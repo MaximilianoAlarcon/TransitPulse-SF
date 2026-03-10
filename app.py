@@ -15,7 +15,8 @@ def operators():
 
     print(response)
 
-    return jsonify(response.json())
+    data = json.loads(response.content.decode("utf-8-sig"))
+    return jsonify(data)
 
 @app.route("/")
 def dashboard():
