@@ -13,6 +13,8 @@ width:250px;
 background:#1f2937;
 color:white;
 padding:20px;
+overflow-y:auto;   /* habilita scroll vertical */
+height:100vh;      /* limita la altura a la pantalla */
 }
 
 .sidebar ul{
@@ -27,4 +29,5 @@ cursor:pointer;
 
 #map{
 flex:1;
+height:100vh;
 }
