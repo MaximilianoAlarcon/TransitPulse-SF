@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify
-import random, os, requests. json
+import random, os, requests, json
 
 app = Flask(__name__)
 
@@ -13,7 +13,8 @@ def operators():
 
     response = requests.get(url)
 
-    print(response)
+    if response.status_code != 200:
+        return {"error": "API failed"}
 
     data = json.loads(response.content.decode("utf-8-sig"))
     return jsonify(data)
