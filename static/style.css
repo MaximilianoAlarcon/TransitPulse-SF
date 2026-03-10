@@ -1,11 +1,15 @@
-body{
+html, body{
 margin:0;
+padding:0;
+height:100%;
+overflow:hidden;   /* evita scroll en toda la página */
 font-family:Arial;
 }
 
 .container{
 display:flex;
-height:100vh;
+height:100%;
+width:100%;
 }
 
 .sidebar{
@@ -14,12 +18,13 @@ background:#1f2937;
 color:white;
 padding:20px;
 overflow-y:auto;   /* habilita scroll vertical */
-height:100vh;      /* limita la altura a la pantalla */
+box-sizing:border-box;
 }
 
 .sidebar ul{
 list-style:none;
 padding:0;
+margin:0;
 }
 
 .sidebar li{
@@ -29,5 +34,5 @@ cursor:pointer;
 
 #map{
 flex:1;
-height:100vh;
+height:100%;
 }
