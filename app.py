@@ -17,6 +17,8 @@ def operators():
 
     response = requests.get(url, params=params)
 
+    print(response)
+
     return jsonify(response.json())
 
 @app.route("/")
