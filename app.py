@@ -1,7 +1,23 @@
 from flask import Flask, render_template, jsonify
-import random
+import random, os
 
 app = Flask(__name__)
+
+API_KEY = os.environ.get("API_511_KEY")
+
+
+@app.route("/api/operators")
+def operators():
+
+    url = " http://api.511.org/transit/gtfsoperators"
+
+    params = {
+        "api_key": API_KEY
+    }
+
+    response = requests.get(url, params=params)
+
+    return jsonify(response.json())
 
 @app.route("/")
 def dashboard():

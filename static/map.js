@@ -20,3 +20,24 @@ vehicles.forEach(v => {
 }
 
 loadVehicles();
+
+async function loadOperators(){
+
+let response = await fetch("/api/operators");
+let data = await response.json();
+
+let list = document.getElementById("operators-list");
+
+data.forEach(op => {
+
+let li = document.createElement("li");
+
+li.textContent = op.Name;
+
+list.appendChild(li);
+
+});
+
+}
+
+loadOperators();
