@@ -1,0 +1,30 @@
+body{
+margin:0;
+font-family:Arial;
+}
+
+.container{
+display:flex;
+height:100vh;
+}
+
+.sidebar{
+width:250px;
+background:#1f2937;
+color:white;
+padding:20px;
+}
+
+.sidebar ul{
+list-style:none;
+padding:0;
+}
+
+.sidebar li{
+padding:10px 0;
+cursor:pointer;
+}
+
+#map{
+flex:1;
+}
