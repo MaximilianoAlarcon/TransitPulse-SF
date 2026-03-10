@@ -9,13 +9,9 @@ API_KEY = os.environ.get("API_511_KEY")
 @app.route("/api/operators")
 def operators():
 
-    url = " http://api.511.org/transit/gtfsoperators"
+    url = " http://api.511.org/transit/gtfsoperators?api_key="+API_KEY
 
-    params = {
-        "api_key": API_KEY
-    }
-
-    response = requests.get(url, params=params)
+    response = requests.get(url)
 
     print(response)
 
