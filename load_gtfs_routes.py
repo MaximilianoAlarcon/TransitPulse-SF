@@ -22,11 +22,7 @@ OPERATORS_URL = f"http://api.511.org/transit/gtfsoperators?api_key={API_KEY}"
 
 
 def get_operators():
-    params = {
-        "api_key": API_KEY
-    }
-
-    r = requests.get(OPERATORS_URL, params=params)
+    r = requests.get(OPERATORS_URL)
     r.raise_for_status()
 
     data = json.loads(r.content.decode("utf-8-sig"))
