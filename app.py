@@ -1,6 +1,6 @@
 from flask import Flask, render_template, jsonify, request
 import random, os, requests, json
-import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes,load_gtfs_trips
+import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes,load_gtfs_trips,load_gtfs_stop_times
 import psycopg2
 
 app = Flask(__name__)
@@ -155,6 +155,18 @@ def load_trips():
 
     return {"status": "GTFS import started"}
 
+
+
+def run_load_stop_times():
+    load_gtfs_stop_times.run()
+
+@app.route("/load-stop-times")
+def load_stop_times():
+
+    thread = threading.Thread(target=run_load_stop_times)
+    thread.start()
+
+    return {"status": "GTFS import started"}
 
 
 
