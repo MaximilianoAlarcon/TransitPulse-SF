@@ -5,6 +5,70 @@ import threading,load_gtfs_stops,execute_query_postgis
 app = Flask(__name__)
 
 API_KEY = os.environ.get("API_511_KEY")
+API_GEO_KEY = os.environ.get("API_GEO_KEY")
+
+# Configuración DB
+DB_CONFIG = {
+    "host": os.environ.get("DB_HOST"),
+    "database": os.environ.get("DB_NAME"),
+    "user": os.environ.get("DB_USER"),
+    "password": os.environ.get("DB_PASSWORD"),
+    "port": os.environ.get("DB_PORT")
+}
+
+
+# Función para geocoding
+def geocode_address(address):
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={API_GEO_KEY}"
+    resp = requests.get(url).json()
+    status = resp.get("status")
+    if status == "OK":
+        location = resp["results"][0]["geometry"]["location"]
+        return location["lat"], location["lng"], None
+    elif status == "ZERO_RESULTS":
+        return None, None, "Dirección no encontrada"
+    else:
+        return None, None, f"Error de geocoding: {status}"
+
+# Función para obtener la parada más cercana
+def get_closest_stop(lat, lon):
+    conn = psycopg2.connect(**DB_CONFIG)
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT stop_name, stop_lat, stop_lon
+        FROM stops
+        ORDER BY geom <-> ST_SetSRID(ST_MakePoint(%s, %s), 4326)
+        LIMIT 1;
+    """, (lon, lat))
+    stop = cur.fetchone()
+    cur.close()
+    conn.close()
+    return stop
+
+
+@app.route("/closest-stop")
+def closest_stop():
+    address = request.args.get("address")
+    if not address:
+        return jsonify({"error": "No se recibió dirección"}), 400
+
+    lat, lon, error = geocode_address(address)
+    if error:
+        return jsonify({"error": error}), 404
+
+    stop = get_closest_stop(lat, lon)
+    if not stop:
+        return jsonify({"error": "No se encontró ninguna parada"}), 404
+
+    print("Esta es la parada mas cercana")
+    print(stop)
+
+    return jsonify({
+        "stop_name": stop[0],
+        "stop_lat": stop[1],
+        "stop_lon": stop[2]
+    })
+
 
 
 @app.route("/api/operators")

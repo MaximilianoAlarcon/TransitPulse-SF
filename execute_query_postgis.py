@@ -5,17 +5,17 @@ import pandas as pd
 import psycopg2
 import json
 
-API_KEY = "4756c636-6b91-461d-a590-a84f17363f13"
+API_KEY = os.environ.get("API_511_KEY")
 
 OPERATORS_URL = "http://api.511.org/transit/gtfsoperators"
 DATAFEED_URL = "http://api.511.org/transit/datafeeds"
 
 DB_CONFIG = {
-    "host": "postgis.railway.internal",
-    "database": "railway",
-    "user": "postgres",
-    "password": "EF2Ebgfg13DdagdgDgEgdecG13e4a61G",
-    "port": 5432
+    "host": os.environ.get("DB_HOST"),
+    "database": os.environ.get("DB_NAME"),
+    "user": os.environ.get("DB_USER"),
+    "password": os.environ.get("DB_PASSWORD"),
+    "port": os.environ.get("DB_PORT")
 }
 
 
