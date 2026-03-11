@@ -20,10 +20,16 @@ def operators():
     data = json.loads(response.content.decode("utf-8-sig"))
     return jsonify(data)
 
+def run_import():
+    load_gtfs_stops.run()
+
 @app.route("/load-stops")
 def load_stops():
-    load_gtfs_stops.run()
-    return {"status": "GTFS stops loaded"}
+
+    thread = threading.Thread(target=run_import)
+    thread.start()
+
+    return {"status": "GTFS import started"}
 
 @app.route("/")
 def dashboard():
