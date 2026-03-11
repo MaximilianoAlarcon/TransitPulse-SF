@@ -25,10 +25,6 @@ def init_db(conn):
     cur = conn.cursor()
     # activar PostGIS
 
-    cur.execute("""
-    TRUNCATE TABLE stop_times;
-    """)
-
     print("Datos de stop_times")
     cur.execute("""
     SELECT * FROM stop_times LIMIT 10
@@ -52,8 +48,6 @@ def init_db(conn):
     rows = cur.fetchall()  # trae todos los resultados
     for row in rows:
         print(row)
-
-
 
     conn.commit()
     cur.close()
