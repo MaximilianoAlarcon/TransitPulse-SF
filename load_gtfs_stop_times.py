@@ -58,6 +58,15 @@ def run():
             reader = csv.reader(io.TextIOWrapper(f, encoding="utf-8-sig"))
             header = next(reader)
 
+            # mapa columna -> índice
+            col_index = {name: i for i, name in enumerate(header)}
+
+            def get(row, col):
+                idx = col_index.get(col)
+                if idx is None or idx >= len(row):
+                    return None
+                return row[idx]
+
             buffer = io.StringIO()
             writer = csv.writer(buffer)
 
@@ -66,7 +75,20 @@ def run():
 
             for row in reader:
 
-                writer.writerow([operator_id] + row)
+                writer.writerow([
+                    operator_id,
+                    get(row, "trip_id"),
+                    get(row, "arrival_time"),
+                    get(row, "departure_time"),
+                    get(row, "stop_id"),
+                    get(row, "stop_sequence"),
+                    get(row, "stop_headsign"),
+                    get(row, "pickup_type"),
+                    get(row, "drop_off_type"),
+                    get(row, "shape_dist_traveled"),
+                    get(row, "timepoint")
+                ])
+
                 batch_count += 1
                 total_count += 1
 
@@ -99,7 +121,6 @@ def run():
                     writer = csv.writer(buffer)
                     batch_count = 0
 
-            # último batch
             if batch_count > 0:
 
                 buffer.seek(0)
