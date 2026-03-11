@@ -4,6 +4,7 @@ import io
 import csv
 import psycopg2
 import os
+import json
 
 # Configuración de DB
 DB_CONFIG = {
