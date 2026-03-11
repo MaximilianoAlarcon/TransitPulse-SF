@@ -26,41 +26,63 @@ def init_db(conn):
     # activar PostGIS
 
     cur.execute("""
-    UPDATE stops
-    SET geom = ST_SetSRID(ST_MakePoint(stop_lon, stop_lat), 4326)
-    WHERE geom IS NULL;
+    CREATE TABLE routes (
+        operator_id TEXT,
+        route_id TEXT,
+        agency_id TEXT,
+        route_short_name TEXT,
+        route_long_name TEXT,
+        route_desc TEXT,
+        route_type INT,
+        route_url TEXT,
+        route_color TEXT,
+        route_text_color TEXT,
+        PRIMARY KEY (operator_id, route_id)
+    );
     """)
 
-    # clave primaria compuesta
-    print("Datos de stops")
     cur.execute("""
-    SELECT * FROM stops LIMIT 10;
+    CREATE TABLE trips (
+        operator_id TEXT,
+        trip_id TEXT,
+        route_id TEXT,
+        service_id TEXT,
+        trip_headsign TEXT,
+        direction_id INT,
+        block_id TEXT,
+        shape_id TEXT,
+        trip_short_name TEXT,
+        bikes_allowed INT,
+        wheelchair_accessible INT,
+        PRIMARY KEY (operator_id, trip_id)
+    );
     """)
-    rows = cur.fetchall()  # trae todos los resultados
-    for row in rows:
-        print(row)
 
-    print("Cantidad de datos")
+    cur.execute("""
+    CREATE TABLE stop_times (
+        operator_id TEXT,
+        trip_id TEXT,
+        arrival_time TEXT,
+        departure_time TEXT,
+        stop_id TEXT,
+        stop_sequence INT,
+        stop_headsign TEXT,
+        pickup_type INT,
+        drop_off_type INT,
+        shape_dist_traveled FLOAT,
+        timepoint INT,
+        PRIMARY KEY (operator_id, trip_id, stop_sequence)
+    );
+    """)
+
+
+    print("Cantidad de datos de stops")
     cur.execute("""
     SELECT COUNT(*) FROM stops
     """)
     rows = cur.fetchall()  # trae todos los resultados
     for row in rows:
         print(row)
-
-
-    print("Prueba de Gist")
-    cur.execute("""
-    SELECT stop_name, stop_lat, stop_lon
-    FROM stops
-    ORDER BY geom <-> ST_SetSRID(ST_MakePoint(-122.418, 37.775), 4326)
-    LIMIT 1;
-    """)
-    rows = cur.fetchall()  # trae todos los resultados
-    for row in rows:
-        print(row)
-
-
 
     conn.commit()
     cur.close()
