@@ -84,7 +84,7 @@ def insert_stops(df, conn):
     conn.commit()
 
 
-def main():
+def run():
 
     conn = psycopg2.connect(**DB_CONFIG)
 
@@ -104,7 +104,3 @@ def main():
             insert_stops(df, conn)
 
     conn.close()
-
-
-if __name__ == "__main__":
-    main()
