@@ -1,6 +1,6 @@
 from flask import Flask, render_template, jsonify
 import random, os, requests, json
-import threading,load_gtfs_stops
+import threading,load_gtfs_stops,execute_query_postgis
 
 app = Flask(__name__)
 
@@ -20,6 +20,9 @@ def operators():
     data = json.loads(response.content.decode("utf-8-sig"))
     return jsonify(data)
 
+
+
+
 def run_import():
     load_gtfs_stops.run()
 
@@ -30,6 +33,25 @@ def load_stops():
     thread.start()
 
     return {"status": "GTFS import started"}
+
+
+
+
+
+def run_query_postgis():
+    execute_query_postgis.run()
+
+@app.route("/query-postgis")
+def query_postgis():
+
+    thread = threading.Thread(target=run_query_postgis)
+    thread.start()
+
+    return {"message": "Holitoo"}
+
+
+
+
 
 @app.route("/")
 def dashboard():
