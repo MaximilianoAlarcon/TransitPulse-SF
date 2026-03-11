@@ -119,16 +119,29 @@ def operators():
 
 
 
-def run_import():
+def run_load_stops():
     load_gtfs_stops.run()
 
 @app.route("/load-stops")
 def load_stops():
 
-    thread = threading.Thread(target=run_import)
+    thread = threading.Thread(target=run_load_stops)
     thread.start()
 
     return {"status": "GTFS import started"}
+
+
+def run_load_routes():
+    load_gtfs_routes.run()
+
+@app.route("/load-routes")
+def load_routes():
+
+    thread = threading.Thread(target=run_load_routes)
+    thread.start()
+
+    return {"status": "GTFS import started"}
+
 
 
 
