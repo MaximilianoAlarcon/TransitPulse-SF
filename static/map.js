@@ -54,6 +54,32 @@ map.on('moveend', loadStopsInView);
 
 
 
+if (navigator.geolocation) {
+
+    navigator.geolocation.getCurrentPosition(function(position) {
+
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        map.setView([lat, lon], 15);
+
+        window.userMarker = L.circleMarker([lat, lon], {
+            radius: 8,
+            color: "#136aec",
+            fillColor: "#2a93ee",
+            fillOpacity: 0.9
+        }).addTo(map).bindPopup("You");
+
+        loadStopsInView();
+
+    });
+
+}
+
+
+
+
+
 async function loadOperators(){
 
 let response = await fetch("/api/operators");
