@@ -29,7 +29,7 @@ def init_db(conn):
 
     print("Datos de routes")
     cur.execute("""
-    SELECT * FROM routes LIMIT 10
+    SELECT * FROM trips LIMIT 10
     """)
     rows = cur.fetchall()  # trae todos los resultados
     for row in rows:
@@ -37,7 +37,7 @@ def init_db(conn):
 
     print("Cantidad de datos de routes")
     cur.execute("""
-    SELECT COUNT(*) FROM routes
+    SELECT COUNT(*) FROM trips
     """)
     rows = cur.fetchall()  # trae todos los resultados
     for row in rows:
