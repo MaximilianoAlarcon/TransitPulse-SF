@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, request
 import random, os, requests, json
 import threading,load_gtfs_stops,execute_query_postgis
+import psycopg2
 
 app = Flask(__name__)
 
