@@ -21,6 +21,21 @@ API_KEY = os.environ.get("API_511_KEY")
 OPERATORS_URL = f"http://api.511.org/transit/gtfsoperators?api_key={API_KEY}"
 
 
+def get_operators():
+    params = {
+        "api_key": API_KEY
+    }
+
+    r = requests.get(OPERATORS_URL, params=params)
+    r.raise_for_status()
+
+    data = json.loads(r.content.decode("utf-8-sig"))
+
+    operators = [op["Id"] for op in data]
+
+    return operators
+
+
 def run():
 
     # Conexión a PostgreSQL
@@ -29,11 +44,10 @@ def run():
 
 
     # 1️⃣ Obtener lista de operadores
-    resp = requests.get(OPERATORS_URL)
-    operators = resp.json()["operators"]  # Ajusta según la estructura exacta del JSON
+    operators = get_operators()
 
     for op in operators:
-        operator_id = op["Id"]
+        operator_id = op
         print(f"Procesando operador {operator_id}...")
 
         # 2️⃣ Descargar datafeed
