@@ -21,6 +21,19 @@ vehicles.forEach(v => {
 
 //loadVehicles();
 
+
+// --- 1️⃣ Crear capa de paradas GTFS ---
+const stopsLayer = L.layerGroup().addTo(map);
+
+// Suponiendo que ya cargaste el array stops desde el backend
+stops.forEach(stop => {
+    L.marker([stop.stop_lat, stop.stop_lon])
+        .bindPopup(`<b>${stop.stop_name}</b>`)
+        .addTo(stopsLayer);
+});
+
+
+
 async function loadOperators(){
 
 let response = await fetch("/api/operators");
