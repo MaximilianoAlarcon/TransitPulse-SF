@@ -25,9 +25,9 @@ def init_db(conn):
     cur = conn.cursor()
     # activar PostGIS
 
-    cur.execute("""
-    TRUNCATE TABLE stop_times;
-    """)
+    #cur.execute("""
+    #TRUNCATE TABLE stop_times;
+    #""")
 
     print("Datos de stop_times")
     cur.execute("""
@@ -44,6 +44,15 @@ def init_db(conn):
     rows = cur.fetchall()  # trae todos los resultados
     for row in rows:
         print(row)
+    
+    print("Cantidad de memoria de stop_times")
+    cur.execute("""
+    SELECT pg_size_pretty(pg_total_relation_size('stop_times'));
+    """)
+    rows = cur.fetchall()  # trae todos los resultados
+    for row in rows:
+        print(row)
+
 
 
     conn.commit()
