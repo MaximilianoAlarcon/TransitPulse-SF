@@ -15,17 +15,20 @@
 
 <div class="sidebar">
 
-<h3>Search your stop</h3>
-<input type="text" id="address-input" placeholder="Where do you want to go?">
-<button id="search-btn">Buscar</button>
-<!-- Resultado -->
-<div id="closest-stop-result"></div>
-
 <h2>Operators</h2>
 <ul id="operators-list"></ul>
 </div>
 <div id="map"></div>
 
+</div>
+
+
+<!-- Chat flotante -->
+<div id="chat-widget">
+    <div id="chat-header">Where do you want to go?</div>
+    <input type="text" id="chat-input" placeholder="Write your destination...">
+    <button id="chat-send">Search</button>
+    <div id="chat-result"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
