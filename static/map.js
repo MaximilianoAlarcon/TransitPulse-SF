@@ -4,6 +4,17 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'© OpenStreetMap'
 }).addTo(map);
 
+
+// capa de clusters
+const stopsLayer = L.markerClusterGroup();
+
+map.addLayer(stopsLayer);
+
+
+
+
+
+
 async function loadVehicles(){
 
 let response = await fetch("/api/vehicles");
@@ -22,15 +33,24 @@ vehicles.forEach(v => {
 //loadVehicles();
 
 
-// --- 1️⃣ Crear capa de paradas GTFS ---
-const stopsLayer = L.layerGroup().addTo(map);
+async function loadStopsInView() {
+    const bounds = map.getBounds();
+    const response = await fetch(`/stops?lat_min=${bounds.getSouthWest().lat}&lon_min=${bounds.getSouthWest().lng}&lat_max=${bounds.getNorthEast().lat}&lon_max=${bounds.getNorthEast().lng}`);
+    const stops = await response.json();
 
-// Suponiendo que ya cargaste el array stops desde el backend
-stops.forEach(stop => {
-    L.marker([stop.stop_lat, stop.stop_lon])
-        .bindPopup(`<b>${stop.stop_name}</b>`)
-        .addTo(stopsLayer);
-});
+    stopsLayer.clearLayers(); // limpiamos los markers antiguos
+    stops.forEach(stop => {
+        const marker = L.marker([stop.stop_lat, stop.stop_lon])
+            .bindPopup(`<b>${stop.stop_name}</b>`);
+        stopsLayer.addLayer(marker);
+    });
+}
+
+// cargar la vista inicial
+loadStopsInView();
+
+// recargar cuando el usuario mueve o hace zoom
+map.on('moveend', loadStopsInView);
 
 
 

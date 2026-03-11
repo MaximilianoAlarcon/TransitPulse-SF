@@ -18,6 +18,10 @@ DB_CONFIG = {
 }
 
 
+def get_connection():
+    return psycopg2.connect(**DB_CONFIG)
+
+
 # Función para geocoding
 def geocode_address(address):
     url = f"https://maps.googleapis.com/maps/api/geocode/json?address={address}&key={API_GEO_KEY}"
@@ -33,7 +37,7 @@ def geocode_address(address):
 
 # Función para obtener la parada más cercana
 def get_closest_stop(lat, lon):
-    conn = psycopg2.connect(**DB_CONFIG)
+    conn = get_connection()
     cur = conn.cursor()
     cur.execute("""
         SELECT stop_name, stop_lat, stop_lon
@@ -45,6 +49,33 @@ def get_closest_stop(lat, lon):
     cur.close()
     conn.close()
     return stop
+
+
+@app.route("/stops")
+def stops():
+    lat_min = float(request.args.get("lat_min"))
+    lon_min = float(request.args.get("lon_min"))
+    lat_max = float(request.args.get("lat_max"))
+    lon_max = float(request.args.get("lon_max"))
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # ST_MakeEnvelope crea un rectángulo con los límites, SRID 4326 = WGS84
+    cur.execute("""
+        SELECT stop_name, stop_lat, stop_lon
+        FROM stops
+        WHERE geom && ST_MakeEnvelope(%s, %s, %s, %s, 4326)
+    """, (lon_min, lat_min, lon_max, lat_max))
+
+    rows = cur.fetchall()
+
+    result = [
+        {"stop_name": r[0], "stop_lat": r[1], "stop_lon": r[2]}
+        for r in rows
+    ]
+
+    return jsonify(result)
 
 
 @app.route("/closest-stop")
