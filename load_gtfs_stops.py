@@ -23,34 +23,12 @@ def init_db(conn):
 
     cur = conn.cursor()
     # activar PostGIS
-    cur.execute("""
-    CREATE EXTENSION IF NOT EXISTS postgis;
-    """)
+
     # clave primaria compuesta
     cur.execute("""
     ALTER TABLE stops
     ADD CONSTRAINT stops_pk
     PRIMARY KEY (operator_id, stop_id);
-    """)
-    
-    # columna geográfica
-    cur.execute("""
-    ALTER TABLE stops
-    ADD COLUMN IF NOT EXISTS geom GEOGRAPHY(Point, 4326);
-    """)
-
-    # llenar la columna geom
-    cur.execute("""
-    UPDATE stops
-    SET geom = ST_SetSRID(ST_MakePoint(stop_lon, stop_lat), 4326)
-    WHERE geom IS NULL;
-    """)
-
-    # índice espacial (muy importante)
-    cur.execute("""
-    CREATE INDEX IF NOT EXISTS stops_geom_idx
-    ON stops
-    USING GIST (geom);
     """)
 
     conn.commit()
