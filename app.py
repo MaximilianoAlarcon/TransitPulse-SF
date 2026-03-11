@@ -1,6 +1,6 @@
 from flask import Flask, render_template, jsonify
 import random, os, requests, json
-import load_gtfs_stops
+import threading,load_gtfs_stops
 
 app = Flask(__name__)
 
