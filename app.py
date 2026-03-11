@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify
 import random, os, requests, json
+import load_gtfs_stops
 
 app = Flask(__name__)
 
@@ -18,6 +19,11 @@ def operators():
 
     data = json.loads(response.content.decode("utf-8-sig"))
     return jsonify(data)
+
+@app.route("/load-stops")
+def load_stops():
+    load_gtfs_stops.run()
+    return {"status": "GTFS stops loaded"}
 
 @app.route("/")
 def dashboard():
