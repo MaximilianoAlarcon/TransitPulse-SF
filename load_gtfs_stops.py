@@ -11,10 +11,10 @@ OPERATORS_URL = "http://api.511.org/transit/gtfsoperators"
 DATAFEED_URL = "http://api.511.org/transit/datafeeds"
 
 DB_CONFIG = {
-    "host": "postgres.railway.internal",
+    "host": "postgis.railway.internal",
     "database": "railway",
     "user": "postgres",
-    "password": "JEROCknTYsMjelLkphuPjIcygiEBlliJ",
+    "password": "EF2Ebgfg13DdagdgDgEgdecG13e4a61G",
     "port": 5432
 }
 
@@ -26,10 +26,21 @@ def init_db(conn):
 
     # clave primaria compuesta
     cur.execute("""
-    ALTER TABLE stops
-    ADD CONSTRAINT stops_pk
-    PRIMARY KEY (operator_id, stop_id);
+    CREATE TABLE stops (
+        operator_id TEXT,
+        stop_id TEXT,
+        stop_name TEXT,
+        stop_lat DOUBLE PRECISION,
+        stop_lon DOUBLE PRECISION,
+        geom GEOGRAPHY(Point, 4326),
+        PRIMARY KEY (operator_id, stop_id)
+    );
     """)
+
+    cur.execute("""
+    CREATE INDEX stops_geom_idx ON stops USING GIST (geom);
+    """)
+
 
     conn.commit()
     cur.close()
