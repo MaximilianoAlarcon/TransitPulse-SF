@@ -19,7 +19,7 @@ vehicles.forEach(v => {
 
 }
 
-loadVehicles();
+//loadVehicles();
 
 async function loadOperators(){
 
@@ -41,6 +41,37 @@ list.appendChild(li);
 }
 
 loadOperators();
+
+
+const closestIcon = L.icon({
+    iconUrl: '/static/blue-pin.png', // ruta a tu imagen de pin azul
+    iconSize: [25, 41], // tamaño del pin
+    iconAnchor: [12, 41], // punto del pin que indica la ubicación
+    popupAnchor: [0, -41] // posición del popup respecto al pin
+});
+
+
+async function markClosestStop(data) {
+    const lat = data.stop_lat;
+    const lon = data.stop_lon;
+    const stopName = data.stop_name;
+
+    // Si el marcador ya existe, lo movemos
+    if (window.closestMarker) {
+        window.closestMarker.setLatLng([lat, lon])
+            .setPopupContent(`<b>${stopName}</b>`)
+            .openPopup();
+    } else {
+        // Crear un nuevo marcador
+        window.closestMarker = L.marker([lat, lon], { icon: closestIcon })
+            .addTo(map)
+            .bindPopup(`<b>${stopName}</b>`)
+            .openPopup();
+    }
+
+    // Centrar mapa en la parada
+    map.setView([lat, lon], 15);
+}
 
 
 // --- Código del chat flotante ---
@@ -66,6 +97,8 @@ document.getElementById("chat-send").addEventListener("click", async () => {
         map.setView([data.stop_lat, data.stop_lon], 15);
 
         document.getElementById("chat-input").value = "";
+
+        markClosestStop(data);
     } catch (error) {
         document.getElementById("chat-result").innerText = "Error al consultar la API";
         console.error(error);
