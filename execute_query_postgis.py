@@ -25,9 +25,9 @@ def init_db(conn):
     cur = conn.cursor()
     # activar PostGIS
 
-    #cur.execute("""
-    #TRUNCATE TABLE stop_times;
-    #""")
+    cur.execute("""
+    TRUNCATE TABLE stop_times;
+    """)
 
     print("Datos de stop_times")
     cur.execute("""
