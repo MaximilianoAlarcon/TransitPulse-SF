@@ -3,6 +3,7 @@ import zipfile
 import io
 import csv
 import psycopg2
+import os
 
 # Configuración de DB
 DB_CONFIG = {
