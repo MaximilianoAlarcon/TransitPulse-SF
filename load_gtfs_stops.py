@@ -3,6 +3,7 @@ import zipfile
 import io
 import pandas as pd
 import psycopg2
+import json
 
 API_KEY = "4756c636-6b91-461d-a590-a84f17363f13"
 
@@ -26,9 +27,9 @@ def get_operators():
     r = requests.get(OPERATORS_URL, params=params)
     r.raise_for_status()
 
-    data = r.json()
+    data = json.loads(r.content.decode("utf-8-sig"))
 
-    operators = [op["Id"] for op in data["Operators"]]
+    operators = [op["Id"] for op in data]
 
     return operators
 
