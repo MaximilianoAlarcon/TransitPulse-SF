@@ -24,6 +24,12 @@ def init_db(conn):
     cur = conn.cursor()
     # activar PostGIS
 
+    cur.execute("""
+    UPDATE stops
+    SET geom = ST_SetSRID(ST_MakePoint(stop_lon, stop_lat), 4326)
+    WHERE geom IS NULL;
+    """)
+
     # clave primaria compuesta
     print("Datos de stops")
     cur.execute("""
@@ -40,6 +46,19 @@ def init_db(conn):
     rows = cur.fetchall()  # trae todos los resultados
     for row in rows:
         print(row)
+
+
+    print("Prueba de Gist")
+    cur.execute("""
+    SELECT stop_name, stop_lat, stop_lon
+    FROM stops
+    ORDER BY geom <-> ST_SetSRID(ST_MakePoint(-122.418, 37.775), 4326)
+    LIMIT 1;
+    """)
+    rows = cur.fetchall()  # trae todos los resultados
+    for row in rows:
+        print(row)
+
 
 
     conn.commit()
