@@ -25,19 +25,21 @@ def init_db(conn):
     cur = conn.cursor()
     # activar PostGIS
 
-
-
-    print("Datos de routes")
     cur.execute("""
-    SELECT * FROM trips LIMIT 10
+    TRUNCATE TABLE stop_times;
+    """)
+
+    print("Datos de stop_times")
+    cur.execute("""
+    SELECT * FROM stop_times LIMIT 10
     """)
     rows = cur.fetchall()  # trae todos los resultados
     for row in rows:
         print(row)
 
-    print("Cantidad de datos de routes")
+    print("Cantidad de datos de stop_times")
     cur.execute("""
-    SELECT COUNT(*) FROM trips
+    SELECT COUNT(*) FROM stop_times
     """)
     rows = cur.fetchall()  # trae todos los resultados
     for row in rows:
