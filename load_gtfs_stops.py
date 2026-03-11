@@ -4,6 +4,7 @@ import io
 import pandas as pd
 import psycopg2
 import json
+import os
 
 API_KEY = os.environ.get("API_511_KEY")
 
