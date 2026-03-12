@@ -52,8 +52,7 @@ WHERE ST_DWithin(
 
     if origin_stops.empty:
         print("❌ No se encontraron paradas cercanas al ORIGEN dentro del radio especificado.")
-        conn.close()
-        exit()
+
 
     # --- 2. Buscar paradas cercanas al destino ---
     dest_stops = pd.read_sql(f"""
@@ -68,8 +67,7 @@ WHERE ST_DWithin(
 
     if dest_stops.empty:
         print("❌ No se encontraron paradas cercanas al DESTINO dentro del radio especificado.")
-        conn.close()
-        exit()
+
 
     # --- 3. Traer trips que pasan por paradas de origen ---
     origin_ids = tuple(origin_stops['stop_id'].tolist())
@@ -97,7 +95,7 @@ WHERE ST_DWithin(
         params=(dest_ids,)
     )
 
-    conn.close()
+
 
     # --- 5. Merge en pandas para encontrar combinaciones válidas ---
     df = origin_trips.merge(dest_trips, on='trip_id', suffixes=('_origin', '_dest'))
