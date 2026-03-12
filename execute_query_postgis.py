@@ -40,7 +40,7 @@ def init_db(conn):
 
     # --- Coordenadas de origen y destino ---
     origin_coords = (-122.4120372 , 37.7803603)  # (lon, lat)
-    dest_coords = (-122.4048082 , 37.7944675)
+    dest_coords = (-122.47641 , 37.729008)
 
     # Radio de búsqueda aproximado en grados (~1 km ≈ 0.01)
     search_radius = 500 
@@ -137,38 +137,41 @@ def init_db(conn):
         print(df_final.shape)
 
 
-        # Hora actual como timedelta
-        current_time = datetime.now().strftime("%H:%M:%S")
-        now = pd.to_timedelta(current_time)
+        if df_final.shape[0] > 0:
 
-        # Convertir arrival_time a timedelta
-        df_final['arrival_time_origin'] = pd.to_timedelta(df_final['arrival_time_origin'])
-        df_final['arrival_time_dest'] = pd.to_timedelta(df_final['arrival_time_dest'])
+            # Hora actual como timedelta
+            current_time = datetime.now().strftime("%H:%M:%S")
+            now = pd.to_timedelta(current_time)
 
-        # Calcular travel_time
-        df_final['travel_time'] = df_final['arrival_time_dest'] - df_final['arrival_time_origin']
+            # Convertir arrival_time a timedelta
+            df_final['arrival_time_origin'] = pd.to_timedelta(df_final['arrival_time_origin'])
+            df_final['arrival_time_dest'] = pd.to_timedelta(df_final['arrival_time_dest'])
 
-        # Calcular wait_time y tiempo totalW
-        df_final['wait_time'] = df_final['arrival_time_origin'] - now
-        df_final = df_final[df_final['wait_time'] >= pd.Timedelta(0)]  # descartar buses que ya pasaron
-        df_final['total_time'] = df_final['wait_time'] + df_final['travel_time']
+            # Calcular travel_time
+            df_final['travel_time'] = df_final['arrival_time_dest'] - df_final['arrival_time_origin']
 
-        # Elegir bus que llega primero considerando espera
-        df_fastest = df_final.sort_values('total_time').head(1)
+            # Calcular wait_time y tiempo totalW
+            df_final['wait_time'] = df_final['arrival_time_origin'] - now
+            df_final = df_final[df_final['wait_time'] >= pd.Timedelta(0)]  # descartar buses que ya pasaron
+            df_final['total_time'] = df_final['wait_time'] + df_final['travel_time']
 
-        print("✅ Bus que te lleva al destino más rápido desde ahora:")
-        print(df_fastest.head())
+            # Elegir bus que llega primero considerando espera
+            df_fastest = df_final.sort_values('total_time').head(1)
 
+            print("✅ Bus que te lleva al destino más rápido desde ahora:")
+            print(df_fastest.head())
 
-        transport_details = pd.read_sql(
-            "SELECT * FROM routes WHERE route_id IN (SELECT route_id FROM trips WHERE trip_id = %s AND operator_id = %s);",
-            conn,
-            params=(df_fastest['trip_id'].iloc[0], df_fastest['operator_id_origin'].iloc[0])
-        )
+            transport_details = pd.read_sql(
+                "SELECT * FROM routes WHERE route_id IN (SELECT route_id FROM trips WHERE trip_id = %s AND operator_id = %s);",
+                conn,
+                params=(df_fastest['trip_id'].iloc[0], df_fastest['operator_id_origin'].iloc[0])
+            )
 
-        print("Detalles del transporte")
-        print(transport_details.head())
-        print(transport_details.shape)
+            print("Detalles del transporte")
+            print(transport_details.head())
+            print(transport_details.shape)
+        else:
+            print("⚠️ No se encontraron viajes directos porque no hay paradas cercanas al origen o destino.")
     
     
     else:
