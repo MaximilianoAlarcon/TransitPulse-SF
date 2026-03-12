@@ -87,7 +87,7 @@ dest_trips AS (
 
 )
 
-SELECT
+SELECT DISTINCT ON (ot.trip_id)
     ot.trip_id,
     os.stop_name AS origin_stop,
     ds.stop_name AS destination_stop,
@@ -96,15 +96,14 @@ SELECT
 
 FROM origin_trips ot
 JOIN dest_trips dt
-ON ot.trip_id = dt.trip_id
-
+    ON ot.trip_id = dt.trip_id
 JOIN origin_stops os
-ON os.stop_id = ot.stop_id
-
+    ON os.stop_id = ot.stop_id
 JOIN dest_stops ds
-ON ds.stop_id = dt.stop_id
+    ON ds.stop_id = dt.stop_id
 
 WHERE dt.stop_sequence > ot.stop_sequence
+ORDER BY ot.trip_id
 LIMIT 20;
     """)
     rows = cur.fetchall()  # trae todos los resultados
