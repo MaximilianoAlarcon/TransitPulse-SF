@@ -126,6 +126,8 @@ def init_db(conn):
         # 5. Selección de columnas finales
         df_final = df[['trip_id', 'stop_name_origin', 'stop_name_dest', 'stop_sequence_origin', 'stop_sequence_dest']]
 
+        df_final = df_final.drop_duplicates(subset=['trip_id', 'stop_sequence_origin', 'stop_sequence_dest'])
+
         # 6. Mensaje según resultado
         if df_final.empty:
             print("⚠️ No se encontraron viajes que conecten las paradas cercanas al origen y destino.")
