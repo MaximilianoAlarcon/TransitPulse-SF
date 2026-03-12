@@ -29,8 +29,8 @@ def init_db(conn):
 WITH params AS (
 
     SELECT
-        ST_SetSRID(ST_Point(-122.3816274, 37.6191145), 4326) AS origin_geom,
-        ST_SetSRID(ST_Point(-122.4120372, 37.7803603), 4326) AS dest_geom,
+        ST_SetSRID(ST_Point(37.8199286, -122.4782551), 4326) AS origin_geom,
+        ST_SetSRID(ST_Point(37.7803603, -122.4120372), 4326) AS dest_geom,
         500 AS search_radius_m
 
 ),
