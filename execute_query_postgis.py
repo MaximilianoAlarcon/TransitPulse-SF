@@ -41,13 +41,13 @@ def init_db(conn):
 
     # --- 1. Buscar paradas cercanas al origen ---
     origin_stops = pd.read_sql(f"""
-SELECT s.stop_id, s.stop_name
-FROM stops s
-WHERE ST_DWithin(
-    s.geom::geography,
-    ST_SetSRID(ST_Point({origin_coords[0]}, {origin_coords[1]}), 4326)::geography,
-    {search_radius}
-)
+    SELECT s.stop_id, s.stop_name
+    FROM stops s
+    WHERE ST_DWithin(
+        s.geom::geography,
+        ST_SetSRID(ST_Point({origin_coords[0]}, {origin_coords[1]}), 4326)::geography,
+        {search_radius}
+    )
     """, conn)
 
     if origin_stops.empty:
@@ -56,13 +56,13 @@ WHERE ST_DWithin(
 
     # --- 2. Buscar paradas cercanas al destino ---
     dest_stops = pd.read_sql(f"""
-SELECT s.stop_id, s.stop_name
-FROM stops s
-WHERE ST_DWithin(
-    s.geom::geography,
-    ST_SetSRID(ST_Point({dest_coords[0]}, {dest_coords[1]}), 4326)::geography,
-    {search_radius}
-)
+    SELECT s.stop_id, s.stop_name
+    FROM stops s
+    WHERE ST_DWithin(
+        s.geom::geography,
+        ST_SetSRID(ST_Point({dest_coords[0]}, {dest_coords[1]}), 4326)::geography,
+        {search_radius}
+    )
     """, conn)
 
     if dest_stops.empty:
@@ -116,7 +116,7 @@ WHERE ST_DWithin(
             print(df_final.head(20))
     
     else:
-    print("⚠️ No se encontraron viajes directos porque no hay paradas cercanas al origen o destino.")
+        print("⚠️ No se encontraron viajes directos porque no hay paradas cercanas al origen o destino.")
 
 
 
