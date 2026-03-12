@@ -88,7 +88,7 @@ def init_db(conn):
 
         print("Ejecutando query 3")
         origin_trips = pd.read_sql(
-            "SELECT st.trip_id, st.stop_sequence, st.stop_id FROM stop_times st WHERE st.stop_id IN %s",
+            "SELECT st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time FROM stop_times st WHERE st.stop_id IN %s",
             conn,
             params=(origin_ids,)
         )
@@ -96,7 +96,7 @@ def init_db(conn):
         # --- 4. Traer trips que pasan por paradas de destino ---
         print("Ejecutando query 4")
         dest_trips = pd.read_sql(
-            "SELECT st.trip_id, st.stop_sequence, st.stop_id FROM stop_times st WHERE st.stop_id IN %s",
+            "SELECT st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time FROM stop_times st WHERE st.stop_id IN %s",
             conn,
             params=(dest_ids,)
         )
@@ -112,11 +112,13 @@ def init_db(conn):
         # 3. Renombrar columnas de stops para evitar conflictos al merge
         origin_stops_renamed = origin_stops.rename(columns={
             'stop_id': 'stop_id_origin',
-            'stop_name': 'stop_name_origin'
+            'stop_name': 'stop_name_origin',
+            'arrival_time': 'arrival_time_origin'
         })
         dest_stops_renamed = dest_stops.rename(columns={
             'stop_id': 'stop_id_dest',
-            'stop_name': 'stop_name_dest'
+            'stop_name': 'stop_name_dest',
+            'arrival_time': 'arrival_time_dest'
         })
 
         # 4. Merge para agregar nombres de paradas
@@ -124,9 +126,15 @@ def init_db(conn):
         df = df.merge(dest_stops_renamed, on='stop_id_dest')
 
         # 5. Selección de columnas finales
-        df_final = df[['trip_id', 'stop_name_origin', 'stop_name_dest', 'stop_sequence_origin', 'stop_sequence_dest']]
+
+
+        df_final = df[['trip_id', 'stop_name_origin', 'arrival_time_origin', 'stop_name_dest', 'arrival_time_dest', 'stop_sequence_origin', 'stop_sequence_dest']]
 
         df_final = df_final.drop_duplicates(subset=['trip_id', 'stop_sequence_origin', 'stop_sequence_dest'])
+
+        print("Tamaño del dataframe final")
+        print(df_final.shape)
+
 
         # 6. Mensaje según resultado
         if df_final.empty:
