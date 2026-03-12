@@ -191,7 +191,7 @@ def run_search_engine_test():
     search_engine_test.run()
 
 @app.route("/search-engine-test")
-def search_engine_test():
+def endpoint_search_engine_test():
 
     thread = threading.Thread(target=run_search_engine_test)
     thread.start()
