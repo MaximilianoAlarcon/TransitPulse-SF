@@ -26,14 +26,13 @@ def select(cur,query):
     for row in rows:
         print(row)
 
-
 def init_db(conn):
 
     cur = conn.cursor()
     # activar PostGIS
 
 
-    select(cur,
+    cur.execute(
     """
     ANALYZE stops;
     ANALYZE stop_times;
