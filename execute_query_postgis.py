@@ -159,7 +159,7 @@ def init_db(conn):
 
 
         transport_details = pd.read_sql(
-            "SELECT * FROM routes WHERE route_id IN (SELECT route_id FROM trips WHERE trip_id = '%s');",
+            "SELECT * FROM routes WHERE route_id IN (SELECT route_id FROM trips WHERE trip_id = %s);",
             conn,
             params=(df_fastest['trip_id'].iloc[0],)
         )
