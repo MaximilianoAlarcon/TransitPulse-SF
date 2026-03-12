@@ -26,6 +26,11 @@ def select(cur,query):
     for row in rows:
         print(row)
 
+pd.set_option('display.max_columns', None)  # mostrar todas las columnas
+pd.set_option('display.width', 200)         # ancho de la tabla en consola
+pd.set_option('display.max_rows', 50)      # mostrar hasta 50 filas
+
+
 def init_db(conn):
 
     cur = conn.cursor()
