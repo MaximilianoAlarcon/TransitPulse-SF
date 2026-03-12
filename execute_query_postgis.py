@@ -73,6 +73,16 @@ WHERE ST_DWithin(
 
     # --- 3. Traer trips que pasan por paradas de origen ---
     origin_ids = tuple(origin_stops['stop_id'].tolist())
+    print("Origin ids")
+    print(origin_ids)
+
+
+    dest_ids = tuple(dest_stops['stop_id'].tolist())
+    print("Destination ids")
+    print(dest_ids)
+
+
+    print("Ejecutando query 3")
     origin_trips = pd.read_sql(
         "SELECT st.trip_id, st.stop_sequence, st.stop_id FROM stop_times st WHERE st.stop_id IN %s",
         conn,
@@ -80,7 +90,7 @@ WHERE ST_DWithin(
     )
 
     # --- 4. Traer trips que pasan por paradas de destino ---
-    dest_ids = tuple(dest_stops['stop_id'].tolist())
+    print("Ejecutando query 4")
     dest_trips = pd.read_sql(
         "SELECT st.trip_id, st.stop_sequence, st.stop_id FROM stop_times st WHERE st.stop_id IN %s",
         conn,
