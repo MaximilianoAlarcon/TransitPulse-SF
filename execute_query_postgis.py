@@ -5,6 +5,7 @@ import pandas as pd
 import psycopg2
 import json
 import os
+from datetime import datetime
 
 API_KEY = os.environ.get("API_511_KEY")
 
@@ -129,11 +130,32 @@ def init_db(conn):
 
 
         df_final = df[['trip_id', 'stop_name_origin', 'arrival_time_origin', 'stop_name_dest', 'arrival_time_dest', 'stop_sequence_origin', 'stop_sequence_dest']]
-
         df_final = df_final.drop_duplicates(subset=['trip_id', 'stop_sequence_origin', 'stop_sequence_dest'])
-
         print("Tamaño del dataframe final")
         print(df_final.shape)
+
+
+        # Hora actual como timedelta
+        current_time = datetime.now().strftime("%H:%M:%S")
+        now = pd.to_timedelta(current_time)
+
+        # Convertir arrival_time a timedelta
+        df_final['arrival_time_origin'] = pd.to_timedelta(df_final['arrival_time_origin'])
+        df_final['arrival_time_dest'] = pd.to_timedelta(df_final['arrival_time_dest'])
+
+        # Calcular travel_time
+        df_final['travel_time'] = df_final['arrival_time_dest'] - df_final['arrival_time_origin']
+
+        # Calcular wait_time y tiempo totalW
+        df_final['wait_time'] = df_final['arrival_time_origin'] - now
+        df_final = df_final[df_final['wait_time'] >= pd.Timedelta(0)]  # descartar buses que ya pasaron
+        df_final['total_time'] = df_final['wait_time'] + df_final['travel_time']
+
+        # Elegir bus que llega primero considerando espera
+        df_fastest = df_final.sort_values('total_time').head(1)
+
+        print("✅ Bus que te lleva al destino más rápido desde ahora:")
+        print(df_fastest[['trip_id', 'stop_name_origin', 'stop_name_dest', 'wait_time', 'travel_time', 'total_time']])
 
 
         # 6. Mensaje según resultado
