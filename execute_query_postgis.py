@@ -34,9 +34,9 @@ def init_db(conn):
 
     cur.execute(
     """
-CREATE INDEX IF NOT EXISTS idx_stops_geom ON stops USING gist(geom);
-
-CREATE INDEX IF NOT EXISTS idx_stop_times_trip_sequence ON stop_times(trip_id, stop_sequence);
+CREATE INDEX idx_stops_geom ON stops USING gist(geom);
+CREATE INDEX idx_stop_times_stop_id ON stop_times(stop_id);
+CREATE INDEX idx_stop_times_trip_id_stop_seq ON stop_times(trip_id, stop_sequence);
     """
     )
 
@@ -45,50 +45,44 @@ CREATE INDEX IF NOT EXISTS idx_stop_times_trip_sequence ON stop_times(trip_id, s
 WITH params AS (
     SELECT
         ST_SetSRID(ST_Point(-122.4782551, 37.8199286), 4326) AS origin_geom,
-        ST_SetSRID(ST_Point(-122.4120372, 37.7803603), 4326) AS dest_geom,
-        500 AS search_radius_m
+        ST_SetSRID(ST_Point(-122.4120372, 37.7803603), 4326) AS dest_geom
 ),
 
--- paradas cerca del origen usando <-> para aprovechar GiST
 origin_stops AS (
-    SELECT s.stop_id, s.stop_name, s.geom
+    SELECT s.stop_id, s.stop_name
     FROM stops s, params p
-    WHERE s.geom <-> p.origin_geom < 0.005  -- aproximación rápida, ~500 m
+    WHERE s.geom <-> p.origin_geom < 0.005
 ),
 
--- paradas cerca del destino
 dest_stops AS (
-    SELECT s.stop_id, s.stop_name, s.geom
+    SELECT s.stop_id, s.stop_name
     FROM stops s, params p
     WHERE s.geom <-> p.dest_geom < 0.005
 ),
 
--- viajes que pasan por origen
 origin_trips AS (
-    SELECT st.trip_id, st.stop_sequence, st.stop_id
+    SELECT st.trip_id, st.stop_sequence, st.stop_id, os.stop_name AS origin_stop
     FROM stop_times st
     JOIN origin_stops os ON st.stop_id = os.stop_id
 ),
 
--- viajes que pasan por destino
 dest_trips AS (
-    SELECT st.trip_id, st.stop_sequence, st.stop_id
+    SELECT st.trip_id, st.stop_sequence, st.stop_id, ds.stop_name AS dest_stop
     FROM stop_times st
     JOIN dest_stops ds ON st.stop_id = ds.stop_id
 )
 
-SELECT DISTINCT ON (ot.trip_id)
-    ot.trip_id,
-    os.stop_name AS origin_stop,
-    ds.stop_name AS destination_stop,
-    ot.stop_sequence AS origin_sequence,
-    dt.stop_sequence AS destination_sequence
+SELECT ot.trip_id, ot.origin_stop, dt.dest_stop AS destination_stop,
+       ot.stop_sequence AS origin_sequence, dt.stop_sequence AS destination_sequence
 FROM origin_trips ot
-JOIN dest_trips dt ON ot.trip_id = dt.trip_id
-JOIN origin_stops os ON os.stop_id = ot.stop_id
-JOIN dest_stops ds ON ds.stop_id = dt.stop_id
-WHERE dt.stop_sequence > ot.stop_sequence
-ORDER BY ot.trip_id
+JOIN LATERAL (
+    SELECT dt.stop_sequence, dt.dest_stop
+    FROM dest_trips dt
+    WHERE dt.trip_id = ot.trip_id
+      AND dt.stop_sequence > ot.stop_sequence
+    ORDER BY dt.stop_sequence
+    LIMIT 1
+) dt ON true
 LIMIT 20;
     """
     )
