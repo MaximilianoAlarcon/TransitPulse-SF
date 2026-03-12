@@ -40,7 +40,7 @@ def init_db(conn):
 
     # --- Coordenadas de origen y destino ---
     origin_coords = (-122.4120372 , 37.7803603)  # (lon, lat)
-    dest_coords = (-122.4261032 , 37.7887868)
+    dest_coords = (-122.4048082 , 37.7944675)
 
     # Radio de búsqueda aproximado en grados (~1 km ≈ 0.01)
     search_radius = 500 
@@ -161,9 +161,9 @@ def init_db(conn):
 
 
         transport_details = pd.read_sql(
-            "SELECT * FROM routes WHERE route_id IN (SELECT route_id FROM trips WHERE trip_id = %s);",
+            "SELECT * FROM routes WHERE route_id IN (SELECT route_id FROM trips WHERE trip_id = %s AND operator_id = %s);",
             conn,
-            params=(df_fastest['trip_id'].iloc[0],)
+            params=(df_fastest['trip_id'].iloc[0], df_fastest['operator_id_origin'].iloc[0])
         )
 
         print("Detalles del transporte")
