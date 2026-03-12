@@ -39,8 +39,8 @@ def init_db(conn):
 
 
     # --- Coordenadas de origen y destino ---
-    origin_coords = (-122.3816274 , 37.61911449999999)  # (lon, lat)
-    dest_coords = (-122.4120372 , 37.7803603)
+    origin_coords = (-122.4120372 , 37.7803603)  # (lon, lat)
+    dest_coords = (-122.4261032 , 37.7887868)
 
     # Radio de búsqueda aproximado en grados (~1 km ≈ 0.01)
     search_radius = 500 
