@@ -114,7 +114,7 @@ def init_db(conn):
             print(row)
     except psycopg2.errors.QueryCanceled:
         results = None
-         print("No encontramos viaje directo, sera necesario un trasbordo")
+        print("No encontramos viaje directo, sera necesario un trasbordo")
 
 
 
