@@ -1,6 +1,6 @@
 from flask import Flask, render_template, jsonify, request
 import random, os, requests, json
-import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes,load_gtfs_trips,load_gtfs_stop_times
+import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes,load_gtfs_trips,load_gtfs_stop_times,search_engine_test
 import psycopg2
 
 app = Flask(__name__)
@@ -184,6 +184,19 @@ def query_postgis():
 
     return {"message": "Holitoo"}
 
+
+
+
+def run_search_engine_test():
+    search_engine_test.run()
+
+@app.route("/search-engine-test")
+def search_engine_test():
+
+    thread = threading.Thread(target=run_search_engine_test)
+    thread.start()
+
+    return {"message": "Holitoo"}
 
 
 
