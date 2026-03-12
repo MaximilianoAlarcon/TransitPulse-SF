@@ -37,7 +37,7 @@ def init_db(conn):
     dest_coords = (-122.4120372, 37.7803603)
 
     # Radio de búsqueda aproximado en grados (~1 km ≈ 0.01)
-    search_radius = 1000  
+    search_radius = 500 
 
     # --- 1. Buscar paradas cercanas al origen ---
     origin_stops = pd.read_sql(f"""
@@ -79,41 +79,44 @@ WHERE ST_DWithin(
     print("Destination ids")
     print(dest_ids)
 
+    if len(origin_ids) > 0 and len(dest_ids) > 0:
 
-    print("Ejecutando query 3")
-    origin_trips = pd.read_sql(
-        "SELECT st.trip_id, st.stop_sequence, st.stop_id FROM stop_times st WHERE st.stop_id IN %s",
-        conn,
-        params=(origin_ids,)
-    )
+        print("Ejecutando query 3")
+        origin_trips = pd.read_sql(
+            "SELECT st.trip_id, st.stop_sequence, st.stop_id FROM stop_times st WHERE st.stop_id IN %s",
+            conn,
+            params=(origin_ids,)
+        )
 
-    # --- 4. Traer trips que pasan por paradas de destino ---
-    print("Ejecutando query 4")
-    dest_trips = pd.read_sql(
-        "SELECT st.trip_id, st.stop_sequence, st.stop_id FROM stop_times st WHERE st.stop_id IN %s",
-        conn,
-        params=(dest_ids,)
-    )
+        # --- 4. Traer trips que pasan por paradas de destino ---
+        print("Ejecutando query 4")
+        dest_trips = pd.read_sql(
+            "SELECT st.trip_id, st.stop_sequence, st.stop_id FROM stop_times st WHERE st.stop_id IN %s",
+            conn,
+            params=(dest_ids,)
+        )
 
 
 
-    # --- 5. Merge en pandas para encontrar combinaciones válidas ---
-    df = origin_trips.merge(dest_trips, on='trip_id', suffixes=('_origin', '_dest'))
-    df = df[df['stop_sequence_dest'] > df['stop_sequence_origin']]
+        # --- 5. Merge en pandas para encontrar combinaciones válidas ---
+        df = origin_trips.merge(dest_trips, on='trip_id', suffixes=('_origin', '_dest'))
+        df = df[df['stop_sequence_dest'] > df['stop_sequence_origin']]
 
-    # --- 6. Agregar nombres de paradas ---
-    df = df.merge(origin_stops[['stop_id', 'stop_name']], left_on='stop_id_origin', right_on='stop_id')
-    df = df.merge(dest_stops[['stop_id', 'stop_name']], left_on='stop_id_dest', right_on='stop_id', suffixes=('_origin', '_dest'))
+        # --- 6. Agregar nombres de paradas ---
+        df = df.merge(origin_stops[['stop_id', 'stop_name']], left_on='stop_id_origin', right_on='stop_id')
+        df = df.merge(dest_stops[['stop_id', 'stop_name']], left_on='stop_id_dest', right_on='stop_id', suffixes=('_origin', '_dest'))
 
-    # --- 7. Selección de columnas finales ---
-    df_final = df[['trip_id', 'stop_name_origin', 'stop_name_dest', 'stop_sequence_origin', 'stop_sequence_dest']]
+        # --- 7. Selección de columnas finales ---
+        df_final = df[['trip_id', 'stop_name_origin', 'stop_name_dest', 'stop_sequence_origin', 'stop_sequence_dest']]
 
-    if df_final.empty:
-        print("⚠️ No se encontraron viajes que conecten las paradas cercanas al origen y destino.")
-    else:
-        print("✅ Viajes encontrados:")
-        print(df_final.head(20))
+        if df_final.empty:
+            print("⚠️ No se encontraron viajes que conecten las paradas cercanas al origen y destino.")
+        else:
+            print("✅ Viajes encontrados:")
+            print(df_final.head(20))
     
+    else:
+    print("⚠️ No se encontraron viajes directos porque no hay paradas cercanas al origen o destino.")
 
 
 
