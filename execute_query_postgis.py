@@ -131,7 +131,7 @@ def init_db(conn):
         # 5. Selección de columnas finales
 
 
-        df_final = df[['trip_id', 'stop_name_origin', 'arrival_time_origin', 'stop_name_dest', 'arrival_time_dest', 'stop_sequence_origin', 'stop_sequence_dest']]
+        df_final = df[['trip_id', 'stop_name_origin', 'arrival_time_origin', 'stop_name_dest', 'arrival_time_dest', 'stop_sequence_origin', 'stop_sequence_dest', 'operator_id_origin', 'operator_id_dest']]
         df_final = df_final.drop_duplicates(subset=['trip_id', 'stop_sequence_origin', 'stop_sequence_dest'])
         print("Tamaño del dataframe final")
         print(df_final.shape)
