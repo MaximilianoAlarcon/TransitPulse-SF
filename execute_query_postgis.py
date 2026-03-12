@@ -155,15 +155,19 @@ def init_db(conn):
         df_fastest = df_final.sort_values('total_time').head(1)
 
         print("✅ Bus que te lleva al destino más rápido desde ahora:")
-        print(df_fastest[['trip_id', 'stop_name_origin', 'stop_name_dest', 'wait_time', 'travel_time', 'total_time']])
+        print(df_fastest.head())
 
 
-        # 6. Mensaje según resultado
-        if df_final.empty:
-            print("⚠️ No se encontraron viajes que conecten las paradas cercanas al origen y destino.")
-        else:
-            print("✅ Viajes encontrados:")
-            print(df_final.head(20))
+        transport_details = pd.read_sql(
+            "SELECT * FROM routes WHERE route_id IN (SELECT route_id FROM trips WHERE trip_id = '%s');",
+            conn,
+            params=(df_fastest['trip_id'].iloc[0],)
+        )
+
+        print("Detalles del transporte")
+        print(transport_details.head())
+        print(transport_details.shape)
+    
     
     else:
         print("⚠️ No se encontraron viajes directos porque no hay paradas cercanas al origen o destino.")
