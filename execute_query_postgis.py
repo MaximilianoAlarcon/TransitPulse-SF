@@ -32,60 +32,46 @@ def init_db(conn):
     # activar PostGIS
 
 
-    cur.execute(
-    """
-CREATE INDEX idx_stops_geom ON stops USING gist(geom);
-CREATE INDEX idx_stop_times_stop_id ON stop_times(stop_id);
-CREATE INDEX idx_stop_times_trip_id_stop_seq ON stop_times(trip_id, stop_sequence);
-    """
-    )
+    # 1. Origen
+    origin_stops = pd.read_sql("""
+    SELECT s.stop_id, s.stop_name, s.geom
+    FROM stops s
+    WHERE s.geom <-> ST_SetSRID(ST_Point(-122.4782551, 37.8199286), 4326) < 0.005
+    """, conn)
 
-    select(cur,
-    """
-WITH params AS (
-    SELECT
-        ST_SetSRID(ST_Point(-122.4782551, 37.8199286), 4326) AS origin_geom,
-        ST_SetSRID(ST_Point(-122.4120372, 37.7803603), 4326) AS dest_geom
-),
+    # 2. Destino
+    dest_stops = pd.read_sql("""
+    SELECT s.stop_id, s.stop_name, s.geom
+    FROM stops s
+    WHERE s.geom <-> ST_SetSRID(ST_Point(-122.4120372, 37.7803603), 4326) < 0.005
+    """, conn)
 
-origin_stops AS (
-    SELECT s.stop_id, s.stop_name
-    FROM stops s, params p
-    WHERE s.geom <-> p.origin_geom < 0.005
-),
-
-dest_stops AS (
-    SELECT s.stop_id, s.stop_name
-    FROM stops s, params p
-    WHERE s.geom <-> p.dest_geom < 0.005
-),
-
-origin_trips AS (
-    SELECT st.trip_id, st.stop_sequence, st.stop_id, os.stop_name AS origin_stop
+    # 3. Trips por origen
+    origin_trips = pd.read_sql(f"""
+    SELECT st.trip_id, st.stop_sequence, st.stop_id
     FROM stop_times st
-    JOIN origin_stops os ON st.stop_id = os.stop_id
-),
+    WHERE st.stop_id IN ({','.join([str(x) for x in origin_stops.stop_id])})
+    """, conn)
 
-dest_trips AS (
-    SELECT st.trip_id, st.stop_sequence, st.stop_id, ds.stop_name AS dest_stop
+    # 4. Trips por destino
+    dest_trips = pd.read_sql(f"""
+    SELECT st.trip_id, st.stop_sequence, st.stop_id
     FROM stop_times st
-    JOIN dest_stops ds ON st.stop_id = ds.stop_id
-)
+    WHERE st.stop_id IN ({','.join([str(x) for x in dest_stops.stop_id])})
+    """, conn)
 
-SELECT ot.trip_id, ot.origin_stop, dt.dest_stop AS destination_stop,
-       ot.stop_sequence AS origin_sequence, dt.stop_sequence AS destination_sequence
-FROM origin_trips ot
-JOIN LATERAL (
-    SELECT dt.stop_sequence, dt.dest_stop
-    FROM dest_trips dt
-    WHERE dt.trip_id = ot.trip_id
-      AND dt.stop_sequence > ot.stop_sequence
-    ORDER BY dt.stop_sequence
-    LIMIT 1
-) dt ON true
-LIMIT 20;
-    """
-    )
+    # 5. Merge en pandas
+    df = origin_trips.merge(dest_trips, on='trip_id', suffixes=('_origin', '_dest'))
+    df = df[df['stop_sequence_dest'] > df['stop_sequence_origin']]
+
+    # 6. Agregar nombres de stops
+    df = df.merge(origin_stops[['stop_id', 'stop_name']], left_on='stop_id_origin', right_on='stop_id')
+    df = df.merge(dest_stops[['stop_id', 'stop_name']], left_on='stop_id_dest', right_on='stop_id', suffixes=('_origin', '_dest'))
+
+    # Resultado final
+    df = df[['trip_id', 'stop_name_origin', 'stop_name_dest', 'stop_sequence_origin', 'stop_sequence_dest']]
+
+    print(df.head(20))
     
 
 
