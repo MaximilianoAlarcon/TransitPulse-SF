@@ -25,29 +25,39 @@ def init_db(conn):
     cur = conn.cursor()
     # activar PostGIS
 
-    print("Datos de stop_times")
     cur.execute("""
-    SELECT * FROM stop_times LIMIT 10
+
+CREATE INDEX IF NOT EXISTS idx_stops_geom
+ON stops
+USING GIST (geom);
+
+
+CREATE INDEX IF NOT EXISTS idx_stop_times_stop
+ON stop_times (stop_id);
+
+
+CREATE INDEX IF NOT EXISTS idx_stop_times_trip
+ON stop_times (trip_id);
+
+
+CREATE INDEX IF NOT EXISTS idx_stop_times_trip_sequence
+ON stop_times (trip_id, stop_sequence);
+
+
+CREATE INDEX IF NOT EXISTS idx_trips_trip
+ON trips (trip_id);
+
+
+CREATE INDEX IF NOT EXISTS idx_routes_route
+ON routes (route_id);
+
+
+ANALYZE;
     """)
     rows = cur.fetchall()  # trae todos los resultados
     for row in rows:
         print(row)
 
-    print("Cantidad de datos de stop_times")
-    cur.execute("""
-    SELECT COUNT(*) FROM stop_times
-    """)
-    rows = cur.fetchall()  # trae todos los resultados
-    for row in rows:
-        print(row)
-    
-    print("Cantidad de memoria de stop_times")
-    cur.execute("""
-    SELECT pg_size_pretty(pg_total_relation_size('stop_times'));
-    """)
-    rows = cur.fetchall()  # trae todos los resultados
-    for row in rows:
-        print(row)
 
     conn.commit()
     cur.close()
