@@ -32,46 +32,71 @@ def init_db(conn):
     # activar PostGIS
 
 
-    # 1. Origen
-    origin_stops = pd.read_sql("""
-    SELECT s.stop_id, s.stop_name, s.geom
+    # --- Coordenadas de origen y destino ---
+    origin_coords = (-122.4782551, 37.8199286)  # (lon, lat)
+    dest_coords = (-122.4120372, 37.7803603)
+
+    # Radio de búsqueda aproximado en grados (~1 km ≈ 0.01)
+    search_radius = 0.01  
+
+    # --- 1. Buscar paradas cercanas al origen ---
+    origin_stops = pd.read_sql(f"""
+    SELECT s.stop_id, s.stop_name
     FROM stops s
-    WHERE s.geom <-> ST_SetSRID(ST_Point(-122.4782551, 37.8199286), 4326) < 0.005
+    WHERE s.geom <-> ST_SetSRID(ST_Point({origin_coords[0]}, {origin_coords[1]}), 4326) < {search_radius}
     """, conn)
 
-    # 2. Destino
-    dest_stops = pd.read_sql("""
-    SELECT s.stop_id, s.stop_name, s.geom
+    if origin_stops.empty:
+        print("❌ No se encontraron paradas cercanas al ORIGEN dentro del radio especificado.")
+        conn.close()
+        exit()
+
+    # --- 2. Buscar paradas cercanas al destino ---
+    dest_stops = pd.read_sql(f"""
+    SELECT s.stop_id, s.stop_name
     FROM stops s
-    WHERE s.geom <-> ST_SetSRID(ST_Point(-122.4120372, 37.7803603), 4326) < 0.005
+    WHERE s.geom <-> ST_SetSRID(ST_Point({dest_coords[0]}, {dest_coords[1]}), 4326) < {search_radius}
     """, conn)
 
-    # 3. Trips por origen
-    origin_trips = pd.read_sql(f"""
-    SELECT st.trip_id, st.stop_sequence, st.stop_id
-    FROM stop_times st
-    WHERE st.stop_id IN ({','.join([str(x) for x in origin_stops.stop_id])})
-    """, conn)
+    if dest_stops.empty:
+        print("❌ No se encontraron paradas cercanas al DESTINO dentro del radio especificado.")
+        conn.close()
+        exit()
 
-    # 4. Trips por destino
-    dest_trips = pd.read_sql(f"""
-    SELECT st.trip_id, st.stop_sequence, st.stop_id
-    FROM stop_times st
-    WHERE st.stop_id IN ({','.join([str(x) for x in dest_stops.stop_id])})
-    """, conn)
+    # --- 3. Traer trips que pasan por paradas de origen ---
+    origin_ids = tuple(origin_stops['stop_id'].tolist())
+    origin_trips = pd.read_sql(
+        "SELECT st.trip_id, st.stop_sequence, st.stop_id FROM stop_times st WHERE st.stop_id IN %s",
+        conn,
+        params=(origin_ids,)
+    )
 
-    # 5. Merge en pandas
+    # --- 4. Traer trips que pasan por paradas de destino ---
+    dest_ids = tuple(dest_stops['stop_id'].tolist())
+    dest_trips = pd.read_sql(
+        "SELECT st.trip_id, st.stop_sequence, st.stop_id FROM stop_times st WHERE st.stop_id IN %s",
+        conn,
+        params=(dest_ids,)
+    )
+
+    conn.close()
+
+    # --- 5. Merge en pandas para encontrar combinaciones válidas ---
     df = origin_trips.merge(dest_trips, on='trip_id', suffixes=('_origin', '_dest'))
     df = df[df['stop_sequence_dest'] > df['stop_sequence_origin']]
 
-    # 6. Agregar nombres de stops
+    # --- 6. Agregar nombres de paradas ---
     df = df.merge(origin_stops[['stop_id', 'stop_name']], left_on='stop_id_origin', right_on='stop_id')
     df = df.merge(dest_stops[['stop_id', 'stop_name']], left_on='stop_id_dest', right_on='stop_id', suffixes=('_origin', '_dest'))
 
-    # Resultado final
-    df = df[['trip_id', 'stop_name_origin', 'stop_name_dest', 'stop_sequence_origin', 'stop_sequence_dest']]
+    # --- 7. Selección de columnas finales ---
+    df_final = df[['trip_id', 'stop_name_origin', 'stop_name_dest', 'stop_sequence_origin', 'stop_sequence_dest']]
 
-    print(df.head(20))
+    if df_final.empty:
+        print("⚠️ No se encontraron viajes que conecten las paradas cercanas al origen y destino.")
+    else:
+        print("✅ Viajes encontrados:")
+        print(df_final.head(20))
     
 
 
