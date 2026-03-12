@@ -97,18 +97,31 @@ def init_db(conn):
         )
 
 
-
-        # --- 5. Merge en pandas para encontrar combinaciones válidas ---
+        # --- Bloque completo para combinar trips y agregar nombres de paradas ---
+        # 1. Merge de trips por trip_id
         df = origin_trips.merge(dest_trips, on='trip_id', suffixes=('_origin', '_dest'))
+
+        # 2. Filtrar secuencias válidas (destino después del origen)
         df = df[df['stop_sequence_dest'] > df['stop_sequence_origin']]
 
-        # --- 6. Agregar nombres de paradas ---
-        df = df.merge(origin_stops[['stop_id', 'stop_name']], left_on='stop_id_origin', right_on='stop_id')
-        df = df.merge(dest_stops[['stop_id', 'stop_name']], left_on='stop_id_dest', right_on='stop_id', suffixes=('_origin', '_dest'))
+        # 3. Renombrar columnas de stops para evitar conflictos al merge
+        origin_stops_renamed = origin_stops.rename(columns={
+            'stop_id': 'stop_id_origin',
+            'stop_name': 'stop_name_origin'
+        })
+        dest_stops_renamed = dest_stops.rename(columns={
+            'stop_id': 'stop_id_dest',
+            'stop_name': 'stop_name_dest'
+        })
 
-        # --- 7. Selección de columnas finales ---
+        # 4. Merge para agregar nombres de paradas
+        df = df.merge(origin_stops_renamed, on='stop_id_origin')
+        df = df.merge(dest_stops_renamed, on='stop_id_dest')
+
+        # 5. Selección de columnas finales
         df_final = df[['trip_id', 'stop_name_origin', 'stop_name_dest', 'stop_sequence_origin', 'stop_sequence_dest']]
 
+        # 6. Mensaje según resultado
         if df_final.empty:
             print("⚠️ No se encontraron viajes que conecten las paradas cercanas al origen y destino.")
         else:
