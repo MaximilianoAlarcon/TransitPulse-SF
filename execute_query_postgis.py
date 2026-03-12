@@ -54,10 +54,27 @@ ON routes (route_id);
 
 ANALYZE;
     """)
+    
+    print("Indices")
+    cur.execute("""
+    SELECT indexname, indexdef
+FROM pg_indexes
+WHERE tablename = 'stop_times';
+    """)
     rows = cur.fetchall()  # trae todos los resultados
     for row in rows:
         print(row)
 
+
+    print("Indices")
+    cur.execute("""
+    SELECT indexname, indexdef
+FROM pg_indexes
+WHERE tablename = 'stops';
+    """)
+    rows = cur.fetchall()  # trae todos los resultados
+    for row in rows:
+        print(row)
 
     conn.commit()
     cur.close()
