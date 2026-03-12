@@ -37,17 +37,17 @@ def init_db(conn):
     dest_coords = (-122.4120372, 37.7803603)
 
     # Radio de búsqueda aproximado en grados (~1 km ≈ 0.01)
-    search_radius = 10  
+    search_radius = 500  
 
     # --- 1. Buscar paradas cercanas al origen ---
     origin_stops = pd.read_sql(f"""
-    SELECT s.stop_id, s.stop_name
-    FROM stops s
-    WHERE ST_DWithin(
-        ST_Transform(s.geom, 3857), -- transforma a metros
-        ST_Transform(ST_SetSRID(ST_Point(-122.4782551, 37.8199286), 4326), 3857),
-        500  -- metros exactos
-    )
+SELECT s.stop_id, s.stop_name
+FROM stops s
+WHERE ST_DWithin(
+    s.geom::geography,
+    ST_SetSRID(ST_Point({origin_coords[0]}, {origin_coords[1]}), 4326)::geography,
+    {search_radius}
+)
     """, conn)
 
     if origin_stops.empty:
@@ -57,13 +57,13 @@ def init_db(conn):
 
     # --- 2. Buscar paradas cercanas al destino ---
     dest_stops = pd.read_sql(f"""
-    SELECT s.stop_id, s.stop_name
-    FROM stops s
-    WHERE ST_DWithin(
-        ST_Transform(s.geom, 3857),  -- convierte las paradas a SRID métrico
-        ST_Transform(ST_SetSRID(ST_Point({dest_coords[0]}, {dest_coords[1]}), 4326), 3857),  -- punto de destino
-        {search_radius_meters}  -- radio en metros, por ejemplo 500
-    )
+SELECT s.stop_id, s.stop_name
+FROM stops s
+WHERE ST_DWithin(
+    s.geom::geography,
+    ST_SetSRID(ST_Point({dest_coords[0]}, {dest_coords[1]}), 4326)::geography,
+    {search_radius}
+)
     """, conn)
 
     if dest_stops.empty:
