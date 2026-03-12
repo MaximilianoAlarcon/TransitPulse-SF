@@ -37,7 +37,7 @@ def init_db(conn):
     dest_coords = (-122.4120372, 37.7803603)
 
     # Radio de búsqueda aproximado en grados (~1 km ≈ 0.01)
-    search_radius = 0.01  
+    search_radius = 0.3  
 
     # --- 1. Buscar paradas cercanas al origen ---
     origin_stops = pd.read_sql(f"""
