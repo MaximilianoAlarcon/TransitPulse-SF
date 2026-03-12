@@ -89,7 +89,7 @@ def init_db(conn):
 
         print("Ejecutando query 3")
         origin_trips = pd.read_sql(
-            "SELECT st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time FROM stop_times st WHERE st.stop_id IN %s",
+            "SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time FROM stop_times st WHERE st.stop_id IN %s",
             conn,
             params=(origin_ids,)
         )
@@ -97,7 +97,7 @@ def init_db(conn):
         # --- 4. Traer trips que pasan por paradas de destino ---
         print("Ejecutando query 4")
         dest_trips = pd.read_sql(
-            "SELECT st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time FROM stop_times st WHERE st.stop_id IN %s",
+            "SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time FROM stop_times st WHERE st.stop_id IN %s",
             conn,
             params=(dest_ids,)
         )
@@ -112,11 +112,13 @@ def init_db(conn):
 
         # 3. Renombrar columnas de stops para evitar conflictos al merge
         origin_stops_renamed = origin_stops.rename(columns={
+            'operator_id':'operator_id_origin',
             'stop_id': 'stop_id_origin',
             'stop_name': 'stop_name_origin',
             'arrival_time': 'arrival_time_origin'
         })
         dest_stops_renamed = dest_stops.rename(columns={
+            'operator_id':'operator_id_dest',
             'stop_id': 'stop_id_dest',
             'stop_name': 'stop_name_dest',
             'arrival_time': 'arrival_time_dest'
