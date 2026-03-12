@@ -19,11 +19,36 @@ DB_CONFIG = {
     "port": os.environ.get("DB_PORT")
 }
 
+def select(cur,query):
+    print("Ejecutando consulta")
+    cur.execute(query)
+    rows = cur.fetchall()  # trae todos los resultados
+    for row in rows:
+        print(row)
+
 
 def init_db(conn):
 
     cur = conn.cursor()
     # activar PostGIS
+
+
+    select(cur,
+    """
+    ANALYZE stops;
+    ANALYZE stop_times;
+    ANALYZE routes;
+    """
+    )
+
+    select(cur,
+    """
+SELECT state, query
+FROM pg_stat_activity
+WHERE state = 'active';
+    """
+    )
+
 
     cur.execute("""
 WITH params AS (
