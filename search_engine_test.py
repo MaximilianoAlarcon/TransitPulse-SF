@@ -47,7 +47,7 @@ def init_db(conn):
 
     # --- 1. Buscar paradas cercanas al origen ---
     origin_stops = pd.read_sql(f"""
-    SELECT s.stop_id, s.stop_name
+    SELECT s.stop_lat, s.stop_lon, s.stop_id, s.stop_name
     FROM stops s
     WHERE ST_DWithin(
         s.geom::geography,
@@ -62,7 +62,7 @@ def init_db(conn):
 
     # --- 2. Buscar paradas cercanas al destino ---
     dest_stops = pd.read_sql(f"""
-    SELECT s.stop_id, s.stop_name
+    SELECT s.stop_lat, s.stop_lon, s.stop_id, s.stop_name
     FROM stops s
     WHERE ST_DWithin(
         s.geom::geography,
@@ -115,13 +115,17 @@ def init_db(conn):
             'operator_id':'operator_id_origin',
             'stop_id': 'stop_id_origin',
             'stop_name': 'stop_name_origin',
-            'arrival_time': 'arrival_time_origin'
+            'arrival_time': 'arrival_time_origin',
+            'stop_lat': 'stop_lat_origin',
+            'stop_lon': 'stop_lon_origin'
         })
         dest_stops_renamed = dest_stops.rename(columns={
             'operator_id':'operator_id_dest',
             'stop_id': 'stop_id_dest',
             'stop_name': 'stop_name_dest',
-            'arrival_time': 'arrival_time_dest'
+            'arrival_time': 'arrival_time_dest',
+            'stop_lat': 'stop_lat_dest',
+            'stop_lon': 'stop_lon_dest'
         })
 
         # 4. Merge para agregar nombres de paradas
@@ -131,7 +135,9 @@ def init_db(conn):
         # 5. Selección de columnas finales
 
 
-        df_final = df[['trip_id', 'stop_name_origin', 'arrival_time_origin', 'stop_name_dest', 'arrival_time_dest', 'stop_sequence_origin', 'stop_sequence_dest', 'operator_id_origin', 'operator_id_dest']]
+        df_final = df[['trip_id', 'stop_name_origin', 'arrival_time_origin', 'stop_name_dest', 
+        'arrival_time_dest', 'stop_sequence_origin', 'stop_sequence_dest', 'operator_id_origin', 
+        'operator_id_dest','stop_lat_origin','stop_lon_origin','stop_lat_dest','stop_lon_dest']]
         df_final = df_final.drop_duplicates(subset=['trip_id', 'stop_sequence_origin', 'stop_sequence_dest'])
         print("Tamaño del dataframe final")
         print(df_final.shape)
