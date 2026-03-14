@@ -155,13 +155,15 @@ def find_direct_trip(origin_coords, dest_coords, search_radius=500):
             print(transport_details.shape)
             transport_details = transport_details.iloc[0]
 
+            t1 = trip_details["arrival_time_origin"]
+            t2 = trip_details["arrival_time_dest"]
             return {
                 "status":"Found",
                 "details":{
                     "stop_name_origin":trip_details["stop_name_origin"],
-                    "arrival_time_origin":trip_details["arrival_time_origin"],
+                    "arrival_time_origin":f"{t1.components.hours:02}:{t1.components.minutes:02}",
                     "stop_name_dest":trip_details["stop_name_dest"],
-                    "arrival_time_dest":trip_details["arrival_time_dest"],
+                    "arrival_time_dest":f"{t2.components.hours:02}:{t2.components.minutes:02}",
                     "stop_lat_origin":trip_details["stop_lat_origin"],
                     "stop_lon_origin":trip_details["stop_lon_origin"],
                     "stop_lat_dest":trip_details["stop_lat_dest"],
