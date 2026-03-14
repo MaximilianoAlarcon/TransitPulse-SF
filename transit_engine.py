@@ -156,7 +156,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius=500):
             transport_details = transport_details.iloc[0]
 
             return {
-                "status":"Found"
+                "status":"Found",
                 "details":{
                     "stop_name_origin":trip_details["stop_name_origin"],
                     "arrival_time_origin":trip_details["arrival_time_origin"],
