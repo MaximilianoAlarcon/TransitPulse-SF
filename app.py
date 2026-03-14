@@ -81,7 +81,7 @@ def stops():
 
 
 @app.route("/direct-trip")
-def closest_stop():
+def direct_trip():
     address = request.args.get("address")
     if not address:
         return jsonify({"error": "No address received"}), 400
