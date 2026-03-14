@@ -47,6 +47,41 @@ function formatDuration(seconds) {
 }
 
 
+function markRouteStops(map, originLat, originLon, destLat, destLon) {
+
+    const originIcon = new L.Icon({
+        iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41]
+    });
+
+    const destIcon = new L.Icon({
+        iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41]
+    });
+
+    const originMarker = L.marker([originLat, originLon], {
+        icon: originIcon,
+        draggable: false
+    }).addTo(map);
+
+    const destMarker = L.marker([destLat, destLon], {
+        icon: destIcon,
+        draggable: false
+    }).addTo(map);
+
+    originMarker.bindPopup("Origin stop");
+    destMarker.bindPopup("Destination stop");
+
+    const group = new L.featureGroup([originMarker, destMarker]);
+    map.fitBounds(group.getBounds(), {padding: [50, 50]});
+}
+
+
+
 async function loadStopsInView() {
     const bounds = map.getBounds();
     const response = await fetch(`/stops?lat_min=${bounds.getSouthWest().lat}&lon_min=${bounds.getSouthWest().lng}&lat_max=${bounds.getNorthEast().lat}&lon_max=${bounds.getNorthEast().lng}`);
@@ -176,16 +211,15 @@ document.getElementById("chat-send").addEventListener("click", async () => {
                 // Centrar mapa en la parada más cercana
                 map.setView([trip_details.stop_lat_origin, trip_details.stop_lon_origin], 15);
                 document.getElementById("chat-input").value = "";
+                /*
                 markClosestStop({
                     "stop_name":trip_details.stop_name_origin,
                     "stop_lat":trip_details.stop_lat_origin,
                     "stop_lon":trip_details.stop_lon_origin
                 });
-                markClosestStop({
-                    "stop_name":trip_details.stop_name_dest,
-                    "stop_lat":trip_details.stop_lat_dest,
-                    "stop_lon":trip_details.stop_lon_dest
-                });
+                */
+
+                markRouteStops(map, trip_details.stop_lat_origin, trip_details.stop_lon_origin, trip_details.stop_lat_dest, trip_details.stop_lon_dest)
             } else {
                 document.getElementById("chat-result").innerHTML = `
                 <p>We couldn't find a direct trip</p>
