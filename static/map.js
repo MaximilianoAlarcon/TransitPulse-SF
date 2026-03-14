@@ -33,6 +33,20 @@ vehicles.forEach(v => {
 //loadVehicles();
 
 
+function formatDuration(seconds) {
+    seconds = Math.floor(seconds)
+
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+
+    if (hours > 0) {
+        return `${hours} h ${minutes} min`
+    }
+
+    return `${minutes} min`
+}
+
+
 async function loadStopsInView() {
     const bounds = map.getBounds();
     const response = await fetch(`/stops?lat_min=${bounds.getSouthWest().lat}&lon_min=${bounds.getSouthWest().lng}&lat_max=${bounds.getNorthEast().lat}&lon_max=${bounds.getNorthEast().lng}`);
@@ -156,8 +170,8 @@ document.getElementById("chat-send").addEventListener("click", async () => {
                 trip_details = data["details"]
                 document.getElementById("chat-result").innerHTML = `
                 <p>You should take the transport : <b>${trip_details.route_long_name}</b></p>
-                <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${trip_details.wait_time}</p>
-                <p>Your trip will last approximately ${trip_details.total_time}</p>
+                <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_time)}</p>
+                <p>Your trip will last approximately ${formatDuration(trip_details.total_time)}</p>
                 `;
                 // Centrar mapa en la parada más cercana
                 map.setView([trip_details.stop_lat_origin, trip_details.stop_lon_origin], 15);
