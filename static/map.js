@@ -10,6 +10,22 @@ const stopsLayer = L.markerClusterGroup();
 
 map.addLayer(stopsLayer);
 
+let originMarker = null
+let destMarker = null
+
+function clearRouteMarkers(map) {
+
+    if (originMarker) {
+        map.removeLayer(originMarker)
+        originMarker = null
+    }
+
+    if (destMarker) {
+        map.removeLayer(destMarker)
+        destMarker = null
+    }
+
+}
 
 
 
@@ -49,35 +65,23 @@ function formatDuration(seconds) {
 
 function markRouteStops(map, originLat, originLon, destLat, destLon) {
 
-    const originIcon = new L.Icon({
+    const blueIcon = new L.Icon({
         iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
         shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-        iconSize: [25, 41],
-        iconAnchor: [12, 41]
-    });
+        iconSize: [25,41],
+        iconAnchor: [12,41]
+    })
 
-    const destIcon = new L.Icon({
+    const redIcon = new L.Icon({
         iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
         shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-        iconSize: [25, 41],
-        iconAnchor: [12, 41]
-    });
+        iconSize: [25,41],
+        iconAnchor: [12,41]
+    })
 
-    const originMarker = L.marker([originLat, originLon], {
-        icon: originIcon,
-        draggable: false
-    }).addTo(map);
+    originMarker = L.marker([originLat, originLon], {icon: blueIcon}).addTo(map)
+    destMarker = L.marker([destLat, destLon], {icon: redIcon}).addTo(map)
 
-    const destMarker = L.marker([destLat, destLon], {
-        icon: destIcon,
-        draggable: false
-    }).addTo(map);
-
-    originMarker.bindPopup("Origin stop");
-    destMarker.bindPopup("Destination stop");
-
-    const group = new L.featureGroup([originMarker, destMarker]);
-    map.fitBounds(group.getBounds(), {padding: [50, 50]});
 }
 
 
@@ -186,6 +190,7 @@ async function markClosestStop(data) {
 
 // --- Código del chat flotante ---
 document.getElementById("chat-send").addEventListener("click", async () => {
+    clearRouteMarkers(map)
     const address = document.getElementById("chat-input").value.trim();
     if (!address) return alert("Enter your destination");
 
