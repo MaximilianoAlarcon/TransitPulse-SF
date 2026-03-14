@@ -107,8 +107,10 @@ if (navigator.geolocation) {
 
     navigator.geolocation.getCurrentPosition(function(position) {
 
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
+        //const lat = position.coords.latitude;
+        //const lon = position.coords.longitude;
+        const lat = 37.7803603;
+        const lon = -122.4120372;
 
         map.setView([lat, lon], 15);
 
