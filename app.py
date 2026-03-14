@@ -94,7 +94,7 @@ def closest_stop():
     dest_coords = (lat,lon)
 
     search = find_direct_trip(origin_coords,dest_coords)
-    if search["status"] == "Found"
+    if search["status"] == "Found":
         return jsonify({
             "status": "Found",
             "details": search["details"]
