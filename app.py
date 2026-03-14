@@ -1,6 +1,8 @@
 from flask import Flask, render_template, jsonify, request
 import random, os, requests, json
-import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes,load_gtfs_trips,load_gtfs_stop_times,search_engine_test
+import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes
+import load_gtfs_trips,load_gtfs_stop_times,search_engine_test
+from transit_engine import find_direct_trip
 import psycopg2
 
 app = Flask(__name__)
@@ -78,28 +80,38 @@ def stops():
     return jsonify(result)
 
 
-@app.route("/closest-stop")
+@app.route("/direct-trip")
 def closest_stop():
     address = request.args.get("address")
     if not address:
-        return jsonify({"error": "No se recibió dirección"}), 400
+        return jsonify({"error": "No address received"}), 400
 
     lat, lon, error = geocode_address(address)
     if error:
         return jsonify({"error": error}), 404
 
-    stop = get_closest_stop(lat, lon)
-    if not stop:
-        return jsonify({"error": "No se encontró ninguna parada"}), 404
+    origin_coords = (37.7803603, -122.4120372)
+    dest_coords = (lat,lon)
 
-    print("Esta es la parada mas cercana")
-    print(stop)
+    search = find_direct_trip(origin_coords,dest_coords)
+    if search["status"] == "Found"
+        return jsonify({
+            "status": "Found",
+            "details": search["details"]
+        })
+    else:
+        return jsonify({
+            "status": search["status"],
+            "reason": search["reason"],
+        })
 
-    return jsonify({
-        "stop_name": stop[0],
-        "stop_lat": stop[1],
-        "stop_lon": stop[2]
-    })
+
+    #stop = get_closest_stop(lat, lon)
+    #if not stop:
+    #    return jsonify({"error": "No se encontró ninguna parada"}), 404
+
+    #print("Esta es la parada mas cercana")
+    #print(stop)
 
 
 

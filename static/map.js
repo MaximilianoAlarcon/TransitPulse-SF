@@ -136,30 +136,52 @@ async function markClosestStop(data) {
 // --- Código del chat flotante ---
 document.getElementById("chat-send").addEventListener("click", async () => {
     const address = document.getElementById("chat-input").value.trim();
-    if (!address) return alert("Ingresa un lugar");
+    if (!address) return alert("Enter your destination");
 
     try {
-        const response = await fetch(`/closest-stop?address=${encodeURIComponent(address)}`);
+        const response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}`);
         if (!response.ok) {
             const errData = await response.json();
-            document.getElementById("chat-result").innerText = errData.error || "Error desconocido";
+            document.getElementById("chat-result").innerText = errData.error || "Unknown error";
             return;
         }
 
         const data = await response.json();
-        document.getElementById("chat-result").innerHTML = `
-            <p>Parada más cercana: <b>${data.stop_name}</b></p>
-            <p>Lat: ${data.stop_lat}, Lon: ${data.stop_lon}</p>
-        `;
-
-        // Centrar mapa en la parada más cercana
-        map.setView([data.stop_lat, data.stop_lon], 15);
-
-        document.getElementById("chat-input").value = "";
-
-        markClosestStop(data);
+        if ("error" in data){
+            document.getElementById("chat-result").innerHTML = `
+            <p>Error: <b>${data.error}</b></p>
+            `;
+        } else {
+            if (data["status"] == "Found"){
+                trip_details = data["details"]
+                document.getElementById("chat-result").innerHTML = `
+                <p>You should take the transport : <b>${trip_details.route_long_name}</b></p>
+                <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${trip_details.wait_time}</p>
+                <p>Your trip will last approximately ${trip_details.total_time}</p>
+                `;
+                // Centrar mapa en la parada más cercana
+                map.setView([trip_details.stop_lat_origin, trip_details.stop_lon_origin], 15);
+                document.getElementById("chat-input").value = "";
+                markClosestStop({
+                    "stop_name":trip_details.stop_name_origin,
+                    "stop_lat":trip_details.stop_lat_origin,
+                    "stop_lon":trip_details.stop_lon_origin
+                });
+                markClosestStop({
+                    "stop_name":trip_details.stop_name_dest,
+                    "stop_lat":trip_details.stop_lat_dest,
+                    "stop_lon":trip_details.stop_lon_dest
+                });
+            } else {
+                document.getElementById("chat-result").innerHTML = `
+                <p>We couldn't find a direct trip</p>
+                <p>${data.reason}</p>
+                `;
+            }
+        }
+        
     } catch (error) {
-        document.getElementById("chat-result").innerText = "Error al consultar la API";
+        document.getElementById("chat-result").innerText = "Internal Error";
         console.error(error);
     }
 });
