@@ -164,17 +164,17 @@ def find_direct_trip(origin_coords, dest_coords, search_radius=500):
                     "arrival_time_origin":f"{t1.components.hours:02}:{t1.components.minutes:02}",
                     "stop_name_dest":trip_details["stop_name_dest"],
                     "arrival_time_dest":f"{t2.components.hours:02}:{t2.components.minutes:02}",
-                    "stop_lat_origin":trip_details["stop_lat_origin"],
-                    "stop_lon_origin":trip_details["stop_lon_origin"],
-                    "stop_lat_dest":trip_details["stop_lat_dest"],
-                    "stop_lon_dest":trip_details["stop_lon_dest"],
+                    "stop_lat_origin":float(trip_details["stop_lat_origin"]),
+                    "stop_lon_origin":float(trip_details["stop_lon_origin"]),
+                    "stop_lat_dest":float(trip_details["stop_lat_dest"]),
+                    "stop_lon_dest":float(trip_details["stop_lon_dest"]),
                     "travel_time":int(trip_details["travel_time"].total_seconds()),
                     "wait_time":int(trip_details["wait_time"].total_seconds()),
                     "total_time":int(trip_details["total_time"].total_seconds()),
                     "route_short_name":transport_details["route_short_name"],
                     "route_long_name":transport_details["route_long_name"],
                     "route_desc":transport_details["route_desc"],
-                    "route_type":transport_details["route_type"],
+                    "route_type":int(transport_details["route_type"]),
                     "route_url":transport_details["route_url"]
                 }
             }
