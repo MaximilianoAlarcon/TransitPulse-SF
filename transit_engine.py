@@ -167,7 +167,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius=500):
                     "stop_lat_dest":trip_details["stop_lat_dest"],
                     "stop_lon_dest":trip_details["stop_lon_dest"],
                     "travel_time":int(trip_details["travel_time"].total_seconds()),
-                    "wait_time":int(:trip_details["wait_time"].total_seconds()),
+                    "wait_time":int(trip_details["wait_time"].total_seconds()),
                     "total_time":int(trip_details["total_time"].total_seconds()),
                     "route_short_name":transport_details["route_short_name"],
                     "route_long_name":transport_details["route_long_name"],
