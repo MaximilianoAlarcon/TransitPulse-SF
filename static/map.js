@@ -28,16 +28,18 @@ let splitInstance;
 function initSplit() {
     const isMobile = window.innerWidth <= 1024;
 
-    // Si ya hay un split, lo destruimos
     if(splitInstance) splitInstance.destroy();
 
-    splitInstance = Split(['#sidebar','#map'], {
-        direction: isMobile ? 'vertical' : 'horizontal',
-        sizes: isMobile ? [40,60] : [25,75],  // % iniciales
-        minSize: [100,100],
-        gutterSize: 8,
-        cursor: isMobile ? 'ns-resize' : 'ew-resize'
-    });
+    splitInstance = Split(
+        isMobile ? ['#map','#sidebar'] : ['#sidebar','#map'],
+        {
+            direction: isMobile ? 'vertical' : 'horizontal',
+            sizes: isMobile ? [60,40] : [25,75], 
+            minSize: [100,100],
+            gutterSize: 12,
+            cursor: isMobile ? 'ns-resize' : 'ew-resize'
+        }
+    );
 }
 
 // Inicializamos
