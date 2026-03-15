@@ -209,9 +209,10 @@ document.addEventListener("touchmove", (event) => {
     // umbral de colapso del sidebar
     const collapseThreshold = screenHeight - 60;
     const collapseThresholdTop = topLimit + 1
-    const collapseThresholdBottom = screenHeight - handleHeight - 2
+    const collapseThresholdBottom = screenHeight - handleHeight - 25
 
     if (pointerY <= collapseThresholdTop) {
+        alert("Se alcanzó el límite inferior: " + pointerY + " <= " + collapseThresholdTop);
         // Colapsar sidebar hacia arriba
         sidebarPanel.style.height = screenHeight - handleHeight + "px"
         mapContainer.style.height = handleHeight + "px"
