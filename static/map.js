@@ -220,7 +220,7 @@ document.addEventListener("touchmove", (event) => {
     }
 
     if (pointerY >= collapseThresholdBottom) {
-        console.log("Se alcanzó el límite inferior:", pointerY, ">= ", collapseThresholdBottom);
+        alert("Se alcanzó el límite inferior: " + pointerY + " >= " + collapseThresholdBottom);
         // Colapsar sidebar hacia abajo
         sidebarPanel.style.height = handleHeight + "px"
         mapContainer.style.height = screenHeight - handleHeight + "px"
