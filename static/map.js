@@ -211,7 +211,7 @@ document.addEventListener("touchmove", (event) => {
     const collapseThresholdBottom = screenHeight - handleHeight - dragMargin
 
     if (pointerY <= collapseThresholdTop) {
-        alert("Se alcanzó el límite inferior: " + pointerY + " <= " + collapseThresholdTop);
+        //alert("Se alcanzó el límite inferior: " + pointerY + " <= " + collapseThresholdTop);
         pointerY = collapseThresholdTop
         // Colapsar sidebar hacia arriba
         sidebarPanel.style.height = screenHeight - handleHeight + "px"
@@ -224,10 +224,10 @@ document.addEventListener("touchmove", (event) => {
     }
 
     if (pointerY >= collapseThresholdBottom) {
-        alert("Se alcanzó el límite inferior: " + pointerY + " >= " + collapseThresholdBottom);
+        //alert("Se alcanzó el límite inferior: " + pointerY + " >= " + collapseThresholdBottom);
         pointerY = collapseThresholdBottom
         // Colapsar sidebar hacia abajo
-        sidebarPanel.style.height = handleHeight + "px"
+        sidebarPanel.style.height = "0px"
         mapContainer.style.height = screenHeight - handleHeight + "px"
         resizeHandle.style.position = "absolute"
         resizeHandle.style.bottom = "0px"
