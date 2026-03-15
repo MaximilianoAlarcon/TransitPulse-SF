@@ -168,14 +168,6 @@ const resizeHandle = document.getElementById("drag-handle")
 const sidebarPanel = document.getElementById("sidebar")
 const mapContainer = document.getElementById("map")
 
-function startResize() {
-    isResizingLayout = true
-}
-
-function stopResize() {
-    isResizingLayout = false
-}
-
 resizeHandle.addEventListener("mousedown", startResize)
 resizeHandle.addEventListener("touchstart", startResize)
 
@@ -222,14 +214,15 @@ document.addEventListener("touchmove", (event) => {
 
     if (!isResizingLayout) return
 
+    event.preventDefault()
+
     const screenHeight = window.innerHeight
-    let pointerY = event.clientY
+    let pointerY = event.touches[0].clientY
 
     const collapseThreshold = screenHeight - 60
 
     if (pointerY > collapseThreshold) {
 
-        // Colapsar sidebar
         mapContainer.style.height = screenHeight - handleHeight + "px"
         sidebarPanel.style.height = handleHeight + "px"
 
