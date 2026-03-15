@@ -128,6 +128,11 @@ function resizeSidebar(pointerY){
 document.addEventListener("mousemove", (e)=>{ if(isResizingLayout) resizeSidebar(e.clientY); });
 document.addEventListener("touchmove", (e)=>{ if(isResizingLayout){ e.preventDefault(); resizeSidebar(e.touches[0].clientY); } });
 
+document.addEventListener("touchend", ()=>{
+    isResizingLayout = false;
+    document.body.classList.remove("dragging");
+});
+
 // Click rápido para dividir mapa/sidebar 55%/45%
 resizeHandle.addEventListener("click", ()=>{
     const screenHeight = document.documentElement.clientHeight;
