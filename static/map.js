@@ -197,7 +197,7 @@ document.addEventListener("touchmove", (event) => {
     event.preventDefault();
 
     const screenHeight = document.documentElement.clientHeight;
-    let pointerY = event.touches[0].clientY;
+    let pointerY = Math.round(event.touches[0].clientY)
 
     const topLimit = dragMargin; // no subir más arriba del margen
     const bottomLimit = screenHeight - handleHeight - dragMargin; // no bajar más abajo
@@ -209,7 +209,7 @@ document.addEventListener("touchmove", (event) => {
     // umbral de colapso del sidebar
     const collapseThreshold = screenHeight - 60;
     const collapseThresholdTop = topLimit + 1
-    const collapseThresholdBottom = screenHeight - handleHeight - 1
+    const collapseThresholdBottom = screenHeight - handleHeight - 2
 
     if (pointerY <= collapseThresholdTop) {
         // Colapsar sidebar hacia arriba
@@ -225,6 +225,7 @@ document.addEventListener("touchmove", (event) => {
         sidebarPanel.style.height = handleHeight + "px"
         mapContainer.style.height = screenHeight - handleHeight + "px"
         map.invalidateSize()
+        pointerY = collapseThresholdBottom
         return
     }
 
