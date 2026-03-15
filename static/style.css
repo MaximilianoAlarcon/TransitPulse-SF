@@ -6,6 +6,10 @@ overflow:hidden;   /* evita scroll en toda la página */
 font-family:Arial;
 }
 
+body.dragging {
+    user-select: none;
+}
+
 .container{
 display:flex;
 height:100%;

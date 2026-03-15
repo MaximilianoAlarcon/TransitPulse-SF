@@ -149,6 +149,17 @@ window.addEventListener("resize", () => {
 
 })
 
+const dragMargin = 20
+
+function startResize() {
+    isResizingLayout = true
+    document.body.classList.add("dragging")
+}
+
+function stopResize() {
+    isResizingLayout = false
+    document.body.classList.remove("dragging")
+}
 
 let isResizingLayout = false
 
@@ -156,20 +167,40 @@ const resizeHandle = document.getElementById("drag-handle")
 const sidebarPanel = document.getElementById("sidebar")
 const mapContainer = document.getElementById("map")
 
-resizeHandle.addEventListener("touchstart", () => {
+function startResize() {
     isResizingLayout = true
-})
+}
 
-document.addEventListener("touchend", () => {
+function stopResize() {
     isResizingLayout = false
-})
+}
 
-resizeHandle.addEventListener("mousedown", () => {
-    isResizingLayout = true
-})
+resizeHandle.addEventListener("mousedown", startResize)
+resizeHandle.addEventListener("touchstart", startResize)
 
-resizeHandle.addEventListener("mousedown", () => {
-    isResizingLayout = true
+document.addEventListener("mouseup", stopResize)
+document.addEventListener("mouseleave", stopResize)
+document.addEventListener("touchend", stopResize)
+
+document.addEventListener("mousemove", (event) => {
+
+    if (!isResizingLayout) return
+
+    const screenHeight = window.innerHeight
+    let pointerY = event.clientY
+
+    // limitar rango
+    if (pointerY < dragMargin) pointerY = dragMargin
+    if (pointerY > screenHeight - dragMargin) pointerY = screenHeight - dragMargin
+
+    const newMapHeight = pointerY
+    const newSidebarHeight = screenHeight - pointerY
+
+    mapContainer.style.height = newMapHeight + "px"
+    sidebarPanel.style.height = newSidebarHeight + "px"
+
+    map.invalidateSize()
+
 })
 
 document.addEventListener("touchmove", (event) => {
@@ -177,25 +208,10 @@ document.addEventListener("touchmove", (event) => {
     if (!isResizingLayout) return
 
     const screenHeight = window.innerHeight
-    const touchPositionY = event.touches[0].clientY
+    let pointerY = event.touches[0].clientY
 
-    const newMapHeight = touchPositionY
-    const newSidebarHeight = screenHeight - touchPositionY
-
-    mapContainer.style.height = newMapHeight + "px"
-    sidebarPanel.style.height = newSidebarHeight + "px"
-
-    // importante para Leaflet cuando cambia el tamaño del mapa
-    map.invalidateSize()
-
-})
-
-document.addEventListener("mousemove", (event) => {
-
-    if (!isResizingLayout) return
-
-    const screenHeight = window.innerHeight
-    const pointerY = event.clientY
+    if (pointerY < dragMargin) pointerY = dragMargin
+    if (pointerY > screenHeight - dragMargin) pointerY = screenHeight - dragMargin
 
     const newMapHeight = pointerY
     const newSidebarHeight = screenHeight - pointerY
