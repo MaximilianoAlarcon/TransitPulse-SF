@@ -8,7 +8,7 @@ function initSplit() {
     if (splitInstance) splitInstance.destroy();
 
     // Definir paneles según device
-    const panels = isMobile ? ['#map', '#sidebar'] : ['#sidebar', '#map'];
+    const panels = isMobile ? ['#sidebar', '#map'] : ['#sidebar', '#map'];
 
     // Definir tamaños iniciales
     const sizes = isMobile ? [70, 30] : [25, 75]; // mapa ocupa más espacio que sidebar
