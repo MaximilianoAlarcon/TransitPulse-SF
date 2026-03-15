@@ -1,24 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Logistics Dashboard</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logistics Dashboard</title>
 
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
 
-    <!-- MarkerCluster CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+<link rel="stylesheet" href="/static/style.css">
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="/static/style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
+
 <body>
 
 <div id="split-container">
-    <div id="map"></div>
-
     <div id="sidebar">
         <div id="sidebar-content">
             <input id="chat-input" type="text" placeholder="Where do you want to go?">
@@ -26,16 +22,13 @@
             <div id="chat-result"></div>
         </div>
     </div>
+
+    <div id="map"></div>
 </div>
 
-<!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-
-<!-- Split.js -->
 <script src="https://unpkg.com/split.js/dist/split.min.js"></script>
-
-<!-- Custom JS -->
 <script src="/static/map.js"></script>
 
 </body>
