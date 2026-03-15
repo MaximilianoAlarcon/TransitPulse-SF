@@ -132,6 +132,24 @@ if (navigator.geolocation) {
 }
 
 
+window.addEventListener("resize", () => {
+
+    const isMobileLayout = window.innerWidth <= 768
+
+    if (!isMobileLayout) {
+
+        // reset estilos que modificamos al arrastrar
+        mapContainer.style.height = ""
+        sidebarPanel.style.height = ""
+
+        // importante para Leaflet
+        map.invalidateSize()
+
+    }
+
+})
+
+
 let isResizingLayout = false
 
 const resizeHandle = document.getElementById("drag-handle")
@@ -144,6 +162,14 @@ resizeHandle.addEventListener("touchstart", () => {
 
 document.addEventListener("touchend", () => {
     isResizingLayout = false
+})
+
+resizeHandle.addEventListener("mousedown", () => {
+    isResizingLayout = true
+})
+
+resizeHandle.addEventListener("mousedown", () => {
+    isResizingLayout = true
 })
 
 document.addEventListener("touchmove", (event) => {
@@ -160,6 +186,23 @@ document.addEventListener("touchmove", (event) => {
     sidebarPanel.style.height = newSidebarHeight + "px"
 
     // importante para Leaflet cuando cambia el tamaño del mapa
+    map.invalidateSize()
+
+})
+
+document.addEventListener("mousemove", (event) => {
+
+    if (!isResizingLayout) return
+
+    const screenHeight = window.innerHeight
+    const pointerY = event.clientY
+
+    const newMapHeight = pointerY
+    const newSidebarHeight = screenHeight - pointerY
+
+    mapContainer.style.height = newMapHeight + "px"
+    sidebarPanel.style.height = newSidebarHeight + "px"
+
     map.invalidateSize()
 
 })
