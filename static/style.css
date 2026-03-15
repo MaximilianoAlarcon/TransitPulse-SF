@@ -41,8 +41,9 @@ height:100%;
 
 #chat-widget {
     position: fixed;
-    bottom: 20px;
+    /*bottom: 20px;
     right: 20px;
+    */
     width: 250px;
     background-color: #ffffff;
     border: 1px solid #ccc;
