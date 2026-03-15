@@ -203,45 +203,38 @@ document.addEventListener("touchmove", (event) => {
     const bottomLimit = screenHeight - handleHeight - dragMargin; // no bajar más abajo
 
     // limitar el pointer dentro de los límites
-    if (pointerY < topLimit) pointerY = topLimit;
-    if (pointerY > bottomLimit) pointerY = bottomLimit;
+    //if (pointerY < topLimit) pointerY = topLimit;
+    //if (pointerY > bottomLimit) pointerY = bottomLimit;
 
     // umbral de colapso del sidebar
-    const collapseThreshold = screenHeight - 60; // 60px antes del final
+    const collapseThreshold = screenHeight - 60;
+    const collapseThresholdTop = topLimit + 1
+    const collapseThresholdBottom = screenHeight - handleHeight - 1
 
-    if (pointerY > collapseThreshold) {
-        // Colapsar el sidebar dejando visible solo el handle
-        sidebarPanel.style.height = handleHeight + "px";
-        mapContainer.style.height = screenHeight - handleHeight + "px";
-        map.invalidateSize();
-        return;
-    } else {
-        // Alturas normales mientras el handle no llega al colapso
-        const newMapHeight = pointerY;
-        const newSidebarHeight = screenHeight - pointerY;
-
-        // Aplicar límites
-        const topLimit = dragMargin;
-        const bottomLimit = screenHeight - handleHeight - dragMargin;
-
-        let adjustedPointerY = pointerY;
-        if (adjustedPointerY < topLimit) adjustedPointerY = topLimit;
-        if (adjustedPointerY > bottomLimit) adjustedPointerY = bottomLimit;
-
-        sidebarPanel.style.height = screenHeight - adjustedPointerY + "px";
-        mapContainer.style.height = adjustedPointerY + "px";
-
-        map.invalidateSize();
+    if (pointerY <= collapseThresholdTop) {
+        // Colapsar sidebar hacia arriba
+        sidebarPanel.style.height = screenHeight - handleHeight + "px"
+        mapContainer.style.height = handleHeight + "px"
+        map.invalidateSize()
+        return
     }
 
-    // alturas normales del mapa y sidebar
-    const newMapHeight = pointerY;
-    const newSidebarHeight = screenHeight - pointerY;
+    if (pointerY >= collapseThresholdBottom) {
+        // Colapsar sidebar hacia abajo
+        sidebarPanel.style.height = handleHeight + "px"
+        mapContainer.style.height = screenHeight - handleHeight + "px"
+        map.invalidateSize()
+        return
+    }
 
-    mapContainer.style.height = newMapHeight + "px";
-    sidebarPanel.style.height = newSidebarHeight + "px";
+    // Ajuste normal dentro de límites
+    if (pointerY < topLimit) pointerY = topLimit
+    if (pointerY > bottomLimit) pointerY = bottomLimit
 
-    map.invalidateSize();
+    sidebarPanel.style.height = screenHeight - pointerY + "px"
+    mapContainer.style.height = pointerY + "px"
+
+    map.invalidateSize()
 });
 
 
