@@ -219,6 +219,12 @@ document.addEventListener("touchmove", (event) => {
     const screenHeight = window.innerHeight
     let pointerY = event.touches[0].clientY
 
+    const topLimit = dragMargin
+    const bottomLimit = screenHeight - handleHeight - dragMargin
+
+    if (pointerY < topLimit) pointerY = topLimit
+    if (pointerY > bottomLimit) pointerY = bottomLimit
+
     const collapseThreshold = screenHeight - 60
 
     if (pointerY > collapseThreshold) {
@@ -229,12 +235,6 @@ document.addEventListener("touchmove", (event) => {
         map.invalidateSize()
         return
     }
-
-    const topLimit = dragMargin
-    const bottomLimit = screenHeight - handleHeight - dragMargin
-
-    if (pointerY < topLimit) pointerY = topLimit
-    if (pointerY > bottomLimit) pointerY = bottomLimit
 
     const newMapHeight = pointerY
     const newSidebarHeight = screenHeight - pointerY
