@@ -113,21 +113,29 @@ height:100%;
         flex-direction:column;
     }
 
+    #drag-handle{
+        display:flex;
+    }
+
 }
 
 
 #drag-handle{
-    width:60px;
-    height:20px;
-    display:flex;
+    height:40px;
+    width:100%;
+    cursor:ns-resize;
+    background:transparent;
+    display:none;
     align-items:center;
     justify-content:center;
 }
 
+/*
 #drag-handle::before{
     content:"";
-    width:60px;
+    width:80px;
     height:6px;
-    background:#ccc;
-    border-radius:3px;
+    background:#bbb;
+    border-radius:4px;
 }
+    */
