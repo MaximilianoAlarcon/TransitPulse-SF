@@ -3,70 +3,48 @@ html, body {
     padding: 0;
     height: 100%;
     overflow: hidden;
-    font-family: Arial;
+    font-family: Arial, sans-serif;
 }
 
-#split-container {
-    display: flex;
-    height: 100vh;
+#map {
+    position: relative;
     width: 100%;
+    height: 100%;
 }
 
-/* Sidebar */
 #sidebar {
-    background: #1f2937;
-    color: white;
+    min-width: 200px;
+    max-width: 400px;
+    height: 40vh; /* mobile initial */
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     position: relative;
-    overflow: hidden;
 }
 
 #sidebar-content {
     flex: 1;
-    padding: 10px;
     overflow-y: auto;
 }
 
-/* Handle */
+/* Drag handle */
 #drag-handle {
     height: 25px;
-    width: 100%;
+    background-color: grey;
     cursor: ns-resize;
-    background: grey;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     flex-shrink: 0;
-    touch-action: none;
-    position: absolute;
-    top: 0;
 }
 
-/* Map */
-#map {
-    flex: 1;
-    height: 100%;
-}
-
-/* MOBILE */
+/* Mobile adjustments */
 @media (max-width: 1024px) {
-    #split-container {
-        flex-direction: column; /* vertical: mapa arriba, sidebar abajo */
-        position: relative;
+    #sidebar {
+        width: 100%;
+        height: 40vh;
+        order: 2; /* move sidebar below map */
     }
 
     #map {
-        flex: 1;
-        height: auto; /* JS controla altura */
-    }
-
-    #sidebar {
-        flex: none;
-        width: 100%;
-        height: 40vh; /* altura inicial */
-        position: absolute;
-        bottom: 0;
-        left: 0;
+        height: 60vh;
+        order: 1; /* map above */
     }
 }
