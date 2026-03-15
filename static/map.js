@@ -213,20 +213,27 @@ document.addEventListener("touchmove", (event) => {
 
     if (pointerY <= collapseThresholdTop) {
         alert("Se alcanzó el límite inferior: " + pointerY + " <= " + collapseThresholdTop);
+        pointerY = collapseThresholdTop
         // Colapsar sidebar hacia arriba
         sidebarPanel.style.height = screenHeight - handleHeight + "px"
         mapContainer.style.height = handleHeight + "px"
+        resizeHandle.style.position = "absolute"
+        resizeHandle.style.top = "0px"
+        resizeHandle.style.bottom = "" // limpiar bottom
         map.invalidateSize()
         return
     }
 
     if (pointerY >= collapseThresholdBottom) {
         alert("Se alcanzó el límite inferior: " + pointerY + " >= " + collapseThresholdBottom);
+        pointerY = collapseThresholdBottom
         // Colapsar sidebar hacia abajo
         sidebarPanel.style.height = handleHeight + "px"
         mapContainer.style.height = screenHeight - handleHeight + "px"
+        resizeHandle.style.position = "absolute"
+        resizeHandle.style.bottom = "0px"
+        resizeHandle.style.top = "" // limpiar top
         map.invalidateSize()
-        pointerY = collapseThresholdBottom
         return
     }
 
