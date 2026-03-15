@@ -65,7 +65,7 @@ html, body {
     #sidebar {
         width: 100%;
         height: auto;
-        max-height: 40vh; /* nunca más del 40% de la pantalla */
+        flex: none;
         min-height: 100px;
     }
 

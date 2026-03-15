@@ -4,19 +4,28 @@ let splitInstance;
 function initSplit() {
     const isMobile = window.innerWidth <= 1024;
 
+    // Destruir instancia previa si existe
     if (splitInstance) splitInstance.destroy();
 
-    splitInstance = Split(
-        isMobile ? ['#map', '#sidebar'] : ['#sidebar', '#map'],
-        {
-            direction: isMobile ? 'vertical' : 'horizontal',
-            sizes: isMobile ? [60,40] : [25,75], // mapa arriba 60%, sidebar abajo 40%
-            minSize: [100,100],
-            maxSize: isMobile ? [Infinity, window.innerHeight * 0.4] : undefined,
-            gutterSize: 12,
-            cursor: isMobile ? 'ns-resize' : 'ew-resize'
-        }
-    );
+    // Definir paneles según device
+    const panels = isMobile ? ['#map', '#sidebar'] : ['#sidebar', '#map'];
+
+    // Definir tamaños iniciales
+    const sizes = isMobile ? [70, 30] : [25, 75]; // mapa ocupa más espacio que sidebar
+
+    // Definir tamaño máximo para el sidebar en mobile
+    const maxSize = isMobile ? [Infinity, window.innerHeight * 0.4] : undefined;
+
+    splitInstance = Split(panels, {
+        direction: isMobile ? 'vertical' : 'horizontal',
+        sizes: sizes,
+        minSize: [100, 100],
+        maxSize: maxSize,
+        gutterSize: 12,
+        cursor: isMobile ? 'ns-resize' : 'ew-resize',
+        snapOffset: 0,
+        onDragEnd: () => map.invalidateSize() // asegurar que Leaflet actualice tamaño
+    });
 }
 
 initSplit();
