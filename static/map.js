@@ -125,13 +125,44 @@ if (navigator.geolocation) {
             fillOpacity: 0.9
         }).addTo(map).bindPopup("You");
 
-        loadStopsInView();
+        //loadStopsInView();
 
     });
 
 }
 
 
+let isResizingLayout = false
+
+const resizeHandle = document.getElementById("drag-handle")
+const sidebarPanel = document.getElementById("sidebar")
+const mapContainer = document.getElementById("map")
+
+resizeHandle.addEventListener("touchstart", () => {
+    isResizingLayout = true
+})
+
+document.addEventListener("touchend", () => {
+    isResizingLayout = false
+})
+
+document.addEventListener("touchmove", (event) => {
+
+    if (!isResizingLayout) return
+
+    const screenHeight = window.innerHeight
+    const touchPositionY = event.touches[0].clientY
+
+    const newMapHeight = touchPositionY
+    const newSidebarHeight = screenHeight - touchPositionY
+
+    mapContainer.style.height = newMapHeight + "px"
+    sidebarPanel.style.height = newSidebarHeight + "px"
+
+    // importante para Leaflet cuando cambia el tamaño del mapa
+    map.invalidateSize()
+
+})
 
 
 
