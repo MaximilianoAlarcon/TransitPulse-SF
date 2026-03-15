@@ -101,7 +101,6 @@ body.dragging {
     justify-content:center;
     flex-shrink:0;
     touch-action: none;
-    position:absolute;
 }
 
 #sidebar-content{

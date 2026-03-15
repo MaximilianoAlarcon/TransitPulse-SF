@@ -192,40 +192,40 @@ document.addEventListener("mousemove", (event) => {
 })
 
 document.addEventListener("touchmove", (event) => {
+    if (!isResizingLayout) return;
 
-    if (!isResizingLayout) return
+    event.preventDefault();
 
-    event.preventDefault()
+    const screenHeight = document.documentElement.clientHeight;
+    let pointerY = event.touches[0].clientY;
 
-    const screenHeight = document.documentElement.clientHeight
-    let pointerY = event.touches[0].clientY
+    const topLimit = dragMargin; // no subir más arriba del margen
+    const bottomLimit = screenHeight - handleHeight - dragMargin; // no bajar más abajo
 
-    const topLimit = dragMargin
-    const bottomLimit = screenHeight - handleHeight - dragMargin
+    // limitar el pointer dentro de los límites
+    if (pointerY < topLimit) pointerY = topLimit;
+    if (pointerY > bottomLimit) pointerY = bottomLimit;
 
-    if (pointerY < topLimit) pointerY = topLimit
-    if (pointerY > bottomLimit) pointerY = bottomLimit
-
-    const collapseThreshold = screenHeight - 60
+    // umbral de colapso del sidebar
+    const collapseThreshold = screenHeight - 60; // 60px antes del final
 
     if (pointerY > collapseThreshold) {
-
-        mapContainer.style.height = screenHeight - handleHeight + "px"
-        sidebarPanel.style.height = "0px"
-
-        map.invalidateSize()
-        return
+        // Colapsar el sidebar dejando visible solo el handle
+        sidebarPanel.style.height = handleHeight + "px";
+        mapContainer.style.height = screenHeight - handleHeight + "px";
+        map.invalidateSize();
+        return;
     }
 
-    const newMapHeight = pointerY
-    const newSidebarHeight = screenHeight - pointerY - handleHeight
+    // alturas normales del mapa y sidebar
+    const newMapHeight = pointerY;
+    const newSidebarHeight = screenHeight - pointerY;
 
-    mapContainer.style.height = newMapHeight + "px"
-    sidebarPanel.style.height = newSidebarHeight + "px"
+    mapContainer.style.height = newMapHeight + "px";
+    sidebarPanel.style.height = newSidebarHeight + "px";
 
-    map.invalidateSize()
-
-})
+    map.invalidateSize();
+});
 
 
 const dragHandle = document.getElementById("drag-handle")
