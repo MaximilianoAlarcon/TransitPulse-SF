@@ -13,8 +13,8 @@ html, body {
 }
 
 #sidebar {
-    min-width: 200px;
-    max-width: 400px;
+    min-width: 100%;
+    max-width: 100%;
     height: 40vh; /* mobile initial */
     flex-shrink: 0;
     display: flex;
@@ -33,6 +33,7 @@ html, body {
     background-color: grey;
     cursor: ns-resize;
     flex-shrink: 0;
+    display: none;
 }
 
 /* Mobile adjustments */
@@ -46,5 +47,9 @@ html, body {
     #map {
         height: 60vh;
         order: 1; /* map above */
+    }
+
+    #drag-handle {
+        display: flex !important;
     }
 }
