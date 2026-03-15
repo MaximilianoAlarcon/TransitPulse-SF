@@ -149,7 +149,7 @@ window.addEventListener("resize", () => {
 
 })
 
-const dragMargin = 20
+const dragMargin = 5
 const handleHeight = 25
 
 function startResize() {
@@ -190,6 +190,18 @@ document.addEventListener("mousemove", (event) => {
     const screenHeight = window.innerHeight
     let pointerY = event.clientY
 
+    const collapseThreshold = screenHeight - 60
+
+    if (pointerY > collapseThreshold) {
+
+        // Colapsar sidebar
+        mapContainer.style.height = screenHeight - handleHeight + "px"
+        sidebarPanel.style.height = handleHeight + "px"
+
+        map.invalidateSize()
+        return
+    }
+
     const topLimit = dragMargin
     const bottomLimit = screenHeight - (handleHeight + dragMargin)
 
@@ -213,6 +225,18 @@ document.addEventListener("touchmove", (event) => {
     const screenHeight = window.innerHeight
     let pointerY = event.clientY
 
+    const collapseThreshold = screenHeight - 60
+
+    if (pointerY > collapseThreshold) {
+
+        // Colapsar sidebar
+        mapContainer.style.height = screenHeight - handleHeight + "px"
+        sidebarPanel.style.height = handleHeight + "px"
+
+        map.invalidateSize()
+        return
+    }
+
     const topLimit = dragMargin
     const bottomLimit = screenHeight - (handleHeight + dragMargin)
 
@@ -230,6 +254,17 @@ document.addEventListener("touchmove", (event) => {
 })
 
 
+const dragHandle = document.getElementById("drag-handle")
+dragHandle.addEventListener("click", () => {
+
+    const screenHeight = window.innerHeight
+
+    mapContainer.style.height = screenHeight * 0.55 + "px"
+    sidebarPanel.style.height = screenHeight * 0.45 + "px"
+
+    map.invalidateSize()
+
+})
 
 
 async function loadOperators(){
