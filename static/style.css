@@ -1,76 +1,21 @@
 html, body{
-margin:0;
-padding:0;
-height:100%;
-overflow:hidden;   /* evita scroll en toda la página */
-font-family:Arial;
+    margin:0;
+    padding:0;
+    height:100%;
+    overflow:hidden;
+    font-family:Arial;
 }
 
 body.dragging {
     user-select: none;
 }
 
-
-
-
-
-
-
-#chat-widget {
-    position: fixed;
-    /*bottom: 20px;
-    right: 20px;
-    */
-    width: 250px;
-    background-color: #ffffff;
-    border: 1px solid #ccc;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    padding: 10px;
-    z-index: 1000;
-    font-family: sans-serif;
-}
-
-#chat-header {
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-#chat-input {
-    width: 100%;
-    padding: 5px;
-    margin-bottom: 5px;
-    box-sizing: border-box;
-}
-
-#chat-send {
-    width: 100%;
-    padding: 5px;
-    cursor: pointer;
-}
-
-#chat-result {
-    margin-top: 10px;
-    font-size: 0.9em;
-    color: #333;
-}
-
-
-
-
-
-
-
-
-
-
 #map{
-    position:relative;
+    position: relative;
     z-index:1;
     flex:1;
     height:100%;
 }
-
 
 .container{
     display:flex;
@@ -79,34 +24,37 @@ body.dragging {
 }
 
 #sidebar{
-    position:relative;
-    z-index:1000;
-    width:250px;
-    background:#1f2937;
-    color:white;
-    /*padding:20px;*/
-    overflow-y:auto;   /* habilita scroll vertical */
-    box-sizing:border-box;
-    display:flex;
-    flex-direction:column;
+    position: absolute; /* siempre al fondo */
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 40vh; /* altura inicial */
+    background: white;
+    border-top: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    overflow-y: auto;
+    box-sizing: border-box;
+    touch-action: none;
 }
 
 #drag-handle{
+    position: absolute;
     top: 0; /* siempre en la cabecera del sidebar */
     width: 100%;
     height:25px;
-    cursor:ns-resize;
-    background:grey;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    flex-shrink:0;
+    cursor: ns-resize;
+    background: grey;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
     touch-action: none;
-    position:absolute;
 }
 
 #sidebar-content{
-    flex:1;
+    flex: 1;
     overflow-y:auto;
 }
 
@@ -124,32 +72,11 @@ body.dragging {
         width:100%;
         height:60vh;
         flex:none;
-        min-height: 50px;
+        min-height:50px;
     }
 
-    #sidebar{
-        position:absolute;
-        bottom:0;
-        left:0;
-        width:100%;
-        height:40vh;
-        background:white;
-        border-top:1px solid #ddd;
-        border-right:none;
-        display:flex;
-        flex-direction:column;
-        touch-action: none;
-    }
-
-    #drag-handle{
-        display:flex !important;
-    }
-
-    #sidebar .btn-plus{
-        display: none !important;
-    }
+    #sidebar .btn-plus,
     #sidebar .btn-minus {
         display: none !important;
     }
-
 }
