@@ -50,3 +50,18 @@ html, body {
     font-size: 0.9em;
     color: #333;
 }
+
+.gutter {
+    background: grey;      /* color del handle */
+    z-index: 999;          /* por encima de los paneles */
+}
+
+.gutter.gutter-horizontal {
+    cursor: ew-resize;     /* drag horizontal */
+    width: 12px;           /* grosor del handle en desktop */
+}
+
+.gutter.gutter-vertical {
+    cursor: ns-resize;     /* drag vertical */
+    height: 12px;          /* grosor del handle en mobile */
+}

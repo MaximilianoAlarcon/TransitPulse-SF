@@ -20,6 +20,38 @@ if (window.innerWidth <= 1024) {
     zoomControls.forEach(ctrl => ctrl.style.display = "none");
 }
 
+
+
+// --- Split.js adaptable desktop/mobile ---
+let splitInstance;
+
+function initSplit() {
+    const isMobile = window.innerWidth <= 1024;
+
+    // Si ya hay un split, lo destruimos
+    if(splitInstance) splitInstance.destroy();
+
+    splitInstance = Split(['#sidebar','#map'], {
+        direction: isMobile ? 'vertical' : 'horizontal',
+        sizes: isMobile ? [40,60] : [25,75],  // % iniciales
+        minSize: [100,100],
+        gutterSize: 8,
+        cursor: isMobile ? 'ns-resize' : 'ew-resize'
+    });
+}
+
+// Inicializamos
+initSplit();
+
+// Reiniciar al cambiar tamaño de ventana
+window.addEventListener('resize', () => {
+    initSplit();
+    map.invalidateSize();
+});
+
+
+
+
 // Marker Cluster
 const stopsLayer = L.markerClusterGroup();
 map.addLayer(stopsLayer);
