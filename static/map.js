@@ -5,6 +5,13 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 
+if (window.innerWidth <= 1024) {
+    // ocultar controles de zoom de Leaflet
+    const zoomControls = document.querySelectorAll(".leaflet-control-zoom");
+    zoomControls.forEach(ctrl => ctrl.style.display = "none");
+}
+
+
 // capa de clusters
 const stopsLayer = L.markerClusterGroup();
 
