@@ -84,10 +84,10 @@ height:100%;
 
 
 #drag-handle{
-    height:40px;
+    height:25px;
     width:100%;
     cursor:ns-resize;
-    background:red;
+    background:black;
     display:none;
     align-items:center;
     justify-content:center;

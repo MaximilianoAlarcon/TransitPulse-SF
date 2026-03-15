@@ -150,6 +150,7 @@ window.addEventListener("resize", () => {
 })
 
 const dragMargin = 20
+const handleHeight = 25
 
 function startResize() {
     isResizingLayout = true
@@ -189,9 +190,11 @@ document.addEventListener("mousemove", (event) => {
     const screenHeight = window.innerHeight
     let pointerY = event.clientY
 
-    // limitar rango
-    if (pointerY < dragMargin) pointerY = dragMargin
-    if (pointerY > screenHeight - dragMargin) pointerY = screenHeight - dragMargin
+    const topLimit = dragMargin
+    const bottomLimit = screenHeight - (handleHeight + dragMargin)
+
+    if (pointerY < topLimit) pointerY = topLimit
+    if (pointerY > bottomLimit) pointerY = bottomLimit
 
     const newMapHeight = pointerY
     const newSidebarHeight = screenHeight - pointerY
@@ -208,10 +211,13 @@ document.addEventListener("touchmove", (event) => {
     if (!isResizingLayout) return
 
     const screenHeight = window.innerHeight
-    let pointerY = event.touches[0].clientY
+    let pointerY = event.clientY
 
-    if (pointerY < dragMargin) pointerY = dragMargin
-    if (pointerY > screenHeight - dragMargin) pointerY = screenHeight - dragMargin
+    const topLimit = dragMargin
+    const bottomLimit = screenHeight - (handleHeight + dragMargin)
+
+    if (pointerY < topLimit) pointerY = topLimit
+    if (pointerY > bottomLimit) pointerY = bottomLimit
 
     const newMapHeight = pointerY
     const newSidebarHeight = screenHeight - pointerY
@@ -222,6 +228,7 @@ document.addEventListener("touchmove", (event) => {
     map.invalidateSize()
 
 })
+
 
 
 
