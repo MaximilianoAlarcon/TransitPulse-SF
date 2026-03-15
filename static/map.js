@@ -149,7 +149,7 @@ window.addEventListener("resize", () => {
 
 })
 
-const dragMargin = 5
+const dragMargin = 1
 const handleHeight = 25
 
 function startResize() {
@@ -231,7 +231,7 @@ document.addEventListener("touchmove", (event) => {
     }
 
     const topLimit = dragMargin
-    const bottomLimit = screenHeight - (handleHeight + dragMargin)
+    const bottomLimit = screenHeight - handleHeight - dragMargin
 
     if (pointerY < topLimit) pointerY = topLimit
     if (pointerY > bottomLimit) pointerY = bottomLimit
