@@ -1,4 +1,6 @@
-var map = L.map('map').setView([37.77,-122.41], 12);
+var map = L.map('map', {
+    zoomControl: window.innerWidth > 1024 // solo agrega zoom si es desktop
+}).setView([37.77,-122.41], 12);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'© OpenStreetMap'
