@@ -207,9 +207,8 @@ document.addEventListener("touchmove", (event) => {
     //if (pointerY > bottomLimit) pointerY = bottomLimit;
 
     // umbral de colapso del sidebar
-    const collapseThreshold = screenHeight - 60;
     const collapseThresholdTop = topLimit + 1
-    const collapseThresholdBottom = screenHeight - handleHeight - 25
+    const collapseThresholdBottom = screenHeight - handleHeight - dragMargin
 
     if (pointerY <= collapseThresholdTop) {
         alert("Se alcanzó el límite inferior: " + pointerY + " <= " + collapseThresholdTop);
