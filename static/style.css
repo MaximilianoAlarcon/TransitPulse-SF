@@ -61,3 +61,12 @@ html, body {
     cursor: ns-resize;
     height: 12px; /* grosor handle vertical */
 }
+
+
+@media (max-width: 1024px) {
+    #sidebar {
+        max-height: 50vh; /* no ocupar más de la mitad */
+        min-height: 100px; /* al menos 100px */
+        width: 100%;
+    }
+}

@@ -10,8 +10,9 @@ function initSplit() {
         isMobile ? ['#map', '#sidebar'] : ['#sidebar', '#map'],
         {
             direction: isMobile ? 'vertical' : 'horizontal',
-            sizes: isMobile ? [60,40] : [25,75], // paneles iniciales %
+            sizes: isMobile ? [70,30] : [25,75], // mapa arriba 70%, sidebar abajo 30%
             minSize: [100,100],
+            maxSize: isMobile ? [Infinity, 300] : undefined, // max 300px para sidebar en mobile
             gutterSize: 12,
             cursor: isMobile ? 'ns-resize' : 'ew-resize'
         }
