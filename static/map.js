@@ -1,3 +1,12 @@
+// --- Inicializar Split.js ---
+Split(['#map', '#sidebar'], {
+    direction: 'vertical',
+    sizes: [60, 40],      // porcentaje inicial
+    minSize: [100, 100],  // altura mínima de cada panel
+    gutterSize: 8,
+    cursor: 'ns-resize'
+});
+
 // --- Inicializar mapa ---
 var map = L.map('map', { zoomControl: window.innerWidth > 1024 }).setView([37.77,-122.41], 12);
 
@@ -5,7 +14,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'© OpenStreetMap'
 }).addTo(map);
 
-// Ocultar controles de zoom en mobile
+// Ocultar zoom en mobile
 if (window.innerWidth <= 1024) {
     const zoomControls = document.querySelectorAll(".leaflet-control-zoom");
     zoomControls.forEach(ctrl => ctrl.style.display = "none");
@@ -15,7 +24,6 @@ if (window.innerWidth <= 1024) {
 const stopsLayer = L.markerClusterGroup();
 map.addLayer(stopsLayer);
 
-// Marcadores de ruta
 let originMarker = null;
 let destMarker = null;
 
@@ -24,7 +32,6 @@ function clearRouteMarkers(map) {
     if(destMarker){ map.removeLayer(destMarker); destMarker=null; }
 }
 
-// Formatear duración
 function formatDuration(seconds) {
     seconds = Math.floor(seconds);
     const hours = Math.floor(seconds / 3600);
@@ -32,7 +39,6 @@ function formatDuration(seconds) {
     return hours>0 ? `${hours} h ${minutes} min` : `${minutes} min`;
 }
 
-// Marcar paradas de la ruta
 function markRouteStops(map, originLat, originLon, destLat, destLon) {
     const blueIcon = new L.Icon({
         iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
@@ -52,7 +58,6 @@ function markRouteStops(map, originLat, originLon, destLat, destLon) {
     destMarker = L.marker([destLat, destLon], {icon: redIcon}).addTo(map);
 }
 
-// Cargar paradas dentro del viewport
 async function loadStopsInView() {
     const bounds = map.getBounds();
     const response = await fetch(`/stops?lat_min=${bounds.getSouthWest().lat}&lon_min=${bounds.getSouthWest().lng}&lat_max=${bounds.getNorthEast().lat}&lon_max=${bounds.getNorthEast().lng}`);
@@ -66,7 +71,7 @@ async function loadStopsInView() {
     });
 }
 
-// Marcador de ubicación del usuario
+// Geolocalización usuario
 if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(position) {
         const lat = 37.7803603;
@@ -81,96 +86,6 @@ if (navigator.geolocation) {
             fillOpacity: 0.9
         }).addTo(map).bindPopup("You");
     });
-}
-
-// --- Sidebar Drag ---
-const dragMargin = 1;
-const handleHeight = 25;
-let isResizingLayout = false;
-
-const resizeHandle = document.getElementById("drag-handle");
-const sidebarPanel = document.getElementById("sidebar");
-const mapContainer = document.getElementById("map");
-
-function startResize(){ isResizingLayout=true; document.body.classList.add("dragging"); }
-function stopResize(){ isResizingLayout=false; document.body.classList.remove("dragging"); }
-
-// --- Desktop: mouse drag ---
-resizeHandle.addEventListener("mousedown", startResize);
-document.addEventListener("mousemove", (e)=>{ 
-    if(!isResizingLayout) return;
-    resizeSidebar(e.clientY);
-});
-document.addEventListener("mouseup", stopResize);
-document.addEventListener("mouseleave", stopResize);
-
-// --- Mobile: touch drag ---
-resizeHandle.addEventListener("touchstart", (e)=>{
-    e.preventDefault();
-    startResize();
-});
-document.addEventListener("touchmove", (e)=>{
-    if(!isResizingLayout) return;
-    e.preventDefault();
-    resizeSidebar(e.touches[0].clientY);
-});
-document.addEventListener("touchend", stopResize);
-
-// --- Función central para ajustar sidebar y mapa ---
-function resizeSidebar(pointerY){
-    const screenHeight = document.documentElement.clientHeight;
-
-    // Limites
-    const topLimit = dragMargin;
-    const bottomLimit = screenHeight - handleHeight - dragMargin;
-    if(pointerY < topLimit) pointerY = topLimit;
-    if(pointerY > bottomLimit) pointerY = bottomLimit;
-
-    const newSidebarHeight = screenHeight - pointerY;
-    const newMapHeight = pointerY;
-
-    sidebarPanel.style.height = newSidebarHeight + "px";
-    mapContainer.style.height = newMapHeight + "px";
-
-    // Mantener handle en la cabecera del sidebar
-    resizeHandle.style.top = "0px";
-
-    map.invalidateSize();
-}
-
-// Click rápido para dividir mapa/sidebar 55%/45%
-resizeHandle.addEventListener("click", ()=>{
-    const screenHeight = document.documentElement.clientHeight;
-    mapContainer.style.height = screenHeight * 0.55 + "px";
-    sidebarPanel.style.height = screenHeight * 0.45 + "px";
-    map.invalidateSize();
-});
-
-// --- Marcador más cercano ---
-const closestIcon = L.icon({
-    iconUrl: '/static/blue-pin.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [0, -41]
-});
-
-async function markClosestStop(data) {
-    const lat = data.stop_lat;
-    const lon = data.stop_lon;
-    const stopName = data.stop_name;
-
-    if (window.closestMarker) {
-        window.closestMarker.setLatLng([lat, lon])
-            .setPopupContent(`<b>${stopName}</b>`)
-            .openPopup();
-    } else {
-        window.closestMarker = L.marker([lat, lon], { icon: closestIcon })
-            .addTo(map)
-            .bindPopup(`<b>${stopName}</b>`)
-            .openPopup();
-    }
-
-    map.setView([lat, lon], 15);
 }
 
 // --- Chat flotante ---
@@ -215,17 +130,12 @@ document.getElementById("chat-send").addEventListener("click", async () => {
     }
 });
 
-// Enviar con Enter
-document.getElementById("chat-input").addEventListener("keypress", (e) => {
-    if (e.key === "Enter") document.getElementById("chat-send").click();
+// Enter para enviar
+document.getElementById("chat-input").addEventListener("keypress", (e)=>{
+    if(e.key==="Enter") document.getElementById("chat-send").click();
 });
 
-// --- Ajuste al cambiar tamaño de ventana ---
-window.addEventListener("resize", () => {
-    const isMobileLayout = window.innerWidth <= 768;
-    if (!isMobileLayout) {
-        mapContainer.style.height = "";
-        sidebarPanel.style.height = "";
-        map.invalidateSize();
-    }
+// --- Ajuste al resize ventana ---
+window.addEventListener("resize", ()=>{
+    map.invalidateSize();
 });
