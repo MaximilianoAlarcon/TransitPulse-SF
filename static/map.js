@@ -202,31 +202,32 @@ document.addEventListener("touchmove", (event) => {
     const topLimit = dragMargin;
     const bottomLimit = screenHeight - handleHeight - dragMargin;
 
-    const collapseThresholdTop = topLimit + 1;
+    const collapseThresholdTop = topLimit;
     const collapseThresholdBottom = bottomLimit;
 
     // Limitar pointer dentro de límites
     if (pointerY < topLimit) pointerY = topLimit;
     if (pointerY > bottomLimit) pointerY = bottomLimit;
 
-    // Actualizar altura del sidebar y map
+    // Ajuste normal del sidebar y mapa
     sidebarPanel.style.height = screenHeight - pointerY + "px";
     mapContainer.style.height = pointerY + "px";
 
-    // 🔑 Reposicionar siempre el handle en el eje Y
-    resizeHandle.style.position = "absolute";
-    resizeHandle.style.top = pointerY + "px";
-    resizeHandle.style.bottom = ""; // limpiar bottom
+    // 🔑 Reposicionar el handle usando transform
+    resizeHandle.style.position = "absolute"; // se mantiene
+    resizeHandle.style.transform = `translateY(${pointerY}px)`;
 
     // Colapso especial
     if (pointerY <= collapseThresholdTop) {
         sidebarPanel.style.height = screenHeight - handleHeight + "px";
         mapContainer.style.height = handleHeight + "px";
+        resizeHandle.style.transform = `translateY(${handleHeight}px)`;
     }
 
     if (pointerY >= collapseThresholdBottom) {
         sidebarPanel.style.height = "0px";
         mapContainer.style.height = screenHeight - handleHeight + "px";
+        resizeHandle.style.transform = `translateY(${screenHeight - handleHeight}px)`;
     }
 
     map.invalidateSize();
