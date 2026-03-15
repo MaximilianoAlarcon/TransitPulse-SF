@@ -83,6 +83,16 @@ height:100%;
 }
 
 
+#drag-handle{
+    height:40px;
+    width:100%;
+    cursor:ns-resize;
+    background:red;
+    display:none;
+    align-items:center;
+    justify-content:center;
+}
+
 
 @media (max-width: 768px){
 
@@ -120,15 +130,7 @@ height:100%;
 }
 
 
-#drag-handle{
-    height:40px;
-    width:100%;
-    cursor:ns-resize;
-    background:transparent;
-    display:none;
-    align-items:center;
-    justify-content:center;
-}
+
 
 /*
 #drag-handle::before{
