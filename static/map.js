@@ -100,10 +100,10 @@ async function loadStopsInView() {
 }
 
 // cargar la vista inicial
-loadStopsInView();
+//loadStopsInView();
 
 // recargar cuando el usuario mueve o hace zoom
-map.on('moveend', loadStopsInView);
+//map.on('moveend', loadStopsInView);
 
 
 
@@ -154,7 +154,7 @@ list.appendChild(li);
 
 }
 
-loadOperators();
+//loadOperators();
 
 
 const closestIcon = L.icon({
