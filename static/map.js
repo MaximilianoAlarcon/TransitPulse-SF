@@ -30,25 +30,6 @@ function clearRouteMarkers(map) {
 
 
 
-
-async function loadVehicles(){
-
-let response = await fetch("/api/vehicles");
-let vehicles = await response.json();
-
-vehicles.forEach(v => {
-
-    L.marker([v.lat, v.lon])
-    .addTo(map)
-    .bindPopup("Vehicle " + v.id + "<br>Status: " + v.status)
-
-});
-
-}
-
-//loadVehicles();
-
-
 function formatDuration(seconds) {
     seconds = Math.floor(seconds)
 
@@ -179,7 +160,7 @@ document.addEventListener("mousemove", (event) => {
 
     if (!isResizingLayout) return
 
-    const screenHeight = window.innerHeight
+    const screenHeight = document.documentElement.clientHeight
     let pointerY = event.clientY
 
     const collapseThreshold = screenHeight - 60
@@ -188,7 +169,7 @@ document.addEventListener("mousemove", (event) => {
 
         // Colapsar sidebar
         mapContainer.style.height = screenHeight - handleHeight + "px"
-        sidebarPanel.style.height = handleHeight + "px"
+        sidebarPanel.style.height = "0px"
 
         map.invalidateSize()
         return
@@ -201,7 +182,7 @@ document.addEventListener("mousemove", (event) => {
     if (pointerY > bottomLimit) pointerY = bottomLimit
 
     const newMapHeight = pointerY
-    const newSidebarHeight = screenHeight - pointerY
+    const newSidebarHeight = screenHeight - pointerY - handleHeight
 
     mapContainer.style.height = newMapHeight + "px"
     sidebarPanel.style.height = newSidebarHeight + "px"
@@ -216,7 +197,7 @@ document.addEventListener("touchmove", (event) => {
 
     event.preventDefault()
 
-    const screenHeight = window.innerHeight
+    const screenHeight = document.documentElement.clientHeight
     let pointerY = event.touches[0].clientY
 
     const topLimit = dragMargin
@@ -230,14 +211,14 @@ document.addEventListener("touchmove", (event) => {
     if (pointerY > collapseThreshold) {
 
         mapContainer.style.height = screenHeight - handleHeight + "px"
-        sidebarPanel.style.height = handleHeight + "px"
+        sidebarPanel.style.height = "0px"
 
         map.invalidateSize()
         return
     }
 
     const newMapHeight = pointerY
-    const newSidebarHeight = screenHeight - pointerY
+    const newSidebarHeight = screenHeight - pointerY - handleHeight
 
     mapContainer.style.height = newMapHeight + "px"
     sidebarPanel.style.height = newSidebarHeight + "px"
@@ -250,7 +231,7 @@ document.addEventListener("touchmove", (event) => {
 const dragHandle = document.getElementById("drag-handle")
 dragHandle.addEventListener("click", () => {
 
-    const screenHeight = window.innerHeight
+    const screenHeight = document.documentElement.clientHeight
 
     mapContainer.style.height = screenHeight * 0.55 + "px"
     sidebarPanel.style.height = screenHeight * 0.45 + "px"
@@ -258,28 +239,6 @@ dragHandle.addEventListener("click", () => {
     map.invalidateSize()
 
 })
-
-
-async function loadOperators(){
-
-let response = await fetch("/api/operators");
-let data = await response.json();
-
-let list = document.getElementById("operators-list");
-
-data.forEach(op => {
-
-let li = document.createElement("li");
-
-li.textContent = op.Name;
-
-list.appendChild(li);
-
-});
-
-}
-
-//loadOperators();
 
 
 const closestIcon = L.icon({
