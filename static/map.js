@@ -6,15 +6,14 @@ function initSplit() {
 
     if (splitInstance) splitInstance.destroy();
 
-    // Desktop: sidebar izquierda, Mobile: sidebar derecha
     splitInstance = Split(
         isMobile ? ['#map', '#sidebar'] : ['#sidebar', '#map'],
         {
-            direction: 'horizontal',
-            sizes: isMobile ? [75,25] : [25,75],
+            direction: isMobile ? 'vertical' : 'horizontal',
+            sizes: isMobile ? [60,40] : [25,75], // paneles iniciales %
             minSize: [100,100],
             gutterSize: 12,
-            cursor: 'ew-resize'
+            cursor: isMobile ? 'ns-resize' : 'ew-resize'
         }
     );
 }
