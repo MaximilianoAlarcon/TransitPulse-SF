@@ -197,53 +197,39 @@ document.addEventListener("touchmove", (event) => {
     event.preventDefault();
 
     const screenHeight = document.documentElement.clientHeight;
-    let pointerY = Math.round(event.touches[0].clientY)
+    let pointerY = Math.round(event.touches[0].clientY);
 
-    const topLimit = dragMargin; // no subir más arriba del margen
-    const bottomLimit = screenHeight - handleHeight - dragMargin; // no bajar más abajo
+    const topLimit = dragMargin;
+    const bottomLimit = screenHeight - handleHeight - dragMargin;
 
-    // limitar el pointer dentro de los límites
-    //if (pointerY < topLimit) pointerY = topLimit;
-    //if (pointerY > bottomLimit) pointerY = bottomLimit;
+    const collapseThresholdTop = topLimit + 1;
+    const collapseThresholdBottom = bottomLimit;
 
-    // umbral de colapso del sidebar
-    const collapseThresholdTop = topLimit + 1
-    const collapseThresholdBottom = screenHeight - handleHeight - dragMargin
+    // Limitar pointer dentro de límites
+    if (pointerY < topLimit) pointerY = topLimit;
+    if (pointerY > bottomLimit) pointerY = bottomLimit;
 
-    if (pointerY < collapseThresholdTop) {
-        //alert("Se alcanzó el límite inferior: " + pointerY + " <= " + collapseThresholdTop);
-        pointerY = collapseThresholdTop
-        // Colapsar sidebar hacia arriba
-        sidebarPanel.style.height = screenHeight - handleHeight + "px"
-        mapContainer.style.height = handleHeight + "px"
-        resizeHandle.style.position = "absolute"
-        resizeHandle.style.top = handleHeight+"px"
-        resizeHandle.style.bottom = "" // limpiar bottom
-        map.invalidateSize()
-        return
+    // Actualizar altura del sidebar y map
+    sidebarPanel.style.height = screenHeight - pointerY + "px";
+    mapContainer.style.height = pointerY + "px";
+
+    // 🔑 Reposicionar siempre el handle en el eje Y
+    resizeHandle.style.position = "absolute";
+    resizeHandle.style.top = pointerY + "px";
+    resizeHandle.style.bottom = ""; // limpiar bottom
+
+    // Colapso especial
+    if (pointerY <= collapseThresholdTop) {
+        sidebarPanel.style.height = screenHeight - handleHeight + "px";
+        mapContainer.style.height = handleHeight + "px";
     }
 
-    if (pointerY > collapseThresholdBottom) {
-        //alert("Se alcanzó el límite inferior: " + pointerY + " >= " + collapseThresholdBottom);
-        pointerY = collapseThresholdBottom
-        // Colapsar sidebar hacia abajo
-        sidebarPanel.style.height = "0px"
-        mapContainer.style.height = screenHeight - handleHeight + "px"
-        resizeHandle.style.position = "absolute"
-        resizeHandle.style.bottom = handleHeight+"px"
-        resizeHandle.style.top = "" // limpiar top
-        map.invalidateSize()
-        return
+    if (pointerY >= collapseThresholdBottom) {
+        sidebarPanel.style.height = "0px";
+        mapContainer.style.height = screenHeight - handleHeight + "px";
     }
 
-    // Ajuste normal dentro de límites
-    if (pointerY < topLimit) pointerY = topLimit
-    if (pointerY > bottomLimit) pointerY = bottomLimit
-
-    sidebarPanel.style.height = screenHeight - pointerY + "px"
-    mapContainer.style.height = pointerY + "px"
-
-    map.invalidateSize()
+    map.invalidateSize();
 });
 
 
