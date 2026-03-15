@@ -215,6 +215,23 @@ document.addEventListener("touchmove", (event) => {
         mapContainer.style.height = screenHeight - handleHeight + "px";
         map.invalidateSize();
         return;
+    } else {
+        // Alturas normales mientras el handle no llega al colapso
+        const newMapHeight = pointerY;
+        const newSidebarHeight = screenHeight - pointerY;
+
+        // Aplicar límites
+        const topLimit = dragMargin;
+        const bottomLimit = screenHeight - handleHeight - dragMargin;
+
+        let adjustedPointerY = pointerY;
+        if (adjustedPointerY < topLimit) adjustedPointerY = topLimit;
+        if (adjustedPointerY > bottomLimit) adjustedPointerY = bottomLimit;
+
+        sidebarPanel.style.height = screenHeight - adjustedPointerY + "px";
+        mapContainer.style.height = adjustedPointerY + "px";
+
+        map.invalidateSize();
     }
 
     // alturas normales del mapa y sidebar
