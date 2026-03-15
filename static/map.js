@@ -10,19 +10,16 @@ function initSplit() {
         isMobile ? ['#map', '#sidebar'] : ['#sidebar', '#map'],
         {
             direction: isMobile ? 'vertical' : 'horizontal',
-            sizes: isMobile ? [70,30] : [25,75], // mapa arriba 70%, sidebar abajo 30%
+            sizes: isMobile ? [60,40] : [25,75], // mapa arriba 60%, sidebar abajo 40%
             minSize: [100,100],
-            maxSize: isMobile ? [Infinity, 300] : undefined, // max 300px para sidebar en mobile
+            maxSize: isMobile ? [Infinity, window.innerHeight * 0.4] : undefined,
             gutterSize: 12,
             cursor: isMobile ? 'ns-resize' : 'ew-resize'
         }
     );
 }
 
-// Inicializamos
 initSplit();
-
-// Re-inicializar al cambiar tamaño
 window.addEventListener('resize', () => {
     initSplit();
     map.invalidateSize();

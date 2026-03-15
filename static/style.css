@@ -1,4 +1,3 @@
-/* Reset general */
 html, body {
     margin: 0;
     padding: 0;
@@ -8,7 +7,6 @@ html, body {
     font-family: Arial, sans-serif;
 }
 
-/* Contenedor principal de Split.js */
 #split-container {
     display: flex;
     height: 100vh;
@@ -16,7 +14,6 @@ html, body {
     overflow: hidden;
 }
 
-/* Sidebar */
 #sidebar {
     background: #fff;
     overflow-y: auto;
@@ -27,7 +24,6 @@ html, body {
     min-width: 100px;
 }
 
-/* Contenido interno */
 #sidebar-content {
     flex: 1;
     padding: 10px;
@@ -35,18 +31,16 @@ html, body {
     flex-direction: column;
 }
 
+#map {
+    flex: 1; /* mapa ocupa espacio restante */
+    overflow: hidden;
+}
+
 #sidebar input, #sidebar button {
     width: 100%;
     margin-bottom: 5px;
 }
 
-/* Mapa */
-#map {
-    flex: none; /* Split.js controla tamaño */
-    overflow: hidden;
-}
-
-/* Gutter / handle */
 .gutter {
     background: grey;
     z-index: 999;
@@ -54,19 +48,29 @@ html, body {
 
 .gutter.gutter-horizontal {
     cursor: ew-resize;
-    width: 12px;  /* grosor handle horizontal */
+    width: 12px;
 }
 
 .gutter.gutter-vertical {
     cursor: ns-resize;
-    height: 12px; /* grosor handle vertical */
+    height: 12px;
 }
 
-
+/* --- Ajustes mobile --- */
 @media (max-width: 1024px) {
+    #split-container {
+        flex-direction: column;
+    }
+
     #sidebar {
-        max-height: 50vh; /* no ocupar más de la mitad */
-        min-height: 100px; /* al menos 100px */
         width: 100%;
+        height: auto;
+        max-height: 40vh; /* nunca más del 40% de la pantalla */
+        min-height: 100px;
+    }
+
+    #map {
+        height: auto;
+        flex: 1;
     }
 }
