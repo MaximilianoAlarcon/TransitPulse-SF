@@ -1,31 +1,3 @@
-// --- Inicialización Split.js ---
-let splitInstance;
-
-function initSplit() {
-    const isMobile = window.innerWidth <= 1024;
-
-    if (splitInstance) splitInstance.destroy();
-
-    const panels = isMobile ? ['#map', '#sidebar'] : ['#sidebar', '#map'];
-
-    splitInstance = Split(panels, {
-        direction: isMobile ? 'vertical' : 'horizontal',
-        sizes: isMobile ? [70,30] : [25,75],
-        minSize: [100,100],
-        maxSize: isMobile ? [Infinity, window.innerHeight * 0.4] : undefined,
-        gutterSize: 12,
-        cursor: isMobile ? 'ns-resize' : 'ew-resize',
-        snapOffset: 0,
-        onDragEnd: () => map.invalidateSize()
-    });
-}
-
-initSplit();
-window.addEventListener('resize', () => {
-    initSplit();
-    map.invalidateSize();
-});
-
 // --- Leaflet Map ---
 var map = L.map('map', {
     zoomControl: window.innerWidth > 1024
@@ -37,8 +9,8 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 // Ocultar zoom en mobile
 if (window.innerWidth <= 1024) {
-    const zoomControls = document.querySelectorAll(".leaflet-control-zoom");
-    zoomControls.forEach(ctrl => ctrl.style.display = "none");
+    document.querySelectorAll(".leaflet-control-zoom")
+        .forEach(ctrl => ctrl.style.display = "none");
 }
 
 // Marker cluster
@@ -48,6 +20,79 @@ map.addLayer(stopsLayer);
 let originMarker = null;
 let destMarker = null;
 
+// --- Split.js y handle ---
+let splitInstance = null;
+const sidebar = document.getElementById("sidebar");
+const handle = document.getElementById("drag-handle");
+const mapContainer = document.getElementById("map");
+
+function initSplit() {
+    const isMobile = window.innerWidth <= 1024;
+
+    if (splitInstance) splitInstance.destroy();
+
+    if (!isMobile) {
+        // Desktop: Split.js horizontal
+        splitInstance = Split(['#sidebar', '#map'], {
+            direction: 'horizontal',
+            sizes: [25,75],
+            minSize: [200,200],
+            gutterSize: 12,
+            cursor: 'ew-resize',
+            snapOffset: 0,
+            onDragEnd: () => map.invalidateSize()
+        });
+
+        // Reset estilos mobile
+        sidebar.style.position = "";
+        sidebar.style.width = "";
+        sidebar.style.height = "";
+        sidebar.style.bottom = "";
+        mapContainer.style.height = "";
+    } else {
+        // Mobile: sidebar abajo, mapa arriba, arrastre manual
+        sidebar.style.position = "absolute";
+        sidebar.style.bottom = "0";
+        sidebar.style.left = "0";
+        sidebar.style.width = "100%";
+        sidebar.style.height = "40vh"; // altura inicial
+        mapContainer.style.height = (window.innerHeight - sidebar.offsetHeight) + "px";
+    }
+}
+
+window.addEventListener("resize", () => {
+    initSplit();
+    map.invalidateSize();
+});
+
+initSplit();
+
+// --- Drag handle manual para mobile ---
+let isDragging = false;
+
+handle.addEventListener("touchstart", () => isDragging = true);
+document.addEventListener("touchend", () => isDragging = false);
+
+document.addEventListener("touchmove", (e) => {
+    if (!isDragging || window.innerWidth > 1024) return;
+
+    const screenHeight = window.innerHeight;
+    let pointerY = e.touches[0].clientY;
+
+    // Limitar pointer
+    if (pointerY < 0) pointerY = 0;
+    if (pointerY > screenHeight) pointerY = screenHeight;
+
+    // Altura del sidebar desde abajo
+    sidebar.style.height = (screenHeight - pointerY) + "px";
+
+    // Altura del mapa
+    mapContainer.style.height = pointerY + "px";
+
+    map.invalidateSize();
+});
+
+// --- Funciones de ruta y markers ---
 function clearRouteMarkers(map) {
     if (originMarker) { map.removeLayer(originMarker); originMarker = null; }
     if (destMarker) { map.removeLayer(destMarker); destMarker = null; }

@@ -4,31 +4,27 @@
 <title>Logistics Dashboard</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
-
 <link rel="stylesheet" href="/static/style.css">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
 <body>
 
 <div id="split-container">
-    <div id="map"></div>
     <div id="sidebar">
+        <div id="drag-handle"></div>
         <div id="sidebar-content">
             <input id="chat-input" type="text" placeholder="Where do you want to go?">
             <button id="chat-send">Search</button>
             <div id="chat-result"></div>
         </div>
     </div>
+
+    <div id="map"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/split.js/dist/split.min.js"></script>
 <script src="/static/map.js"></script>
-
 </body>
 </html>

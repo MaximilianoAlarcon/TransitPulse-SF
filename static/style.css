@@ -2,76 +2,71 @@ html, body {
     margin: 0;
     padding: 0;
     height: 100%;
-    width: 100%;
     overflow: hidden;
-    font-family: Arial, sans-serif;
+    font-family: Arial;
 }
 
 #split-container {
     display: flex;
     height: 100vh;
-    width: 100vw;
-    overflow: hidden;
+    width: 100%;
 }
 
+/* Sidebar */
 #sidebar {
-    background: #fff;
-    overflow-y: auto;
-    flex: none; /* Split.js controla tamaño */
+    background: #1f2937;
+    color: white;
     display: flex;
     flex-direction: column;
-    box-sizing: border-box;
-    min-width: 100px;
+    position: relative;
+    overflow: hidden;
 }
 
 #sidebar-content {
     flex: 1;
     padding: 10px;
-    display: flex;
-    flex-direction: column;
+    overflow-y: auto;
 }
 
-#map {
-    flex: 1; /* mapa ocupa espacio restante */
-    overflow: hidden;
-}
-
-#sidebar input, #sidebar button {
+/* Handle */
+#drag-handle {
+    height: 25px;
     width: 100%;
-    margin-bottom: 5px;
-}
-
-.gutter {
-    background: grey;
-    z-index: 999;
-}
-
-.gutter.gutter-horizontal {
-    cursor: ew-resize;
-    width: 12px;
-}
-
-.gutter.gutter-vertical {
     cursor: ns-resize;
-    height: 12px;
+    background: grey;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    touch-action: none;
+    position: absolute;
+    top: 0;
 }
 
-/* --- Ajustes mobile --- */
+/* Map */
+#map {
+    flex: 1;
+    height: 100%;
+}
+
+/* MOBILE */
 @media (max-width: 1024px) {
     #split-container {
-        flex-direction: column;
-        height: 100vh;
-    }
-
-    #sidebar {
-        width: 100%;
-        height: auto;
-        flex: none;
-        min-height: 100px;
+        flex-direction: column; /* vertical: mapa arriba, sidebar abajo */
+        position: relative;
     }
 
     #map {
-        height: auto;
         flex: 1;
+        height: auto; /* JS controla altura */
+    }
+
+    #sidebar {
+        flex: none;
+        width: 100%;
+        height: 40vh; /* altura inicial */
+        position: absolute;
+        bottom: 0;
+        left: 0;
     }
 }
