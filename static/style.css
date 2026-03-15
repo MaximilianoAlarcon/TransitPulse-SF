@@ -60,6 +60,7 @@ html, body {
 @media (max-width: 1024px) {
     #split-container {
         flex-direction: column;
+        height: 100vh;
     }
 
     #sidebar {
