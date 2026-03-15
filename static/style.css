@@ -103,7 +103,7 @@ height:100%;
     overflow-y:auto;
 }
 
-@media (max-width: 768px){
+@media (max-width: 1024px){
 
     #app{
         display:block;
