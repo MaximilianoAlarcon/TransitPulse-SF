@@ -92,8 +92,9 @@ body.dragging {
 }
 
 #drag-handle{
+    top: 0; /* siempre en la cabecera del sidebar */
+    width: 100%;
     height:25px;
-    width:100%;
     cursor:ns-resize;
     background:grey;
     display:none;
@@ -143,6 +144,13 @@ body.dragging {
     #drag-handle{
         display:flex !important;
         z-index:1000;
+    }
+
+    #sidebar .btn-plus{
+        display: none !important;
+    }
+    #sidebar .btn-minus {
+        display: none !important;
     }
 
 }
