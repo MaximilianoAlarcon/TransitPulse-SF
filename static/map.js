@@ -69,8 +69,6 @@ async function loadStopsInView() {
 // Marcador de ubicación del usuario
 if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(function(position) {
-        //const lat = position.coords.latitude;
-        //const lon = position.coords.longitude;
         const lat = 37.7803603;
         const lon = -122.4120372;
 
@@ -82,8 +80,6 @@ if (navigator.geolocation) {
             fillColor: "#2a93ee",
             fillOpacity: 0.9
         }).addTo(map).bindPopup("You");
-
-        //loadStopsInView();
     });
 }
 
@@ -99,17 +95,32 @@ const mapContainer = document.getElementById("map");
 function startResize(){ isResizingLayout=true; document.body.classList.add("dragging"); }
 function stopResize(){ isResizingLayout=false; document.body.classList.remove("dragging"); }
 
+// --- Desktop: mouse drag ---
 resizeHandle.addEventListener("mousedown", startResize);
-resizeHandle.addEventListener("touchstart", startResize);
-
+document.addEventListener("mousemove", (e)=>{ 
+    if(!isResizingLayout) return;
+    resizeSidebar(e.clientY);
+});
 document.addEventListener("mouseup", stopResize);
 document.addEventListener("mouseleave", stopResize);
+
+// --- Mobile: touch drag ---
+resizeHandle.addEventListener("touchstart", (e)=>{
+    e.preventDefault();
+    startResize();
+});
+document.addEventListener("touchmove", (e)=>{
+    if(!isResizingLayout) return;
+    e.preventDefault();
+    resizeSidebar(e.touches[0].clientY);
+});
 document.addEventListener("touchend", stopResize);
 
-// Función central para ajustar sidebar y mapa
+// --- Función central para ajustar sidebar y mapa ---
 function resizeSidebar(pointerY){
     const screenHeight = document.documentElement.clientHeight;
 
+    // Limites
     const topLimit = dragMargin;
     const bottomLimit = screenHeight - handleHeight - dragMargin;
     if(pointerY < topLimit) pointerY = topLimit;
@@ -121,17 +132,11 @@ function resizeSidebar(pointerY){
     sidebarPanel.style.height = newSidebarHeight + "px";
     mapContainer.style.height = newMapHeight + "px";
 
+    // Mantener handle en la cabecera del sidebar
+    resizeHandle.style.top = "0px";
+
     map.invalidateSize();
 }
-
-// Eventos mouse y touch
-document.addEventListener("mousemove", (e)=>{ if(isResizingLayout) resizeSidebar(e.clientY); });
-document.addEventListener("touchmove", (e)=>{ if(isResizingLayout){ e.preventDefault(); resizeSidebar(e.touches[0].clientY); } });
-
-document.addEventListener("touchend", ()=>{
-    isResizingLayout = false;
-    document.body.classList.remove("dragging");
-});
 
 // Click rápido para dividir mapa/sidebar 55%/45%
 resizeHandle.addEventListener("click", ()=>{
@@ -170,7 +175,7 @@ async function markClosestStop(data) {
 
 // --- Chat flotante ---
 document.getElementById("chat-send").addEventListener("click", async () => {
-    clearRouteMarkers(map)
+    clearRouteMarkers(map);
     const address = document.getElementById("chat-input").value.trim();
     if (!address) return alert("Enter your destination");
 
