@@ -14,6 +14,84 @@ if (window.innerWidth <= 1024) {
 const stopsLayer = L.markerClusterGroup();
 map.addLayer(stopsLayer);
 
+let originMarker = null
+let destMarker = null
+
+function clearRouteMarkers(map) {
+
+    if (originMarker) {
+        map.removeLayer(originMarker)
+        originMarker = null
+    }
+
+    if (destMarker) {
+        map.removeLayer(destMarker)
+        destMarker = null
+    }
+
+}
+
+function formatDuration(seconds) {
+    seconds = Math.floor(seconds)
+
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+
+    if (hours > 0) {
+        return `${hours} h ${minutes} min`
+    }
+
+    return `${minutes} min`
+}
+
+
+function markRouteStops(map, originLat, originLon, destLat, destLon) {
+
+    const blueIcon = new L.Icon({
+        iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+        iconSize: [25,41],
+        iconAnchor: [12,41]
+    })
+
+    const redIcon = new L.Icon({
+        iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+        iconSize: [25,41],
+        iconAnchor: [12,41]
+    })
+
+    originMarker = L.marker([originLat, originLon], {icon: blueIcon}).addTo(map)
+    destMarker = L.marker([destLat, destLon], {icon: redIcon}).addTo(map)
+
+}
+
+
+if (navigator.geolocation) {
+
+    navigator.geolocation.getCurrentPosition(function(position) {
+
+        //const lat = position.coords.latitude;
+        //const lon = position.coords.longitude;
+        const lat = 37.7803603;
+        const lon = -122.4120372;
+
+        map.setView([lat, lon], 15);
+
+        window.userMarker = L.circleMarker([lat, lon], {
+            radius: 8,
+            color: "#136aec",
+            fillColor: "#2a93ee",
+            fillOpacity: 0.9
+        }).addTo(map).bindPopup("You");
+
+        //loadStopsInView();
+
+    });
+
+}
+
+
 // --- Sidebar drag handle ---
 const sidebar = document.getElementById("sidebar");
 const mapContainer = document.getElementById("map");
@@ -57,33 +135,54 @@ const chatInput = document.getElementById("chat-input");
 const chatResult = document.getElementById("chat-result");
 
 chatSend.addEventListener("click", async () => {
-    const address = chatInput.value.trim();
+    clearRouteMarkers(map)
+    const address = document.getElementById("chat-input").value.trim();
     if (!address) return alert("Enter your destination");
 
     try {
-        const resp = await fetch(`/direct-trip?address=${encodeURIComponent(address)}`);
-        const data = await resp.json();
-
-        if (!resp.ok || data.error) {
-            chatResult.innerHTML = `<p>Error: <b>${data.error || 'Unknown'}</b></p>`;
+        const response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}`);
+        if (!response.ok) {
+            const errData = await response.json();
+            document.getElementById("chat-result").innerText = errData.error || "Unknown error";
             return;
         }
 
-        if (data.status === "Found") {
-            const details = data.details;
-            chatResult.innerHTML = `
-                <p>You should take the transport: <b>${details.route_long_name}</b></p>
-                <p>Next transport at "${details.stop_name_origin}" in ${Math.floor(details.wait_time/60)} min</p>
-                <p>Total trip: ${Math.floor(details.total_time/60)} min</p>
+        const data = await response.json();
+        if ("error" in data){
+            document.getElementById("chat-result").innerHTML = `
+            <p>Error: <b>${data.error}</b></p>
             `;
-            chatInput.value = "";
-            map.setView([details.stop_lat_origin, details.stop_lon_origin], 15);
         } else {
-            chatResult.innerHTML = `<p>Could not find a direct trip</p><p>${data.reason || ""}</p>`;
+            if (data["status"] == "Found"){
+                trip_details = data["details"]
+                document.getElementById("chat-result").innerHTML = `
+                <p>You should take the transport : <b>${trip_details.route_long_name}</b></p>
+                <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_time)}</p>
+                <p>Your trip will last approximately ${formatDuration(trip_details.total_time)}</p>
+                `;
+                // Centrar mapa en la parada más cercana
+                map.setView([trip_details.stop_lat_origin, trip_details.stop_lon_origin], 15);
+                document.getElementById("chat-input").value = "";
+                /*
+                markClosestStop({
+                    "stop_name":trip_details.stop_name_origin,
+                    "stop_lat":trip_details.stop_lat_origin,
+                    "stop_lon":trip_details.stop_lon_origin
+                });
+                */
+
+                markRouteStops(map, trip_details.stop_lat_origin, trip_details.stop_lon_origin, trip_details.stop_lat_dest, trip_details.stop_lon_dest)
+            } else {
+                document.getElementById("chat-result").innerHTML = `
+                <p>We couldn't find a direct trip</p>
+                <p>${data.reason}</p>
+                `;
+            }
         }
-    } catch (err) {
-        console.error(err);
-        chatResult.innerText = "Internal Error";
+        
+    } catch (error) {
+        document.getElementById("chat-result").innerText = "Internal Error";
+        console.error(error);
     }
 });
 

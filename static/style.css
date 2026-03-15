@@ -13,8 +13,7 @@ html, body {
 }
 
 #sidebar {
-    min-width: 100%;
-    max-width: 100%;
+    width:250px;
     height: 40vh; /* mobile initial */
     flex-shrink: 0;
     display: flex;
