@@ -187,7 +187,10 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000, near
 
     dest_matches = transfer_trip_stop_times[
         transfer_trip_stop_times.stop_id.isin(dest_ids)
-    ]
+    ].rename(columns={
+        "arrival_time": "arrival_time_dest",
+        "stop_sequence": "stop_sequence_dest"
+    })
 
     print("Destination matches:", len(dest_matches))
 
