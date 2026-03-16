@@ -208,8 +208,9 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000, near
     })
 
     segment2 = transfer_trips.rename(columns={
-        "trip_id": "trip2",
-        "stop_id": "transfer_stop"
+    "trip_id": "trip2",
+    "stop_id": "transfer_stop",
+    "arrival_time": "transfer_departure"
     })
 
     routes = segment1.merge(segment2, on="transfer_stop")
@@ -240,7 +241,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000, near
 
     routes["transfer_arrival_sec"] = routes["transfer_arrival"].apply(time_to_seconds)
 
-    routes["second_trip_time_sec"] = routes["arrival_time"].apply(time_to_seconds)
+    routes["second_trip_time_sec"] = routes["transfer_departure"].apply(time_to_seconds)
 
     routes["dest_time_sec"] = routes["arrival_time_dest"].apply(time_to_seconds)
 
@@ -258,7 +259,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000, near
     "transfer_arrival",
     "arrival_time",
     "arrival_time_dest"
-    ]].head())
+    ]].head(10))
 
     # ------------------------------------
     # STEP 11 — FILTER BAD TRANSFERS
