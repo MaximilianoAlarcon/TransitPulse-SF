@@ -1,8 +1,8 @@
 from flask import Flask, render_template, jsonify, request
 import random, os, requests, json
 import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes
-import load_gtfs_trips,load_gtfs_stop_times,search_engine_test
-import transfer_trip_search_prototype
+import load_gtfs_trips,load_gtfs_stop_times
+import direct_trip_search_prototype,transfer_trip_search_prototype
 from transit_engine import find_direct_trip
 import psycopg2
 
@@ -215,13 +215,13 @@ def endpoint_transfer_trip_search_prototype():
 
 
 
-def run_search_engine_test():
-    search_engine_test.run()
+def run_direct_trip_search_prototype():
+    direct_trip_search_prototype.run()
 
-@app.route("/search-engine-test")
-def endpoint_search_engine_test():
+@app.route("/direct-trip-search-test")
+def endpoint_direct_trip_search_prototype():
 
-    thread = threading.Thread(target=run_search_engine_test)
+    thread = threading.Thread(target=run_direct_trip_search_prototype)
     thread.start()
 
     return {"message": "Holitoo"}
