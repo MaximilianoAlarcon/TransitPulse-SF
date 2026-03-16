@@ -20,16 +20,34 @@ DB_CONFIG = {
     "port": os.environ.get("DB_PORT")
 }
 
-def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000,nearest_stops=5):
+def time_to_seconds(t):
+    """Convert GTFS HH:MM:SS to seconds"""
+    if pd.isna(t):
+        return None
+    h, m, s = map(int, t.split(":"))
+    return h*3600 + m*60 + s
+
+
+def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000, nearest_stops=5):
 
     print("\n========== START TRANSFER SEARCH ==========")
-
-    print("origin_coords:",origin_coords)
-    print("dest_coords:",dest_coords)
+    print("Origin:", origin_coords)
+    print("Destination:", dest_coords)
 
     conn = psycopg2.connect(**DB_CONFIG)
 
-    # --- 1 Buscar paradas cercanas ---
+    # ------------------------------------
+    # PARAMETERS
+    # ------------------------------------
+
+    MAX_TRANSFER_WAIT = 1800   # 30 minutes
+    MIN_TRANSFER_WAIT = 60     # 1 minute
+    MAX_TRAVEL_TIME = 7200     # 2 hours
+
+    # ------------------------------------
+    # STEP 1 — ORIGIN STOPS
+    # ------------------------------------
+
     print("\n[STEP 1] Searching stops near origin")
 
     origin_stops = pd.read_sql("""
@@ -39,14 +57,20 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000,neare
             geom::geography,
             ST_SetSRID(ST_Point(%s,%s),4326)::geography,
             %s
-        )  
+        )
         LIMIT %s
     """, conn, params=(origin_coords[0], origin_coords[1], search_radius, nearest_stops))
 
-    print("Origin stops found:", len(origin_stops))
-    print(origin_stops.head())
+    print("Origin stops:", len(origin_stops))
 
-    print("\n[STEP 1B] Searching stops near destination")
+    if origin_stops.empty:
+        return {"status": "Not found", "reason": "no_origin_stops"}
+
+    # ------------------------------------
+    # STEP 2 — DESTINATION STOPS
+    # ------------------------------------
+
+    print("\n[STEP 2] Searching stops near destination")
 
     dest_stops = pd.read_sql("""
         SELECT stop_id, stop_name, stop_lat, stop_lon
@@ -55,29 +79,23 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000,neare
             geom::geography,
             ST_SetSRID(ST_Point(%s,%s),4326)::geography,
             %s
-        ) 
+        )
         LIMIT %s
     """, conn, params=(dest_coords[0], dest_coords[1], search_radius, nearest_stops))
 
-    print("Destination stops found:", len(dest_stops))
-    print(dest_stops.head())
-
-    if origin_stops.empty:
-        print("❌ FAILURE: No stops near origin")
-        return {"status":"Not found","reason":"no_origin_stops"}
+    print("Destination stops:", len(dest_stops))
 
     if dest_stops.empty:
-        print("❌ FAILURE: No stops near destination")
-        return {"status":"Not found","reason":"no_destination_stops"}
+        return {"status": "Not found", "reason": "no_destination_stops"}
 
     origin_ids = tuple(origin_stops.stop_id.tolist())
     dest_ids = tuple(dest_stops.stop_id.tolist())
 
-    print("Origin stop_ids:", origin_ids[:10])
-    print("Destination stop_ids:", dest_ids[:10])
+    # ------------------------------------
+    # STEP 3 — TRIPS FROM ORIGIN
+    # ------------------------------------
 
-    # --- 2 Trips que pasan por origen ---
-    print("\n[STEP 2] Searching trips that pass origin stops")
+    print("\n[STEP 3] Trips passing origin stops")
 
     origin_trips = pd.read_sql("""
         SELECT trip_id, stop_id, stop_sequence, arrival_time
@@ -85,19 +103,18 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000,neare
         WHERE stop_id IN %s
     """, conn, params=(origin_ids,))
 
-    print("Trips found at origin stops:", len(origin_trips))
-    print(origin_trips.head())
+    print("Trips found:", len(origin_trips))
 
     if origin_trips.empty:
-        print("❌ FAILURE: No trips pass origin stops")
-        return {"status":"Not found","reason":"no_origin_trips"}
+        return {"status": "Not found", "reason": "no_origin_trips"}
 
     trip_ids = tuple(origin_trips.trip_id.unique())
 
-    print("Unique trips from origin:", len(trip_ids))
+    # ------------------------------------
+    # STEP 4 — STOPS OF THOSE TRIPS
+    # ------------------------------------
 
-    # --- 3 Todas las paradas de esos trips ---
-    print("\n[STEP 3] Fetching all stops of those trips")
+    print("\n[STEP 4] Fetching stops for those trips")
 
     trip_stop_times = pd.read_sql("""
         SELECT trip_id, stop_id, stop_sequence, arrival_time
@@ -105,38 +122,37 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000,neare
         WHERE trip_id IN %s
     """, conn, params=(trip_ids,))
 
-    print("Total stop_times fetched:", len(trip_stop_times))
+    print("Stop times fetched:", len(trip_stop_times))
 
-    # --- 4 Encontrar posibles transfer stops ---
-    print("\n[STEP 4] Finding possible transfer stops")
+    # ------------------------------------
+    # STEP 5 — POSSIBLE TRANSFER STOPS
+    # ------------------------------------
+
+    print("\n[STEP 5] Finding transfer candidates")
 
     transfer_candidates = origin_trips.merge(
         trip_stop_times,
         on="trip_id",
-        suffixes=("_origin","_transfer")
+        suffixes=("_origin", "_transfer")
     )
-
-    print("Candidate pairs before sequence filter:", len(transfer_candidates))
 
     transfer_candidates = transfer_candidates[
         transfer_candidates.stop_sequence_transfer >
         transfer_candidates.stop_sequence_origin
     ]
 
-    print("Transfer candidates after sequence filter:", len(transfer_candidates))
-    print(transfer_candidates.head())
+    print("Transfer candidates:", len(transfer_candidates))
 
     if transfer_candidates.empty:
-        print("❌ FAILURE: No downstream stops after origin")
-        return {"status":"Not found","reason":"no_transfer_candidates"}
+        return {"status": "Not found", "reason": "no_transfer_candidates"}
 
     transfer_ids = tuple(transfer_candidates.stop_id_transfer.unique())
 
-    print("Unique transfer stops:", len(transfer_ids))
-    print("Example transfer stops:", transfer_ids[:10])
+    # ------------------------------------
+    # STEP 6 — TRIPS FROM TRANSFER STOPS
+    # ------------------------------------
 
-    # --- 5 Trips que pasan por transfer stops ---
-    print("\n[STEP 5] Searching trips that pass transfer stops")
+    print("\n[STEP 6] Trips from transfer stops")
 
     transfer_trips = pd.read_sql("""
         SELECT trip_id, stop_id, stop_sequence, arrival_time
@@ -144,19 +160,18 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000,neare
         WHERE stop_id IN %s
     """, conn, params=(transfer_ids,))
 
-    print("Trips found at transfer stops:", len(transfer_trips))
-    print(transfer_trips.head())
+    print("Second-leg trips:", len(transfer_trips))
 
     if transfer_trips.empty:
-        print("❌ FAILURE: No trips pass transfer stops")
-        return {"status":"Not found","reason":"no_transfer_trips"}
+        return {"status": "Not found", "reason": "no_transfer_trips"}
 
     transfer_trip_ids = tuple(transfer_trips.trip_id.unique())
 
-    print("Unique second-leg trips:", len(transfer_trip_ids))
+    # ------------------------------------
+    # STEP 7 — STOPS OF SECOND TRIPS
+    # ------------------------------------
 
-    # --- 6 Traer paradas de esos trips ---
-    print("\n[STEP 6] Fetching stop_times for second-leg trips")
+    print("\n[STEP 7] Fetching stop_times of second trips")
 
     transfer_trip_stop_times = pd.read_sql("""
         SELECT trip_id, stop_id, stop_sequence, arrival_time
@@ -164,106 +179,124 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000,neare
         WHERE trip_id IN %s
     """, conn, params=(transfer_trip_ids,))
 
-    print("Total stop_times for second-leg trips:", len(transfer_trip_stop_times))
+    # ------------------------------------
+    # STEP 8 — CHECK DESTINATION
+    # ------------------------------------
 
-    # --- 7 Buscar si llegan al destino ---
-    print("\n[STEP 7] Checking if second trips reach destination stops")
+    print("\n[STEP 8] Checking destination matches")
 
     dest_matches = transfer_trip_stop_times[
         transfer_trip_stop_times.stop_id.isin(dest_ids)
     ]
 
-    print("Destination matches found:", len(dest_matches))
-    print(dest_matches.head())
+    print("Destination matches:", len(dest_matches))
 
     if dest_matches.empty:
-        print("❌ FAILURE: No second-leg trips reach destination stops")
-        return {"status":"Not found","reason":"no_dest_matches"}
+        return {"status": "Not found", "reason": "no_dest_matches"}
 
-    # --- 8 Combinar segmentos ---
-    print("\n[STEP 8] Building route combinations")
+    # ------------------------------------
+    # STEP 9 — BUILD ROUTES
+    # ------------------------------------
+
+    print("\n[STEP 9] Building route combinations")
 
     segment1 = transfer_candidates.rename(columns={
-        "trip_id":"trip1",
-        "stop_id_origin":"origin_stop",
-        "stop_id_transfer":"transfer_stop",
-        "arrival_time_transfer":"transfer_arrival"
+        "trip_id": "trip1",
+        "stop_id_origin": "origin_stop",
+        "stop_id_transfer": "transfer_stop",
+        "arrival_time_transfer": "transfer_arrival"
     })
 
     segment2 = transfer_trips.rename(columns={
-        "trip_id":"trip2",
-        "stop_id":"transfer_stop"
+        "trip_id": "trip2",
+        "stop_id": "transfer_stop"
     })
 
     routes = segment1.merge(segment2, on="transfer_stop")
-
-    print("Routes after first merge:", len(routes))
 
     routes = routes.merge(
         dest_matches,
         left_on="trip2",
         right_on="trip_id",
-        suffixes=("","_dest")
+        suffixes=("", "_dest")
     )
-
-    print("Routes after destination merge:", len(routes))
 
     routes = routes[
         routes.stop_sequence_dest > routes.stop_sequence
     ]
 
-    print("Routes after sequence validation:", len(routes))
+    print("Routes built:", len(routes))
 
     if routes.empty:
-        print("❌ FAILURE: No valid transfer routes after sequence filtering")
-        return {"status":"Not found","reason":"sequence_filter_removed_all"}
+        return {"status": "Not found", "reason": "no_valid_routes"}
 
-    print("\n✅ SUCCESS: Transfer routes found:", len(routes))
+    # ------------------------------------
+    # STEP 10 — TIME CALCULATIONS
+    # ------------------------------------
 
-    print("\n[STEP 9] Calculating best route by total travel time")
+    print("\n[STEP 10] Calculating travel times")
 
-    def time_to_seconds(t):
-        if pd.isna(t):
-            return None
-        h, m, s = map(int, t.split(":"))
-        return h*3600 + m*60 + s
-
-    # convertir tiempos
     routes["origin_time_sec"] = routes["arrival_time_origin"].apply(time_to_seconds)
     routes["transfer_time_sec"] = routes["transfer_arrival"].apply(time_to_seconds)
     routes["dest_time_sec"] = routes["arrival_time_dest"].apply(time_to_seconds)
 
-    # calcular duración total
-    routes["total_travel_time"] = routes["dest_time_sec"] - routes["origin_time_sec"]
+    routes["transfer_wait"] = (
+        routes["transfer_time_sec"] - routes["origin_time_sec"]
+    )
 
-    # eliminar valores inválidos
-    routes = routes[routes["total_travel_time"] > 0]
+    routes["total_travel_time"] = (
+        routes["dest_time_sec"] - routes["origin_time_sec"]
+    )
 
-    print("Routes after time validation:", len(routes))
+    # ------------------------------------
+    # STEP 11 — FILTER BAD TRANSFERS
+    # ------------------------------------
+
+    print("\n[STEP 11] Filtering unrealistic transfers")
+
+    routes = routes[
+        (routes["transfer_wait"] >= MIN_TRANSFER_WAIT) &
+        (routes["transfer_wait"] <= MAX_TRANSFER_WAIT)
+    ]
+
+    routes = routes[
+        routes["total_travel_time"] <= MAX_TRAVEL_TIME
+    ]
+
+    print("Routes after filtering:", len(routes))
 
     if routes.empty:
-        print("❌ FAILURE: No routes with valid travel time")
-        return {"status":"Not found","reason":"invalid_times"}
+        return {"status": "Not found", "reason": "no_realistic_routes"}
 
-    # ordenar por duración
+    # ------------------------------------
+    # STEP 12 — REMOVE DUPLICATES
+    # ------------------------------------
+
+    routes = routes.drop_duplicates(
+        subset=["trip1", "trip2", "transfer_stop"]
+    )
+
+    # ------------------------------------
+    # STEP 13 — SORT BY BEST TIME
+    # ------------------------------------
+
     routes = routes.sort_values("total_travel_time")
 
     best_route = routes.iloc[0]
 
-    print("\n🏆 BEST ROUTE FOUND")
-    print("Trip 1:", best_route["trip1"])
-    print("Trip 2:", best_route["trip2"])
+    print("\n🏆 BEST ROUTE")
+    print("Trip1:", best_route["trip1"])
+    print("Trip2:", best_route["trip2"])
     print("Transfer stop:", best_route["transfer_stop"])
-    print("Total travel time (minutes):", round(best_route["total_travel_time"]/60,2))
+    print("Travel time minutes:", round(best_route["total_travel_time"]/60, 2))
 
-    # devolver solo las mejores 5 rutas
     best_routes = routes.head(5)
 
     return {
-        "status":"Found",
+        "status": "Found",
         "best_route": best_route.to_dict(),
         "alternatives": best_routes.to_dict("records"),
-        "total_options_found": len(routes)
+        "routes_found": len(routes)
     }
 
 
