@@ -2,6 +2,7 @@ from flask import Flask, render_template, jsonify, request
 import random, os, requests, json
 import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes
 import load_gtfs_trips,load_gtfs_stop_times,search_engine_test
+import transfer_trip_search_prototype
 from transit_engine import find_direct_trip
 import psycopg2
 
@@ -196,6 +197,21 @@ def query_postgis():
 
     return {"message": "Holitoo"}
 
+
+
+
+
+
+def run_transfer_trip_search_prototype():
+    transfer_trip_search_prototype.run()
+
+@app.route("/transfer-trip-search-test")
+def endpoint_transfer_trip_search_prototype():
+
+    thread = threading.Thread(target=run_transfer_trip_search_prototype)
+    thread.start()
+
+    return {"message": "Holitoo"}
 
 
 
