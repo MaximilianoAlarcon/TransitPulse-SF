@@ -20,7 +20,7 @@ DB_CONFIG = {
     "port": os.environ.get("DB_PORT")
 }
 
-def find_trip_with_transfer(origin_coords, dest_coords, nearest_stops=5):
+def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000,nearest_stops=5):
 
     print("\n========== START TRANSFER SEARCH ==========")
 
@@ -37,9 +37,11 @@ def find_trip_with_transfer(origin_coords, dest_coords, nearest_stops=5):
         FROM stops
         WHERE ST_DWithin(
             geom::geography,
-            ST_SetSRID(ST_Point(%s,%s),4326)) 
+            ST_SetSRID(ST_Point(%s,%s),4326)::geography,
+            %s
+        )  
         LIMIT %s
-    """, conn, params=(origin_coords[0], origin_coords[1], nearest_stops))
+    """, conn, params=(origin_coords[0], origin_coords[1], search_radius, nearest_stops))
 
     print("Origin stops found:", len(origin_stops))
     print(origin_stops.head())
@@ -51,9 +53,11 @@ def find_trip_with_transfer(origin_coords, dest_coords, nearest_stops=5):
         FROM stops
         WHERE ST_DWithin(
             geom::geography,
-            ST_SetSRID(ST_Point(%s,%s),4326)) 
+            ST_SetSRID(ST_Point(%s,%s),4326)::geography,
+            %s
+        ) 
         LIMIT %s
-    """, conn, params=(dest_coords[0], dest_coords[1], nearest_stops))
+    """, conn, params=(dest_coords[0], dest_coords[1], search_radius, nearest_stops))
 
     print("Destination stops found:", len(dest_stops))
     print(dest_stops.head())
