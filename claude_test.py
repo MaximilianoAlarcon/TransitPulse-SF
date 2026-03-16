@@ -1,0 +1,34 @@
+import anthropic
+import os
+
+client = anthropic.Anthropic(api_key=os.environ.get("API_CLAUDE_KEY"))
+
+def encontrar_parada(input_usuario: str) -> str:
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=200,
+        system="""You are an expert assistant on the San Francisco public transportation system (Muni, BART, Golden Gate Transit).
+Your only task is to receive a location or description from the user and return the EXACT name of the nearest or most relevant public transportation stop.
+Rules:
+- Respond ONLY with the stop name, without explanations or additional text.
+- Use the official stop name as it appears in the Muni/BART systems.
+- If there are several reasonable options, choose the most well-known or busiest one.
+- If you cannot confidently identify a stop, respond: UNKNOWN""",
+        messages=[
+            {"role": "user", "content": input_usuario}
+        ]
+    )
+    return response.content[0].text.strip()
+
+
+def run():
+    # Ejemplos de uso
+    ejemplos = [
+        "golden gate bridge",
+        "fisherman's wharf",
+        "cerca del museum of modern art",
+        "downtown cerca de union square",
+    ]
+    for lugar in ejemplos:
+        parada = encontrar_parada(lugar)
+        print(f"{lugar!r:45} → {parada}")

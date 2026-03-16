@@ -2,7 +2,7 @@ from flask import Flask, render_template, jsonify, request
 import random, os, requests, json
 import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes
 import load_gtfs_trips,load_gtfs_stop_times
-import direct_trip_search_prototype,transfer_trip_search_prototype
+import direct_trip_search_prototype,transfer_trip_search_prototype,claude_test
 from transit_engine import find_direct_trip
 import psycopg2
 
@@ -222,6 +222,19 @@ def run_direct_trip_search_prototype():
 def endpoint_direct_trip_search_prototype():
 
     thread = threading.Thread(target=run_direct_trip_search_prototype)
+    thread.start()
+
+    return {"message": "Holitoo"}
+
+
+
+def run_claude_test():
+    claude_test.run()
+
+@app.route("/claude-test")
+def endpoint_claude_test():
+
+    thread = threading.Thread(target=run_claude_test)
     thread.start()
 
     return {"message": "Holitoo"}
