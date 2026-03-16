@@ -160,6 +160,10 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000, near
         WHERE stop_id IN %s
     """, conn, params=(transfer_ids,))
 
+    transfer_trips = transfer_trips.rename(columns={
+        "arrival_time": "transfer_departure"
+    })
+
     print("Second-leg trips:", len(transfer_trips))
 
     if transfer_trips.empty:
