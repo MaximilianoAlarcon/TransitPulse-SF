@@ -20,7 +20,7 @@ DB_CONFIG = {
     "port": os.environ.get("DB_PORT")
 }
 
-def find_trip_with_transfer(origin_coords, dest_coords, search_radius=500):
+def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800):
 
     conn = psycopg2.connect(**DB_CONFIG)
 
