@@ -220,9 +220,50 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000,neare
 
     print("\n✅ SUCCESS: Transfer routes found:", len(routes))
 
+    print("\n[STEP 9] Calculating best route by total travel time")
+
+    def time_to_seconds(t):
+        if pd.isna(t):
+            return None
+        h, m, s = map(int, t.split(":"))
+        return h*3600 + m*60 + s
+
+    # convertir tiempos
+    routes["origin_time_sec"] = routes["arrival_time_origin"].apply(time_to_seconds)
+    routes["transfer_time_sec"] = routes["transfer_arrival"].apply(time_to_seconds)
+    routes["dest_time_sec"] = routes["arrival_time_dest"].apply(time_to_seconds)
+
+    # calcular duración total
+    routes["total_travel_time"] = routes["dest_time_sec"] - routes["origin_time_sec"]
+
+    # eliminar valores inválidos
+    routes = routes[routes["total_travel_time"] > 0]
+
+    print("Routes after time validation:", len(routes))
+
+    if routes.empty:
+        print("❌ FAILURE: No routes with valid travel time")
+        return {"status":"Not found","reason":"invalid_times"}
+
+    # ordenar por duración
+    routes = routes.sort_values("total_travel_time")
+
+    best_route = routes.iloc[0]
+
+    print("\n🏆 BEST ROUTE FOUND")
+    print("Trip 1:", best_route["trip1"])
+    print("Trip 2:", best_route["trip2"])
+    print("Transfer stop:", best_route["transfer_stop"])
+    print("Total travel time (minutes):", round(best_route["total_travel_time"]/60,2))
+
+    # devolver solo las mejores 5 rutas
+    best_routes = routes.head(5)
+
     return {
         "status":"Found",
-        "results": routes.to_dict("records")
+        "best_route": best_route.to_dict(),
+        "alternatives": best_routes.to_dict("records"),
+        "total_options_found": len(routes)
     }
 
 
