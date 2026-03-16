@@ -3,6 +3,7 @@ import random, os, requests, json
 import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes
 import load_gtfs_trips,load_gtfs_stop_times
 import direct_trip_search_prototype,transfer_trip_search_prototype,claude_test
+from claude import transform_input_address
 from transit_engine import find_direct_trip
 import psycopg2
 
@@ -86,6 +87,10 @@ def direct_trip():
     address = request.args.get("address")
     if not address:
         return jsonify({"error": "No address received"}), 400
+
+    address_transformed = transform_input_address(address)
+    if address_transformed != "UNKNOWN":
+        address = address_transformed
 
     lat, lon, error = geocode_address(address)
     if error:
