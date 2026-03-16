@@ -264,7 +264,6 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000, near
     print(routes[[
     "arrival_time_origin",
     "transfer_arrival",
-    "arrival_time",
     "arrival_time_dest"
     ]].head(10))
 
