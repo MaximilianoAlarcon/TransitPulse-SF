@@ -25,7 +25,7 @@ pd.set_option('display.width', 200)         # ancho de la tabla en consola
 pd.set_option('display.max_rows', 50)      # mostrar hasta 50 filas
 
 
-def find_direct_trip(origin_coords, dest_coords, search_radius=500):
+def find_direct_trip(origin_coords, dest_coords, search_radius=1000):
 
     conn = psycopg2.connect(**DB_CONFIG)
     cur = conn.cursor()
