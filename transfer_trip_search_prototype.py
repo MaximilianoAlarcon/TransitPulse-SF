@@ -237,16 +237,28 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000, near
     print("\n[STEP 10] Calculating travel times")
 
     routes["origin_time_sec"] = routes["arrival_time_origin"].apply(time_to_seconds)
-    routes["transfer_time_sec"] = routes["transfer_arrival"].apply(time_to_seconds)
+
+    routes["transfer_arrival_sec"] = routes["transfer_arrival"].apply(time_to_seconds)
+
+    routes["second_trip_time_sec"] = routes["arrival_time"].apply(time_to_seconds)
+
     routes["dest_time_sec"] = routes["arrival_time_dest"].apply(time_to_seconds)
 
     routes["transfer_wait"] = (
-        routes["transfer_time_sec"] - routes["origin_time_sec"]
+        routes["second_trip_time_sec"] - routes["transfer_arrival_sec"]
     )
 
     routes["total_travel_time"] = (
         routes["dest_time_sec"] - routes["origin_time_sec"]
     )
+
+    print("Debug antes del filtro")
+    print(routes[[
+    "arrival_time_origin",
+    "transfer_arrival",
+    "arrival_time",
+    "arrival_time_dest"
+    ]].head())
 
     # ------------------------------------
     # STEP 11 — FILTER BAD TRANSFERS
