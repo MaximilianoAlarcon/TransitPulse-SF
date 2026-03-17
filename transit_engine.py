@@ -145,39 +145,44 @@ def find_direct_trip(origin_coords, dest_coords, search_radius=800):
             df_final['total_time'] = df_final['wait_time'] + df_final['travel_time']
             # Elegir bus que llega primero considerando espera
             df_fastest = df_final.sort_values('total_time').head(1)
-            print("✅ Bus que te lleva al destino más rápido desde ahora:")
-            print(df_fastest.head())
-            trip_details = df_fastest.iloc[0]
-
-            transport_details = pd.read_sql("SELECT * FROM routes WHERE route_id IN (SELECT route_id FROM trips WHERE trip_id = %s AND operator_id = %s);",conn,params=(df_fastest['trip_id'].iloc[0], df_fastest['operator_id_origin'].iloc[0]))
-            print("Detalles del transporte")
-            print(transport_details.head())
-            print(transport_details.shape)
-            transport_details = transport_details.iloc[0]
-
-            t1 = trip_details["arrival_time_origin"]
-            t2 = trip_details["arrival_time_dest"]
-            return {
-                "status":"Found",
-                "details":{
-                    "stop_name_origin":trip_details["stop_name_origin"],
-                    "arrival_time_origin":f"{t1.components.hours:02}:{t1.components.minutes:02}",
-                    "stop_name_dest":trip_details["stop_name_dest"],
-                    "arrival_time_dest":f"{t2.components.hours:02}:{t2.components.minutes:02}",
-                    "stop_lat_origin":float(trip_details["stop_lat_origin"]),
-                    "stop_lon_origin":float(trip_details["stop_lon_origin"]),
-                    "stop_lat_dest":float(trip_details["stop_lat_dest"]),
-                    "stop_lon_dest":float(trip_details["stop_lon_dest"]),
-                    "travel_time":int(trip_details["travel_time"].total_seconds()),
-                    "wait_time":int(trip_details["wait_time"].total_seconds()),
-                    "total_time":int(trip_details["total_time"].total_seconds()),
-                    "route_short_name":transport_details["route_short_name"],
-                    "route_long_name":transport_details["route_long_name"],
-                    "route_desc":transport_details["route_desc"],
-                    "route_type":int(transport_details["route_type"]),
-                    "route_url":transport_details["route_url"]
+            if df_fastest.shape[0] > 0:
+                print("✅ Bus que te lleva al destino más rápido desde ahora:")
+                print(df_fastest.head())
+                trip_details = df_fastest.iloc[0]
+                transport_details = pd.read_sql("SELECT * FROM routes WHERE route_id IN (SELECT route_id FROM trips WHERE trip_id = %s AND operator_id = %s);",conn,params=(df_fastest['trip_id'].iloc[0], df_fastest['operator_id_origin'].iloc[0]))
+                print("Detalles del transporte")
+                print(transport_details.head())
+                print(transport_details.shape)
+                transport_details = transport_details.iloc[0]
+                t1 = trip_details["arrival_time_origin"]
+                t2 = trip_details["arrival_time_dest"]
+                return {
+                    "status":"Found",
+                    "details":{
+                        "stop_name_origin":trip_details["stop_name_origin"],
+                        "arrival_time_origin":f"{t1.components.hours:02}:{t1.components.minutes:02}",
+                        "stop_name_dest":trip_details["stop_name_dest"],
+                        "arrival_time_dest":f"{t2.components.hours:02}:{t2.components.minutes:02}",
+                        "stop_lat_origin":float(trip_details["stop_lat_origin"]),
+                        "stop_lon_origin":float(trip_details["stop_lon_origin"]),
+                        "stop_lat_dest":float(trip_details["stop_lat_dest"]),
+                        "stop_lon_dest":float(trip_details["stop_lon_dest"]),
+                        "travel_time":int(trip_details["travel_time"].total_seconds()),
+                        "wait_time":int(trip_details["wait_time"].total_seconds()),
+                        "total_time":int(trip_details["total_time"].total_seconds()),
+                        "route_short_name":transport_details["route_short_name"],
+                        "route_long_name":transport_details["route_long_name"],
+                        "route_desc":transport_details["route_desc"],
+                        "route_type":int(transport_details["route_type"]),
+                        "route_url":transport_details["route_url"]
+                    }
                 }
-            }
+            else:
+                print("⚠️ No se encontraron viajes directos porque no hay paradas cercanas al origen o destino.")
+                return {
+                    "status":"Not found",
+                    "reason":"No direct trips were found between the origin and destination"
+                }
         else:
             print("⚠️ No se encontraron viajes directos porque no hay paradas cercanas al origen o destino.")
             return {
