@@ -174,7 +174,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     print(df.head())
     
     if df.shape[0] == 0:
-        return {"status": "Not found"}
+        return {"status": "Not found","reason":"We found no trips with transfers within the next hour"}
 
     # Mantener solo mejores 3 rutas sin duplicados
     df = df.sort_values("total_travel_time")
@@ -273,14 +273,4 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     cur.close()
     print(json.dumps(routes, indent=2))
-    return {"status": "Found", "routes": routes}
-
-def run():
-    # Coordenadas: (lon, lat)
-    origin = (-122.4120372, 37.7803603)      # YOTEL SF
-    destination = (-122.4785598, 37.8199109) # Pacifica Beach Hotel
-    result = find_trip_with_transfer(origin, destination)
-    print(result)
-
-if __name__ == "__main__":
-    run()
+    return {"status": "Found", "details": routes}

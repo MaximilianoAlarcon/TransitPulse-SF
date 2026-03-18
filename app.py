@@ -133,13 +133,13 @@ def transfer_trip():
     print(search)
     if search["status"] == "Found":
         return jsonify({
-            "status": "Found"
-            #"details": search["details"]
+            "status": "Found",
+            "details": search["details"]
         })
     else:
         return jsonify({
-            "status": search["status"]
-            #"reason": search["reason"],
+            "status": search["status"],
+            "reason": search["reason"]
         })
 
 
