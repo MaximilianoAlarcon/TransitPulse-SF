@@ -35,9 +35,26 @@ pd.set_option('display.max_rows', 50)      # mostrar hasta 50 filas
 def init_db(conn):
 
     cur = conn.cursor()
-    select(cur,"""
-    SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position;
+
+    #select(cur,"""
+    #SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position;
+    #""")
+
+    cur.execute("""
+ALTER TABLE stop_times ADD COLUMN IF NOT EXISTS arrival_sec INT;
+
+UPDATE stop_times SET arrival_sec = split_part(arrival_time, ':', 1)::int * 3600 + split_part(arrival_time, ':', 2)::int * 60 + split_part(arrival_time, ':', 3)::int;
+
+CREATE INDEX IF NOT EXISTS idx_stop_times_stop_arrival ON stop_times(stop_id, arrival_sec);
+
+CREATE INDEX IF NOT EXISTS idx_stop_times_trip_seq ON stop_times(trip_id, stop_sequence);
+
+ALTER TABLE stop_times ADD COLUMN IF NOT EXISTS departure_sec INT;
+
+CREATE INDEX IF NOT EXISTS idx_stops_geom ON stops USING GIST(geom);        
     """)
+
+    print("Query ejecutada")
 
 
 def run():
