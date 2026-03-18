@@ -6,6 +6,7 @@ import psycopg2
 import json
 import os
 from datetime import datetime
+import time
 
 API_KEY = os.environ.get("API_511_KEY")
 
@@ -115,14 +116,14 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
     ORDER BY total_travel_time
     LIMIT 20;
     """
-
+    now = time.localtime()
+    current_sec = now.tm_hour*3600 + now.tm_min*60 + now.tm_sec
     params = (
-        origin_coords[0],  # lon
-        origin_coords[1],  # lat
-        search_radius,               # radio origen (metros)
-        dest_coords[0],    # lon
-        dest_coords[1],    # lat
-        search_radius                # radio destino
+        origin_coords[0], origin_coords[1], search_radius,  # origin ST_DWithin
+        origin_coords[0], origin_coords[1],                # origin ST_Distance
+        dest_coords[0], dest_coords[1], search_radius,    # dest ST_DWithin
+        dest_coords[0], dest_coords[1],                   # dest ST_Distance
+        current_sec, current_sec                           # first_leg window
     )
 
     df = pd.read_sql(query, conn, params=params)
