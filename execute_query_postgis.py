@@ -41,6 +41,8 @@ def init_db(conn):
     #""")
 
     cur.execute("""
+ALTER TABLE stop_times ADD COLUMN IF NOT EXISTS departure_sec INT;
+
 UPDATE stop_times SET departure_sec =
     CASE
         WHEN departure_time IS NOT NULL AND departure_time <> ''
