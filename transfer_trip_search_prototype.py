@@ -26,7 +26,7 @@ def time_to_seconds(t):
     h, m, s = map(int, t.split(":"))
     return h*3600 + m*60 + s
 
-def find_trip_with_transfer(origin_coords, dest_coords, search_radius=1200, transfer_radius=200):
+def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=500, search_radius_dest=1200, transfer_radius=200):
     """
     Busca rutas con un solo transbordo entre dos coordenadas.
     - origin_coords: (lon, lat)
@@ -115,8 +115,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=1200, tran
     current_sec = now_sf.hour*3600 + now_sf.minute*60 + now_sf.second
 
     params = (
-        origin_coords[0], origin_coords[1], search_radius,
-        dest_coords[0], dest_coords[1], search_radius,
+        origin_coords[0], origin_coords[1], search_radius_origin,
+        dest_coords[0], dest_coords[1], search_radius_dest,
         current_sec, current_sec
     )
 
