@@ -28,7 +28,7 @@ def time_to_seconds(t):
     return h*3600 + m*60 + s
 
 
-def find_trip_with_transfer(origin_coords, dest_coords, search_radius=2000, nearest_stops=5):
+def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, nearest_stops=5):
 
     print("\n========== START TRANSFER SEARCH ==========")
     print("Origin:", origin_coords)

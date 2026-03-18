@@ -112,13 +112,35 @@ def direct_trip():
         })
 
 
-    #stop = get_closest_stop(lat, lon)
-    #if not stop:
-    #    return jsonify({"error": "No se encontró ninguna parada"}), 404
+@app.route("/transfer-trip")
+def transfer_trip():
+    address = "pacifica state beach"
+    if not address:
+        return jsonify({"error": "No address received"}), 400
 
-    #print("Esta es la parada mas cercana")
-    #print(stop)
+    address_transformed = transform_input_address(address)
+    if address_transformed != "UNKNOWN":
+        address = address_transformed
 
+    lat, lon, error = geocode_address(address)
+    if error:
+        return jsonify({"error": error}), 404
+
+    origin_coords = (-122.4120372,37.7803603)
+    dest_coords = (lon,lat)
+
+    search = transfer_trip_search_prototype.find_trip_with_transfer(origin_coords,dest_coords)
+    print(search)
+    if search["status"] == "Found":
+        return jsonify({
+            "status": "Found",
+            "details": search["details"]
+        })
+    else:
+        return jsonify({
+            "status": search["status"],
+            "reason": search["reason"],
+        })
 
 
 @app.route("/api/operators")
