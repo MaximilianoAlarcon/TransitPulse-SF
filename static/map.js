@@ -136,7 +136,9 @@ const chatResult = document.getElementById("chat-result");
 
 chatSend.addEventListener("click", async () => {
     clearRouteMarkers(map)
-    document.getElementById("chat-result").innerHTML = `<div class="spinner"></div>`;
+    document.getElementById("chat-result").innerHTML = `
+    <p>Searching direct trip...</p>
+    <div class="spinner"></div>`;
     const address = document.getElementById("chat-input").value.trim();
     if (!address) return alert("Enter your destination");
     try {
@@ -175,9 +177,9 @@ chatSend.addEventListener("click", async () => {
                 markRouteStops(map, trip_details.stop_lat_origin, trip_details.stop_lon_origin, trip_details.stop_lat_dest, trip_details.stop_lon_dest)
             } else {
                 document.getElementById("chat-result").innerHTML = `
-                <p>We couldn't find a direct trip</p>
                 <p>${data.reason}</p>
                 `;
+                markRouteStops(map, data["origin_coords"][1], data["origin_coords"][0], data["dest_coords"][1], data["dest_coords"][0])
             }
         }
         

@@ -114,19 +114,19 @@ def direct_trip():
 
 @app.route("/transfer-trip")
 def transfer_trip():
+    my_location = (-122.4120372,37.7803603)
+
     address = request.args.get("address")
     if not address:
         return jsonify({"error": "No address received"}), 400
-
     address_transformed = transform_input_address(address)
     if address_transformed != "UNKNOWN":
         address = address_transformed
-
     lat, lon, error = geocode_address(address)
     if error:
         return jsonify({"error": error}), 404
 
-    origin_coords = (-122.4120372,37.7803603)
+    origin_coords = my_location
     dest_coords = (lon,lat)
 
     search = transfer_trip_search_prototype.find_trip_with_transfer(origin_coords,dest_coords,auto_estimate_radius=True)
@@ -139,7 +139,9 @@ def transfer_trip():
     else:
         return jsonify({
             "status": search["status"],
-            "reason": search["reason"]
+            "reason": search["reason"],
+            "origin_coords":origin_coords,
+            "dest_coords":dest_coords
         })
 
 
