@@ -132,8 +132,8 @@ def init_db(conn):
         -122.4120372,  # lon
         37.7803603,  # lat
         800,               # radio origen (metros)
-        -122.4991027,    # lon
-        37.5996453,    # lat
+        -122.0507824,    # lon
+        37.4090755,    # lat
         800                # radio destino
     )
 
