@@ -76,16 +76,14 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=1200, tran
             st1.stop_sequence AS seq1,
             st2.stop_sequence AS seq2
         FROM stop_times st1
-        JOIN stop_times st2
-            ON ST_DWithin(
-                (SELECT geom FROM stops WHERE stop_id = st1.stop_id)::geography,
-                (SELECT geom FROM stops WHERE stop_id = st2.stop_id)::geography,
-                {transfer_radius}
-            )
-        WHERE
-            st1.trip_id IN (SELECT trip_id FROM first_leg)
+        JOIN stops s1 ON st1.stop_id = s1.stop_id
+        JOIN stop_times st2 ON st2.trip_id IS NOT NULL  -- mantiene todos los trips
+        JOIN stops s2 ON st2.stop_id = s2.stop_id
+        WHERE 
+            ST_DWithin(s1.geom::geography, s2.geom::geography, 200)
+            AND st1.trip_id IN (SELECT trip_id FROM first_leg)
             AND st2.departure_sec > st1.arrival_sec
-            AND st2.departure_sec < st1.arrival_sec + 7200  -- ventana 2 horas
+            AND st2.departure_sec < st1.arrival_sec + 7200
     ),
     final_routes AS (
         SELECT 
