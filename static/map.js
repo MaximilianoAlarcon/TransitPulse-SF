@@ -156,6 +156,7 @@ chatSend.addEventListener("click", async () => {
             if (data["status"] == "Found"){
                 trip_details = data["details"]
                 document.getElementById("chat-result").innerHTML = `
+                <p>If you want to go to: ${address}</p>
                 <p>You should take the transport : <b>${trip_details.route_long_name}</b></p>
                 <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_time)}</p>
                 <p>Your trip will last approximately ${formatDuration(trip_details.total_time)}</p>
