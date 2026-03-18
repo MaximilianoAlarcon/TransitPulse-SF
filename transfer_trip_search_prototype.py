@@ -236,7 +236,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
 
         print(json.dumps(routes, indent=2))
         return {
-            "status": "Found"
+            "status": "Found",
+            "routes": routes
             #"best_route": best_route.to_dict(),
             #"alternatives": best_routes.to_dict("records"),
             #"routes_found": len(routes)
