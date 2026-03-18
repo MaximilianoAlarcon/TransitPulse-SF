@@ -40,11 +40,6 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
             ST_SetSRID(ST_Point(%s,%s),4326)::geography,
             %s
         )
-        ORDER BY ST_Distance(
-            geom::geography,
-            ST_SetSRID(ST_Point(%s,%s),4326)::geography
-        )
-        LIMIT 5
     ),
     dest AS (
         SELECT stop_id
@@ -54,11 +49,6 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
             ST_SetSRID(ST_Point(%s,%s),4326)::geography,
             %s
         )
-        ORDER BY ST_Distance(
-            geom::geography,
-            ST_SetSRID(ST_Point(%s,%s),4326)::geography
-        )
-        LIMIT 5
     ),
     first_leg AS (
         SELECT 
@@ -120,9 +110,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
     current_sec = now.tm_hour*3600 + now.tm_min*60 + now.tm_sec
     params = (
         origin_coords[0], origin_coords[1], search_radius,  # origin ST_DWithin
-        origin_coords[0], origin_coords[1],                # origin ST_Distance
         dest_coords[0], dest_coords[1], search_radius,    # dest ST_DWithin
-        dest_coords[0], dest_coords[1],                   # dest ST_Distance
         current_sec, current_sec                           # first_leg window
     )
 
