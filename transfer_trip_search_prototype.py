@@ -79,6 +79,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
             t.transfer_stop,
             t.t1,
             t.t2,
+            t.seq1,
+            t.seq2,
             st3.arrival_sec AS dest_time,
             st3.stop_id AS dest_stop
         FROM transfers t
