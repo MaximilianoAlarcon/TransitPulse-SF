@@ -98,7 +98,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
         WHERE
             st3.stop_id IN (SELECT stop_id FROM dest)
             AND st3.stop_sequence > t.seq2
-            AND st3.arrival_sec <= t.t1 + 7200   -- máximo 2h total
+            AND st3.arrival_sec <= t.t1 + 14400   -- máximo 2h total
     )
     SELECT *,
         (dest_time - t1) AS total_travel_time
