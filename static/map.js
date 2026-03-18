@@ -136,7 +136,7 @@ const chatResult = document.getElementById("chat-result");
 
 chatSend.addEventListener("click", async () => {
     clearRouteMarkers(map)
-    document.getElementById("chat-result").innerText = `<div class="spinner"></div>`;
+    document.getElementById("chat-result").innerHTML = `<div class="spinner"></div>`;
     const address = document.getElementById("chat-input").value.trim();
     if (!address) return alert("Enter your destination");
     try {
