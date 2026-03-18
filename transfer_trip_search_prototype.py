@@ -26,7 +26,31 @@ def time_to_seconds(t):
     h, m, s = map(int, t.split(":"))
     return h*3600 + m*60 + s
 
-def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800, search_radius_dest=1200, transfer_radius=350):
+def estimate_radius(conn, coords):
+    lon, lat = coords
+
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM stops
+        WHERE ST_DWithin(
+            geom::geography,
+            ST_SetSRID(ST_Point(%s,%s),4326)::geography,
+            500
+        );
+    """, (lon, lat))
+
+    count = cur.fetchone()[0]
+    cur.close()
+
+    if count > 30:
+        return 600
+    elif count > 10:
+        return 1000
+    else:
+        return 1500
+
+def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800, search_radius_dest=1200, transfer_radius=350, auto_estimate_radius=False):
     """
     Busca rutas con un solo transbordo entre dos coordenadas.
     - origin_coords: (lon, lat)
@@ -34,8 +58,13 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     - search_radius: radio para stops de origen/destino (en metros)
     - transfer_radius: radio para considerar transbordo cercano (en metros)
     """
+
     conn = psycopg2.connect(**DB_CONFIG)
-    
+
+    if auto_estimate_radius:
+        search_radius_origin =  estimate_radius(conn,origin_coords)
+        search_radius_dest =  estimate_radius(conn,dest_coords)
+
     query = f"""
     WITH origin AS (
         SELECT stop_id, geom

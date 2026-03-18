@@ -129,7 +129,7 @@ def transfer_trip():
     origin_coords = (-122.4120372,37.7803603)
     dest_coords = (lon,lat)
 
-    search = transfer_trip_search_prototype.find_trip_with_transfer(origin_coords,dest_coords)
+    search = transfer_trip_search_prototype.find_trip_with_transfer(origin_coords,dest_coords,auto_estimate_radius=True)
     print(search)
     if search["status"] == "Found":
         return jsonify({
