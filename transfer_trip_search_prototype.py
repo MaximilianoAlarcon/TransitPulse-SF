@@ -30,293 +30,95 @@ def time_to_seconds(t):
 
 def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, nearest_stops=100):
 
-    print("\n========== START TRANSFER SEARCH ==========")
-    print("Origin:", origin_coords)
-    print("Destination:", dest_coords)
-
-    conn = psycopg2.connect(**DB_CONFIG)
-
-    # ------------------------------------
-    # PARAMETERS
-    # ------------------------------------
-
-    MAX_TRANSFER_WAIT = 3600   # 1800 -> 30 minutes
-    MIN_TRANSFER_WAIT = 30     # 60 -> 1 minute
-    MAX_TRAVEL_TIME = 14400     # 7200 -> 2 hours
-
-    # ------------------------------------
-    # STEP 1 — ORIGIN STOPS
-    # ------------------------------------
-
-    print("\n[STEP 1] Searching stops near origin")
-
-    origin_stops = pd.read_sql("""
-        SELECT stop_id, stop_name, stop_lat, stop_lon
+    query = """
+    WITH origin AS (
+        SELECT stop_id
         FROM stops
         WHERE ST_DWithin(
             geom::geography,
             ST_SetSRID(ST_Point(%s,%s),4326)::geography,
             %s
         )
-        LIMIT %s
-    """, conn, params=(origin_coords[0], origin_coords[1], search_radius, nearest_stops))
-
-    print("Origin stops:", len(origin_stops))
-
-    if origin_stops.empty:
-        return {"status": "Not found", "reason": "no_origin_stops"}
-
-    # ------------------------------------
-    # STEP 2 — DESTINATION STOPS
-    # ------------------------------------
-
-    print("\n[STEP 2] Searching stops near destination")
-
-    dest_stops = pd.read_sql("""
-        SELECT stop_id, stop_name, stop_lat, stop_lon
+    ),
+    dest AS (
+        SELECT stop_id
         FROM stops
         WHERE ST_DWithin(
             geom::geography,
             ST_SetSRID(ST_Point(%s,%s),4326)::geography,
             %s
         )
-        LIMIT %s
-    """, conn, params=(dest_coords[0], dest_coords[1], search_radius, nearest_stops))
-
-    print("Destination stops:", len(dest_stops))
-
-    if dest_stops.empty:
-        return {"status": "Not found", "reason": "no_destination_stops"}
-
-    origin_ids = tuple(origin_stops.stop_id.tolist())
-    dest_ids = tuple(dest_stops.stop_id.tolist())
-
-    # ------------------------------------
-    # STEP 3 — TRIPS FROM ORIGIN
-    # ------------------------------------
-
-    print("\n[STEP 3] Trips passing origin stops")
-
-    origin_trips = pd.read_sql("""
-        SELECT trip_id, stop_id, stop_sequence, arrival_time
+    ),
+    first_leg AS (
+        SELECT *
         FROM stop_times
-        WHERE stop_id IN %s
-    """, conn, params=(origin_ids,))
+        WHERE stop_id IN (SELECT stop_id FROM origin) AND arrival_sec IS NOT NULL
+        ORDER BY arrival_sec
+    ),
+    transfers AS (
+        SELECT 
+            st1.trip_id AS trip1,
+            st2.trip_id AS trip2,
+            st1.stop_id AS transfer_stop,
+            st1.arrival_sec AS t1,
+            st2.departure_sec AS t2,
+            st1.stop_sequence AS seq1,
+            st2.stop_sequence AS seq2
+        FROM stop_times st1
+        JOIN stop_times st2
+            ON st1.stop_id = st2.stop_id
+        WHERE
+            st1.trip_id IN (SELECT trip_id FROM first_leg)
+            AND st2.departure_sec > st1.arrival_sec
+            AND st2.departure_sec < st1.arrival_sec + 3600
+    ),
+    final_routes AS (
+        SELECT 
+            t.trip1,
+            t.trip2,
+            t.transfer_stop,
+            t.t1,
+            t.t2,
+            st3.arrival_sec AS dest_time,
+            st3.stop_id AS dest_stop
+        FROM transfers t
+        JOIN stop_times st3
+            ON t.trip2 = st3.trip_id
+        WHERE
+            st3.stop_id IN (SELECT stop_id FROM dest)
+            AND st3.stop_sequence > t.seq2
+    )
+    SELECT *,
+        (dest_time - t1) AS total_travel_time
+    FROM final_routes
+    ORDER BY total_travel_time
+    LIMIT 20;
+    """
 
-    print("Trips found:", len(origin_trips))
-
-    if origin_trips.empty:
-        return {"status": "Not found", "reason": "no_origin_trips"}
-
-    trip_ids = tuple(origin_trips.trip_id.unique())
-
-    # ------------------------------------
-    # STEP 4 — STOPS OF THOSE TRIPS
-    # ------------------------------------
-
-    print("\n[STEP 4] Fetching stops for those trips")
-
-    trip_stop_times = pd.read_sql("""
-        SELECT trip_id, stop_id, stop_sequence, arrival_time
-        FROM stop_times
-        WHERE trip_id IN %s
-    """, conn, params=(trip_ids,))
-
-    print("Stop times fetched:", len(trip_stop_times))
-
-    # ------------------------------------
-    # STEP 5 — POSSIBLE TRANSFER STOPS
-    # ------------------------------------
-
-    print("\n[STEP 5] Finding transfer candidates")
-
-    transfer_candidates = origin_trips.merge(
-        trip_stop_times,
-        on="trip_id",
-        suffixes=("_origin", "_transfer")
+    params = (
+        origin_coords[0],  # lon
+        origin_coords[1],  # lat
+        search_radius,               # radio origen (metros)
+        dest_coords[0],    # lon
+        dest_coords[1],    # lat
+        search_radius                # radio destino
     )
 
-    transfer_candidates = transfer_candidates[
-        transfer_candidates.stop_sequence_transfer >
-        transfer_candidates.stop_sequence_origin
-    ]
+    df = pd.read_sql(query, conn, params=params)
 
-    print("Transfer candidates:", len(transfer_candidates))
+    print(df.head())
 
-    if transfer_candidates.empty:
-        return {"status": "Not found", "reason": "no_transfer_candidates"}
-
-    transfer_ids = tuple(transfer_candidates.stop_id_transfer.unique())
-
-    # ------------------------------------
-    # STEP 6 — TRIPS FROM TRANSFER STOPS
-    # ------------------------------------
-
-    print("\n[STEP 6] Trips from transfer stops")
-
-    transfer_trips = pd.read_sql("""
-        SELECT trip_id, stop_id, stop_sequence, arrival_time
-        FROM stop_times
-        WHERE stop_id IN %s
-    """, conn, params=(transfer_ids,))
-
-    transfer_trips = transfer_trips.rename(columns={
-        "arrival_time": "transfer_departure"
-    })
-
-    print("Second-leg trips:", len(transfer_trips))
-
-    if transfer_trips.empty:
-        return {"status": "Not found", "reason": "no_transfer_trips"}
-
-    transfer_trip_ids = tuple(transfer_trips.trip_id.unique())
-
-    # ------------------------------------
-    # STEP 7 — STOPS OF SECOND TRIPS
-    # ------------------------------------
-
-    print("\n[STEP 7] Fetching stop_times of second trips")
-
-    transfer_trip_stop_times = pd.read_sql("""
-        SELECT trip_id, stop_id, stop_sequence, arrival_time
-        FROM stop_times
-        WHERE trip_id IN %s
-    """, conn, params=(transfer_trip_ids,))
-
-    # ------------------------------------
-    # STEP 8 — CHECK DESTINATION
-    # ------------------------------------
-
-    print("\n[STEP 8] Checking destination matches")
-
-    dest_matches = transfer_trip_stop_times[
-        transfer_trip_stop_times.stop_id.isin(dest_ids)
-    ].rename(columns={
-        "arrival_time": "arrival_time_dest",
-        "stop_sequence": "stop_sequence_dest"
-    })
-
-    print("Destination matches:", len(dest_matches))
-
-    if dest_matches.empty:
-        return {"status": "Not found", "reason": "no_dest_matches"}
-
-    # ------------------------------------
-    # STEP 9 — BUILD ROUTES
-    # ------------------------------------
-
-    print("\n[STEP 9] Building route combinations")
-
-    segment1 = transfer_candidates.rename(columns={
-        "trip_id": "trip1",
-        "stop_id_origin": "origin_stop",
-        "stop_id_transfer": "transfer_stop",
-        "arrival_time_transfer": "transfer_arrival"
-    })
-
-    segment2 = transfer_trips.rename(columns={
-    "trip_id": "trip2",
-    "stop_id": "transfer_stop",
-    "arrival_time": "transfer_departure"
-    })
-
-    routes = segment1.merge(segment2, on="transfer_stop")
-
-    routes = routes.merge(
-        dest_matches,
-        left_on="trip2",
-        right_on="trip_id",
-        suffixes=("", "_dest")
-    )
-
-    routes = routes[
-        routes.stop_sequence_dest > routes.stop_sequence
-    ]
-
-    print("Routes built:", len(routes))
-
-    if routes.empty:
-        return {"status": "Not found", "reason": "no_valid_routes"}
-
-    # ------------------------------------
-    # STEP 10 — TIME CALCULATIONS
-    # ------------------------------------
-
-    print("\n[STEP 10] Calculating travel times")
-
-    routes["origin_time_sec"] = routes["arrival_time_origin"].apply(time_to_seconds)
-
-    routes["transfer_arrival_sec"] = routes["transfer_arrival"].apply(time_to_seconds)
-
-    routes["second_trip_time_sec"] = routes["transfer_departure"].apply(time_to_seconds)
-
-    routes["dest_time_sec"] = routes["arrival_time_dest"].apply(time_to_seconds)
-
-    routes["transfer_wait"] = (
-        routes["second_trip_time_sec"] - routes["transfer_arrival_sec"]
-    )
-
-    routes["total_travel_time"] = (
-        routes["dest_time_sec"] - routes["origin_time_sec"]
-    )
-
-    print("Debug antes del filtro")
-    print(routes[[
-    "arrival_time_origin",
-    "transfer_arrival",
-    "arrival_time_dest"
-    ]].head(10))
-
-    # ------------------------------------
-    # STEP 11 — FILTER BAD TRANSFERS
-    # ------------------------------------
-
-    print("\n[STEP 11] Filtering unrealistic transfers")
-
-    routes = routes[
-        (routes["transfer_wait"] >= MIN_TRANSFER_WAIT) &
-        (routes["transfer_wait"] <= MAX_TRANSFER_WAIT)
-    ]
-
-    routes = routes[
-        routes["total_travel_time"] <= MAX_TRAVEL_TIME
-    ]
-
-    print("Routes after filtering:", len(routes))
-
-    if routes.empty:
-        return {"status": "Not found", "reason": "no_realistic_routes"}
-
-    # ------------------------------------
-    # STEP 12 — REMOVE DUPLICATES
-    # ------------------------------------
-
-    routes = routes.drop_duplicates(
-        subset=["trip1", "trip2", "transfer_stop"]
-    )
-
-    # ------------------------------------
-    # STEP 13 — SORT BY BEST TIME
-    # ------------------------------------
-
-    routes = routes.sort_values("total_travel_time")
-
-    best_route = routes.iloc[0]
-
-    print("\n🏆 BEST ROUTE")
-    print("Trip1:", best_route["trip1"])
-    print("Trip2:", best_route["trip2"])
-    print("Transfer stop:", best_route["transfer_stop"])
-    print("Travel time minutes:", round(best_route["total_travel_time"]/60, 2))
-
-    best_routes = routes.head(5)
-
-    return {
-        "status": "Found",
-        "best_route": best_route.to_dict(),
-        "alternatives": best_routes.to_dict("records"),
-        "routes_found": len(routes)
-    }
+    if df.shape[0] > 0:
+        return {
+            "status": "Found"
+            #"best_route": best_route.to_dict(),
+            #"alternatives": best_routes.to_dict("records"),
+            #"routes_found": len(routes)
+        }
+    else:
+        return {
+            "status":"Not found"
+        }
 
 
 def run():
