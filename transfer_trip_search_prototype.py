@@ -30,7 +30,7 @@ def time_to_seconds(t):
     return h*3600 + m*60 + s
 
 
-def find_trip_with_transfer(origin_coords, dest_coords, search_radius=1200, nearest_stops=100):
+def find_trip_with_transfer(origin_coords, dest_coords, search_radius=3000, nearest_stops=100):
     conn = psycopg2.connect(**DB_CONFIG)
     query = """
     WITH origin AS (
@@ -108,6 +108,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=1200, near
     )
 
     df = pd.read_sql(query, conn, params=params)
+    print("Dataframe")
+    print(df.head())
     if df.shape[0] > 0:
         # --- 1. Quedarse con las mejores 3 rutas ---
         df = df.sort_values("total_travel_time")
