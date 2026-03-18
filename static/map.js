@@ -142,6 +142,7 @@ chatSend.addEventListener("click", async () => {
     const address = document.getElementById("chat-input").value.trim();
     if (!address) return alert("Enter your destination");
     try {
+        //Search direct trip
         const response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}`);
         if (!response.ok) {
             const errData = await response.json();
@@ -175,12 +176,42 @@ chatSend.addEventListener("click", async () => {
                 */
 
                 markRouteStops(map, trip_details.stop_lat_origin, trip_details.stop_lon_origin, trip_details.stop_lat_dest, trip_details.stop_lon_dest)
-            } else {
-                console.log(data);
+            } else if(data["status"] == "Canceled") {
                 document.getElementById("chat-result").innerHTML = `
                 <p>${data.reason}</p>
                 `;
                 markRouteStops(map, data["origin_coords"][1], data["origin_coords"][0], data["dest_coords"][1], data["dest_coords"][0])
+            } else {
+                //Search transfer trip
+                document.getElementById("chat-result").innerHTML = `
+                <p>Searching transfer trip...</p>
+                <div class="spinner"></div>`;
+                address = document.getElementById("chat-input").value.trim();
+                response = await fetch(`/transfer-trip?address=${encodeURIComponent(address)}`);
+                if (!response.ok) {
+                    errData = await response.json();
+                    document.getElementById("chat-result").innerText = errData.error || "Unknown error";
+                    return;
+                }
+                data = await response.json();
+                if ("error" in data){
+                    document.getElementById("chat-result").innerHTML = `
+                    <p>Error: <b>${data.error}</b></p>
+                    `;
+                } else {
+                    if (data["status"] == "Found"){
+                        trip_details = data["details"]
+                        console.log(trip_details)
+                        document.getElementById("chat-result").innerHTML = `
+                        <p>We found it! Yaaay</p>
+                        `;
+                    } else {
+                        document.getElementById("chat-result").innerHTML = `
+                        <p>${data.reason}</p>
+                        `;
+                        markRouteStops(map, data["origin_coords"][1], data["origin_coords"][0], data["dest_coords"][1], data["dest_coords"][0])                        
+                    }
+                }
             }
         }
         

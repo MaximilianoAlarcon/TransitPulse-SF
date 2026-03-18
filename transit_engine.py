@@ -63,7 +63,7 @@ def should_use_transit(origin_coords, dest_coords):
     if distance < 350:
         return False  # caminar
 
-    if walking_time < 300:  # 5 minutos
+    if walking_time < 420:  # 7 minutos
         return False
 
     return True  # usar transporte
@@ -242,6 +242,6 @@ def find_direct_trip(origin_coords, dest_coords, search_radius=800):
             }
     else:
         return {
-                "status":"Not found",
+                "status":"Canceled",
                 "reason":"You should go walking"
             }
