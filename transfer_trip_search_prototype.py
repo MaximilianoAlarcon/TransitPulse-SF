@@ -65,6 +65,9 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         search_radius_origin =  estimate_radius(conn,origin_coords)
         search_radius_dest =  estimate_radius(conn,dest_coords)
 
+    print("Radio para origen: "+str(search_radius_origin))
+    print("Radio para destino: "+str(search_radius_dest))
+
     query = f"""
     WITH origin AS (
         SELECT stop_id, geom
