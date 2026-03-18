@@ -114,7 +114,7 @@ def direct_trip():
 
 @app.route("/transfer-trip")
 def transfer_trip():
-    address = "pacifica state beach"
+    address = request.args.get("address")
     if not address:
         return jsonify({"error": "No address received"}), 400
 
