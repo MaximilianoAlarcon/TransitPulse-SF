@@ -176,6 +176,7 @@ chatSend.addEventListener("click", async () => {
 
                 markRouteStops(map, trip_details.stop_lat_origin, trip_details.stop_lon_origin, trip_details.stop_lat_dest, trip_details.stop_lon_dest)
             } else {
+                console.log(data);
                 document.getElementById("chat-result").innerHTML = `
                 <p>${data.reason}</p>
                 `;
