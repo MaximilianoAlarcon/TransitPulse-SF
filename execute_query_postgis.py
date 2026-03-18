@@ -40,30 +40,7 @@ def init_db(conn):
     #SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position;
     #""")
 
-    queries = [
-        """ UPDATE stop_times
-            SET arrival_sec =
-                CASE 
-                    WHEN arrival_time IS NOT NULL AND arrival_time <> ''
-                    THEN split_part(arrival_time, ':', 1)::int * 3600 +
-                        split_part(arrival_time, ':', 2)::int * 60 +
-                        split_part(arrival_time, ':', 3)::int
-                END
-            WHERE arrival_sec IS NULL;
-        """,
-
-        """ UPDATE stop_times
-            SET departure_sec =
-                CASE
-                    WHEN departure_time IS NOT NULL AND departure_time <> ''
-                    THEN split_part(departure_time, ':', 1)::int * 3600 +
-                        split_part(departure_time, ':', 2)::int * 60 +
-                        split_part(departure_time, ':', 3)::int
-                    ELSE arrival_sec
-                END
-            WHERE departure_sec IS NULL;
-        """
-    ]
+    queries = []
 
     for q in queries:
         print("Ejecutando:", q.split("\n")[0])
@@ -73,6 +50,13 @@ def init_db(conn):
 
     select(cur,"""
     SELECT COUNT(*) FROM stop_times WHERE departure_sec IS NULL;
+    """)
+
+    select(cur,"""
+    SELECT 
+    COUNT(*) FILTER (WHERE arrival_time IS NULL OR arrival_time = '') AS arrival_nulls,
+    COUNT(*) FILTER (WHERE departure_time IS NULL OR departure_time = '') AS departure_nulls
+    FROM stop_times;
     """)
 
     print("Query ejecutada")
@@ -88,7 +72,6 @@ def init_db(conn):
             ST_SetSRID(ST_Point(%s,%s),4326)::geography,
             %s
         )
-        LIMIT 100
     ),
     dest AS (
         SELECT stop_id
@@ -98,14 +81,12 @@ def init_db(conn):
             ST_SetSRID(ST_Point(%s,%s),4326)::geography,
             %s
         )
-        LIMIT 100
     ),
     first_leg AS (
         SELECT *
         FROM stop_times
         WHERE stop_id IN (SELECT stop_id FROM origin) AND arrival_sec IS NOT NULL
         ORDER BY arrival_sec
-        LIMIT 200
     ),
     transfers AS (
         SELECT 
