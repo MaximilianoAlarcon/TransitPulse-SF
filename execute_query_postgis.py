@@ -41,35 +41,28 @@ def init_db(conn):
     #""")
 
     queries = [
-        """ALTER TABLE stop_times ADD COLUMN IF NOT EXISTS arrival_sec INT;""",
-        """ALTER TABLE stop_times ADD COLUMN IF NOT EXISTS departure_sec INT;""",
-
-        """UPDATE stop_times SET arrival_sec =
-            split_part(arrival_time, ':', 1)::int * 3600 +
-            split_part(arrival_time, ':', 2)::int * 60 +
-            split_part(arrival_time, ':', 3)::int
+        """ UPDATE stop_times
+            SET arrival_sec =
+                CASE 
+                    WHEN arrival_time IS NOT NULL AND arrival_time <> ''
+                    THEN split_part(arrival_time, ':', 1)::int * 3600 +
+                        split_part(arrival_time, ':', 2)::int * 60 +
+                        split_part(arrival_time, ':', 3)::int
+                END
             WHERE arrival_sec IS NULL;
         """,
 
-        """UPDATE stop_times SET departure_sec =
-            CASE
-                WHEN departure_time IS NOT NULL AND departure_time <> ''
-                THEN split_part(departure_time, ':', 1)::int * 3600 +
-                     split_part(departure_time, ':', 2)::int * 60 +
-                     split_part(departure_time, ':', 3)::int
-                ELSE arrival_sec
-            END
+        """ UPDATE stop_times
+            SET departure_sec =
+                CASE
+                    WHEN departure_time IS NOT NULL AND departure_time <> ''
+                    THEN split_part(departure_time, ':', 1)::int * 3600 +
+                        split_part(departure_time, ':', 2)::int * 60 +
+                        split_part(departure_time, ':', 3)::int
+                    ELSE arrival_sec
+                END
             WHERE departure_sec IS NULL;
-        """,
-
-        """CREATE INDEX IF NOT EXISTS idx_stop_times_stop_arrival
-           ON stop_times(stop_id, arrival_sec);""",
-
-        """CREATE INDEX IF NOT EXISTS idx_stop_times_trip_seq
-           ON stop_times(trip_id, stop_sequence);""",
-
-        """CREATE INDEX IF NOT EXISTS idx_stops_geom
-           ON stops USING GIST(geom);"""
+        """
     ]
 
     for q in queries:
@@ -110,7 +103,7 @@ def init_db(conn):
     first_leg AS (
         SELECT *
         FROM stop_times
-        WHERE stop_id IN (SELECT stop_id FROM origin)
+        WHERE stop_id IN (SELECT stop_id FROM origin) AND arrival_sec IS NOT NULL
         ORDER BY arrival_sec
         LIMIT 200
     ),
