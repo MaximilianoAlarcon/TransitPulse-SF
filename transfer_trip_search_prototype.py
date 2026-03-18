@@ -7,6 +7,7 @@ import json
 import os
 from datetime import datetime
 import time
+from zoneinfo import ZoneInfo
 
 API_KEY = os.environ.get("API_511_KEY")
 
@@ -105,8 +106,10 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
     ORDER BY total_travel_time
     LIMIT 20;
     """
-    now = time.localtime()
-    current_sec = now.tm_hour*3600 + now.tm_min*60 + now.tm_sec
+    #now = time.localtime()
+    #current_sec = now.tm_hour*3600 + now.tm_min*60 + now.tm_sec
+    now_sf = datetime.now(ZoneInfo("America/Los_Angeles"))
+    current_sec = now_sf.hour*3600 + now_sf.minute*60 + now_sf.second
     params = (
         origin_coords[0], origin_coords[1], search_radius,  # origin ST_DWithin
         dest_coords[0], dest_coords[1], search_radius,    # dest ST_DWithin
