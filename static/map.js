@@ -139,18 +139,18 @@ chatSend.addEventListener("click", async () => {
     document.getElementById("chat-result").innerHTML = `
     <p>Searching direct trip...</p>
     <div class="spinner"></div>`;
-    const address = document.getElementById("chat-input").value.trim();
+    let address = document.getElementById("chat-input").value.trim();
     if (!address) return alert("Enter your destination");
     try {
         //Search direct trip
-        const response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}`);
+        let response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}`);
         if (!response.ok) {
-            const errData = await response.json();
+            let errData = await response.json();
             document.getElementById("chat-result").innerText = errData.error || "Unknown error";
             return;
         }
 
-        const data = await response.json();
+        let data = await response.json();
         if ("error" in data){
             document.getElementById("chat-result").innerHTML = `
             <p>Error: <b>${data.error}</b></p>
