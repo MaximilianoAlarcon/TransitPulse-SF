@@ -84,19 +84,19 @@ def stops():
 
 @app.route("/direct-trip")
 def direct_trip():
+    my_location = (-122.4120372,37.7803603)
+
     address = request.args.get("address")
     if not address:
         return jsonify({"error": "No address received"}), 400
-
     address_transformed = transform_input_address(address)
     if address_transformed != "UNKNOWN":
         address = address_transformed
-
     lat, lon, error = geocode_address(address)
     if error:
         return jsonify({"error": error}), 404
 
-    origin_coords = (-122.4120372,37.7803603)
+    origin_coords = my_location
     dest_coords = (lon,lat)
 
     search = find_direct_trip(origin_coords,dest_coords)
@@ -109,6 +109,8 @@ def direct_trip():
         return jsonify({
             "status": search["status"],
             "reason": search["reason"],
+            "origin_coords":origin_coords,
+            "dest_coords":dest_coords
         })
 
 
