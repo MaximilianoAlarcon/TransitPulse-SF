@@ -52,17 +52,9 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=1200, near
         )
     ),
     first_leg AS (
-        SELECT 
-            trip_id,
-            stop_id,
-            arrival_sec,
-            stop_sequence
+        SELECT *
         FROM stop_times
-        WHERE 
-            stop_id IN (SELECT stop_id FROM origin)
-            AND arrival_sec IS NOT NULL
-            AND arrival_sec >= %s                -- ahora (tiempo actual)
-            AND arrival_sec <= %s + 3600         -- ventana de 1h
+        WHERE stop_id IN (SELECT stop_id FROM origin) AND arrival_sec IS NOT NULL
         ORDER BY arrival_sec
     ),
     transfers AS (
@@ -74,12 +66,13 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=1200, near
             st2.departure_sec AS t2,
             st1.stop_sequence AS seq1,
             st2.stop_sequence AS seq2
-        FROM first_leg st1
+        FROM stop_times st1
         JOIN stop_times st2
             ON st1.stop_id = st2.stop_id
         WHERE
-            st2.departure_sec BETWEEN st1.arrival_sec + 60
-                                AND st1.arrival_sec + 1800
+            st1.trip_id IN (SELECT trip_id FROM first_leg)
+            AND st2.departure_sec > st1.arrival_sec
+            AND st2.departure_sec < st1.arrival_sec + 3600
     ),
     final_routes AS (
         SELECT 
@@ -98,7 +91,6 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=1200, near
         WHERE
             st3.stop_id IN (SELECT stop_id FROM dest)
             AND st3.stop_sequence > t.seq2
-            AND st3.arrival_sec <= t.t1 + 14400   -- máximo 2h total
     )
     SELECT *,
         (dest_time - t1) AS total_travel_time
@@ -112,8 +104,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=1200, near
     current_sec = now_sf.hour*3600 + now_sf.minute*60 + now_sf.second
     params = (
         origin_coords[0], origin_coords[1], search_radius,  # origin ST_DWithin
-        dest_coords[0], dest_coords[1], search_radius,    # dest ST_DWithin
-        current_sec, current_sec                           # first_leg window
+        dest_coords[0], dest_coords[1], search_radius    # dest ST_DWithin
     )
 
     df = pd.read_sql(query, conn, params=params)
