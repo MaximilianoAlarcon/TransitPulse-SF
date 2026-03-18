@@ -58,7 +58,11 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=1200, tran
     first_leg AS (
         SELECT *
         FROM stop_times
-        WHERE stop_id IN (SELECT stop_id FROM origin) AND arrival_sec IS NOT NULL
+        WHERE 
+        stop_id IN (SELECT stop_id FROM origin) 
+        AND arrival_sec IS NOT NULL 
+        AND arrival_sec >= %s 
+        AND arrival_sec <= %s + 3600
         ORDER BY arrival_sec
     ),
     transfers AS (
@@ -109,9 +113,13 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=1200, tran
     LIMIT 20;
     """
 
+    now_sf = datetime.now(ZoneInfo("America/Los_Angeles")) 
+    current_sec = now_sf.hour*3600 + now_sf.minute*60 + now_sf.second
+
     params = (
         origin_coords[0], origin_coords[1], search_radius,
-        dest_coords[0], dest_coords[1], search_radius
+        dest_coords[0], dest_coords[1], search_radius,
+        current_sec, current_sec
     )
 
     df = pd.read_sql(query, conn, params=params)
