@@ -63,7 +63,6 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
             AND arrival_sec >= %s                -- ahora (tiempo actual)
             AND arrival_sec <= %s + 3600         -- ventana de 1h
         ORDER BY arrival_sec
-        LIMIT 200
     ),
     transfers AS (
         SELECT 
