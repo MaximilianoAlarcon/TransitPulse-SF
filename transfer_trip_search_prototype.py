@@ -39,6 +39,11 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
             ST_SetSRID(ST_Point(%s,%s),4326)::geography,
             %s
         )
+        ORDER BY ST_Distance(
+            geom::geography,
+            ST_SetSRID(ST_Point(%s,%s),4326)::geography
+        )
+        LIMIT 5
     ),
     dest AS (
         SELECT stop_id
@@ -48,12 +53,26 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
             ST_SetSRID(ST_Point(%s,%s),4326)::geography,
             %s
         )
+        ORDER BY ST_Distance(
+            geom::geography,
+            ST_SetSRID(ST_Point(%s,%s),4326)::geography
+        )
+        LIMIT 5
     ),
     first_leg AS (
-        SELECT *
+        SELECT 
+            trip_id,
+            stop_id,
+            arrival_sec,
+            stop_sequence
         FROM stop_times
-        WHERE stop_id IN (SELECT stop_id FROM origin) AND arrival_sec IS NOT NULL
+        WHERE 
+            stop_id IN (SELECT stop_id FROM origin)
+            AND arrival_sec IS NOT NULL
+            AND arrival_sec >= %s                -- ahora (tiempo actual)
+            AND arrival_sec <= %s + 3600         -- ventana de 1h
         ORDER BY arrival_sec
+        LIMIT 200
     ),
     transfers AS (
         SELECT 
@@ -64,13 +83,12 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
             st2.departure_sec AS t2,
             st1.stop_sequence AS seq1,
             st2.stop_sequence AS seq2
-        FROM stop_times st1
+        FROM first_leg st1
         JOIN stop_times st2
             ON st1.stop_id = st2.stop_id
         WHERE
-            st1.trip_id IN (SELECT trip_id FROM first_leg)
-            AND st2.departure_sec > st1.arrival_sec
-            AND st2.departure_sec < st1.arrival_sec + 3600
+            st2.departure_sec BETWEEN st1.arrival_sec + 60
+                                AND st1.arrival_sec + 1800
     ),
     final_routes AS (
         SELECT 
@@ -89,6 +107,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
         WHERE
             st3.stop_id IN (SELECT stop_id FROM dest)
             AND st3.stop_sequence > t.seq2
+            AND st3.arrival_sec <= t.t1 + 7200   -- máximo 2h total
     )
     SELECT *,
         (dest_time - t1) AS total_travel_time
@@ -114,78 +133,77 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
         df = df.head(3)
         routes = []
         cur = conn.cursor()
+        # --- 1. Obtener origin stop UNA sola vez ---
+        cur.execute("""
+            SELECT stop_id, stop_name, stop_lat, stop_lon
+            FROM stops
+            ORDER BY ST_Distance(
+                geom::geography,
+                ST_SetSRID(ST_Point(%s,%s),4326)::geography
+            )
+            LIMIT 1;
+        """, (origin_coords[0], origin_coords[1]))
+
+        origin_stop = cur.fetchone()
+
+        # --- 2. Obtener todos los stops necesarios en lote ---
+        all_stop_ids = set(df["transfer_stop"]).union(set(df["dest_stop"]))
+
+        cur.execute(f"""
+            SELECT stop_id, stop_name, stop_lat, stop_lon
+            FROM stops
+            WHERE stop_id = ANY(%s);
+        """, (list(all_stop_ids),))
+
+        stops_map = {row[0]: row for row in cur.fetchall()}
+
+        # --- 3. Obtener TODOS los stop_times en UNA query ---
+        trip_ids = list(set(df["trip1"]).union(set(df["trip2"])))
+
+        cur.execute("""
+            SELECT 
+                st.trip_id,
+                st.stop_id,
+                st.stop_sequence,
+                s.stop_name,
+                s.stop_lat,
+                s.stop_lon
+            FROM stop_times st
+            JOIN stops s ON st.stop_id = s.stop_id
+            WHERE st.trip_id = ANY(%s)
+            ORDER BY st.trip_id, st.stop_sequence;
+        """, (trip_ids,))
+
+        all_stop_times = cur.fetchall()
+
+        # --- 4. Agrupar por trip_id ---
+        from collections import defaultdict
+
+        trip_map = defaultdict(list)
+
+        for row_st in all_stop_times:
+            trip_id, stop_id, seq, name, lat, lon = row_st
+            trip_map[trip_id].append({
+                "id": stop_id,
+                "name": name,
+                "lat": lat,
+                "lon": lon,
+                "seq": seq
+            })
+
+        # --- 5. Construir rutas ---
         for _, row in df.iterrows():
-            # --- 2. Parada origen (la más cercana al usuario) ---
-            cur.execute("""
-                SELECT stop_id, stop_name, stop_lat, stop_lon
-                FROM stops
-                WHERE stop_id IN (
-                    SELECT stop_id FROM stops
-                    WHERE ST_DWithin(
-                        geom::geography,
-                        ST_SetSRID(ST_Point(%s,%s),4326)::geography,
-                        %s
-                    )
-                )
-                ORDER BY ST_Distance(
-                    geom::geography,
-                    ST_SetSRID(ST_Point(%s,%s),4326)::geography
-                )
-                LIMIT 1;
-            """, (origin_coords[0], origin_coords[1], search_radius, origin_coords[0], origin_coords[1]))
 
-            origin_stop = cur.fetchone()
+            trip1_stops = trip_map[row["trip1"]]
+            trip2_stops = trip_map[row["trip2"]]
 
-            # --- 3. Transfer y destino ---
-            cur.execute("""
-                SELECT stop_id, stop_name, stop_lat, stop_lon
-                FROM stops
-                WHERE stop_id = %s;
-            """, (row["transfer_stop"],))
-            transfer_stop = cur.fetchone()
+            # filtrar por secuencia
+            leg1 = [s for s in trip1_stops if s["seq"] <= row["seq1"]]
+            leg2 = [s for s in trip2_stops if s["seq"] >= row["seq2"]]
 
-            cur.execute("""
-                SELECT stop_id, stop_name, stop_lat, stop_lon
-                FROM stops
-                WHERE stop_id = %s;
-            """, (row["dest_stop"],))
-            dest_stop = cur.fetchone()
+            transfer_stop = stops_map[row["transfer_stop"]]
+            dest_stop = stops_map[row["dest_stop"]]
 
-            # --- 4. Paradas tramo 1 ---
-            cur.execute("""
-                SELECT 
-                    s.stop_id,
-                    s.stop_name,
-                    s.stop_lat,
-                    s.stop_lon,
-                    st.stop_sequence
-                FROM stop_times st
-                JOIN stops s ON st.stop_id = s.stop_id
-                WHERE st.trip_id = %s
-                AND st.stop_sequence <= %s
-                ORDER BY st.stop_sequence;
-            """, (row["trip1"], row["seq1"]))
-
-            leg1_stops = cur.fetchall()
-
-            # --- 5. Paradas tramo 2 ---
-            cur.execute("""
-                SELECT 
-                    s.stop_id,
-                    s.stop_name,
-                    s.stop_lat,
-                    s.stop_lon,
-                    st.stop_sequence
-                FROM stop_times st
-                JOIN stops s ON st.stop_id = s.stop_id
-                WHERE st.trip_id = %s
-                AND st.stop_sequence >= %s
-                ORDER BY st.stop_sequence;
-            """, (row["trip2"], row["seq2"]))
-
-            leg2_stops = cur.fetchall()
-
-            # --- 6. Armar estructura ---
             route = {
                 "origin": {
                     "id": origin_stop[0],
@@ -205,30 +223,16 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
                     "lat": dest_stop[2],
                     "lon": dest_stop[3],
                 },
-                "leg1": [
-                    {
-                        "id": s[0],
-                        "name": s[1],
-                        "lat": s[2],
-                        "lon": s[3],
-                        "seq": s[4],
-                    } for s in leg1_stops
-                ],
-                "leg2": [
-                    {
-                        "id": s[0],
-                        "name": s[1],
-                        "lat": s[2],
-                        "lon": s[3],
-                        "seq": s[4],
-                    } for s in leg2_stops
-                ],
+                "leg1": leg1,
+                "leg2": leg2,
                 "total_time": row["total_travel_time"],
                 "wait_time": row["t2"] - row["t1"]
             }
+
             routes.append(route)
+
         cur.close()
-        # --- 7. Resultado final ---
+
         print(json.dumps(routes, indent=2))
         return {
             "status": "Found"
