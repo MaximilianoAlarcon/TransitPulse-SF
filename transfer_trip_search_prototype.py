@@ -28,7 +28,7 @@ def time_to_seconds(t):
     return h*3600 + m*60 + s
 
 
-def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, nearest_stops=50):
+def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, nearest_stops=100):
 
     print("\n========== START TRANSFER SEARCH ==========")
     print("Origin:", origin_coords)
@@ -40,9 +40,9 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
     # PARAMETERS
     # ------------------------------------
 
-    MAX_TRANSFER_WAIT = 1800   # 30 minutes
-    MIN_TRANSFER_WAIT = 60     # 1 minute
-    MAX_TRAVEL_TIME = 7200     # 2 hours
+    MAX_TRANSFER_WAIT = 3600   # 1800 -> 30 minutes
+    MIN_TRANSFER_WAIT = 30     # 60 -> 1 minute
+    MAX_TRAVEL_TIME = 14400     # 7200 -> 2 hours
 
     # ------------------------------------
     # STEP 1 — ORIGIN STOPS
