@@ -130,7 +130,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
                     ST_SetSRID(ST_Point(%s,%s),4326)::geography
                 )
                 LIMIT 1;
-            """, (origin_lon, origin_lat, radius, origin_lon, origin_lat))
+            """, (origin_coords[0], origin_coords[1], search_radius, origin_coords[0], origin_coords[1]))
 
             origin_stop = cur.fetchone()
 
