@@ -26,7 +26,7 @@ def time_to_seconds(t):
     h, m, s = map(int, t.split(":"))
     return h*3600 + m*60 + s
 
-def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=500, search_radius_dest=1200, transfer_radius=200):
+def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800, search_radius_dest=1200, transfer_radius=200):
     """
     Busca rutas con un solo transbordo entre dos coordenadas.
     - origin_coords: (lon, lat)
@@ -56,14 +56,27 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=500
         )
     ),
     first_leg AS (
-        SELECT *
-        FROM stop_times
+        SELECT st.*
+        FROM stop_times st
+        JOIN stops s ON st.stop_id = s.stop_id
         WHERE 
-        stop_id IN (SELECT stop_id FROM origin) 
-        AND arrival_sec IS NOT NULL 
-        AND arrival_sec >= %s 
-        AND arrival_sec <= %s + 3600
-        ORDER BY arrival_sec
+            st.stop_id IN (SELECT stop_id FROM origin)
+            AND st.arrival_sec IS NOT NULL
+            AND st.arrival_sec >= %s 
+            AND st.arrival_sec <= %s + 3600
+
+            -- 🔥 filtro direccional (con tolerancia)
+            AND ST_Distance(
+                s.geom::geography,
+                ST_SetSRID(ST_Point(%s,%s),4326)::geography
+            ) 
+            < 
+            ST_Distance(
+                ST_SetSRID(ST_Point(%s,%s),4326)::geography,
+                ST_SetSRID(ST_Point(%s,%s),4326)::geography
+            ) * 1.2
+
+        ORDER BY st.arrival_sec
     ),
     transfers AS (
         SELECT 
@@ -117,7 +130,10 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=500
     params = (
         origin_coords[0], origin_coords[1], search_radius_origin,
         dest_coords[0], dest_coords[1], search_radius_dest,
-        current_sec, current_sec
+        current_sec, current_sec,
+        dest_coords[0], dest_coords[1],
+        origin_coords[0], origin_coords[1],
+        dest_coords[0], dest_coords[1]
     )
 
     df = pd.read_sql(query, conn, params=params)
