@@ -77,6 +77,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             ) * 1.2
 
         ORDER BY st.arrival_sec
+        LIMIT 150
     ),
     transfers AS (
         SELECT 
