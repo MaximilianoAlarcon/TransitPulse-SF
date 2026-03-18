@@ -95,7 +95,7 @@ def init_db(conn):
             ST_SetSRID(ST_Point(%s,%s),4326)::geography,
             %s
         )
-        LIMIT 20
+        LIMIT 100
     ),
     dest AS (
         SELECT stop_id
@@ -105,7 +105,7 @@ def init_db(conn):
             ST_SetSRID(ST_Point(%s,%s),4326)::geography,
             %s
         )
-        LIMIT 20
+        LIMIT 100
     ),
     first_leg AS (
         SELECT *
