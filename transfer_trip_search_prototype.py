@@ -105,10 +105,129 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, neare
     )
 
     df = pd.read_sql(query, conn, params=params)
-
-    print(df.head())
-
     if df.shape[0] > 0:
+        # --- 1. Quedarse con las mejores 3 rutas ---
+        df = df.sort_values("total_travel_time")
+        df = df.drop_duplicates(subset=["transfer_stop", "dest_stop"], keep="first")
+        df = df.head(3)
+        routes = []
+        cur = conn.cursor()
+        for _, row in df.iterrows():
+            # --- 2. Parada origen (la más cercana al usuario) ---
+            cur.execute("""
+                SELECT stop_id, stop_name, stop_lat, stop_lon
+                FROM stops
+                WHERE stop_id IN (
+                    SELECT stop_id FROM stops
+                    WHERE ST_DWithin(
+                        geom::geography,
+                        ST_SetSRID(ST_Point(%s,%s),4326)::geography,
+                        %s
+                    )
+                )
+                ORDER BY ST_Distance(
+                    geom::geography,
+                    ST_SetSRID(ST_Point(%s,%s),4326)::geography
+                )
+                LIMIT 1;
+            """, (origin_lon, origin_lat, radius, origin_lon, origin_lat))
+
+            origin_stop = cur.fetchone()
+
+            # --- 3. Transfer y destino ---
+            cur.execute("""
+                SELECT stop_id, stop_name, stop_lat, stop_lon
+                FROM stops
+                WHERE stop_id = %s;
+            """, (row["transfer_stop"],))
+            transfer_stop = cur.fetchone()
+
+            cur.execute("""
+                SELECT stop_id, stop_name, stop_lat, stop_lon
+                FROM stops
+                WHERE stop_id = %s;
+            """, (row["dest_stop"],))
+            dest_stop = cur.fetchone()
+
+            # --- 4. Paradas tramo 1 ---
+            cur.execute("""
+                SELECT 
+                    s.stop_id,
+                    s.stop_name,
+                    s.stop_lat,
+                    s.stop_lon,
+                    st.stop_sequence
+                FROM stop_times st
+                JOIN stops s ON st.stop_id = s.stop_id
+                WHERE st.trip_id = %s
+                AND st.stop_sequence <= %s
+                ORDER BY st.stop_sequence;
+            """, (row["trip1"], row["seq1"]))
+
+            leg1_stops = cur.fetchall()
+
+            # --- 5. Paradas tramo 2 ---
+            cur.execute("""
+                SELECT 
+                    s.stop_id,
+                    s.stop_name,
+                    s.stop_lat,
+                    s.stop_lon,
+                    st.stop_sequence
+                FROM stop_times st
+                JOIN stops s ON st.stop_id = s.stop_id
+                WHERE st.trip_id = %s
+                AND st.stop_sequence >= %s
+                ORDER BY st.stop_sequence;
+            """, (row["trip2"], row["seq2"]))
+
+            leg2_stops = cur.fetchall()
+
+            # --- 6. Armar estructura ---
+            route = {
+                "origin": {
+                    "id": origin_stop[0],
+                    "name": origin_stop[1],
+                    "lat": origin_stop[2],
+                    "lon": origin_stop[3],
+                },
+                "transfer": {
+                    "id": transfer_stop[0],
+                    "name": transfer_stop[1],
+                    "lat": transfer_stop[2],
+                    "lon": transfer_stop[3],
+                },
+                "destination": {
+                    "id": dest_stop[0],
+                    "name": dest_stop[1],
+                    "lat": dest_stop[2],
+                    "lon": dest_stop[3],
+                },
+                "leg1": [
+                    {
+                        "id": s[0],
+                        "name": s[1],
+                        "lat": s[2],
+                        "lon": s[3],
+                        "seq": s[4],
+                    } for s in leg1_stops
+                ],
+                "leg2": [
+                    {
+                        "id": s[0],
+                        "name": s[1],
+                        "lat": s[2],
+                        "lon": s[3],
+                        "seq": s[4],
+                    } for s in leg2_stops
+                ],
+                "total_time": row["total_travel_time"],
+                "wait_time": row["t2"] - row["t1"]
+            }
+            routes.append(route)
+        cur.close()
+        # --- 7. Resultado final ---
+        print(json.dumps(routes, indent=2))
         return {
             "status": "Found"
             #"best_route": best_route.to_dict(),
