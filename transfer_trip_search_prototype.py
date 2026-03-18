@@ -29,7 +29,7 @@ def time_to_seconds(t):
 
 
 def find_trip_with_transfer(origin_coords, dest_coords, search_radius=800, nearest_stops=100):
-
+    conn = psycopg2.connect(**DB_CONFIG)
     query = """
     WITH origin AS (
         SELECT stop_id
