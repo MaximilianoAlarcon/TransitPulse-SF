@@ -6,6 +6,7 @@ import direct_trip_search_prototype,transfer_trip_search_prototype,claude_test
 from claude import transform_input_address
 from transit_engine import find_direct_trip
 import psycopg2
+import numpy as np
 
 app = Flask(__name__)
 
@@ -20,6 +21,21 @@ DB_CONFIG = {
     "password": os.environ.get("DB_PASSWORD"),
     "port": os.environ.get("DB_PORT")
 }
+
+
+def sanitize(obj):
+    if isinstance(obj, dict):
+        return {k: sanitize(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize(v) for v in obj]
+    elif isinstance(obj, tuple):
+        return tuple(sanitize(v) for v in obj)
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    else:
+        return obj
 
 
 def get_connection():
@@ -101,19 +117,19 @@ def direct_trip():
 
     search = find_direct_trip(origin_coords,dest_coords)
     if search["status"] == "Found":
-        return jsonify({
+        return jsonify(sanitize({
             "status": "Found",
             "details": search["details"],
             "origin_coords":origin_coords,
             "dest_coords":dest_coords
-        })
+        }))
     else:
-        return jsonify({
+        return jsonify(sanitize({
             "status": search["status"],
             "reason": search["reason"],
             "origin_coords":origin_coords,
             "dest_coords":dest_coords
-        })
+        }))
 
 
 @app.route("/transfer-trip")
@@ -136,17 +152,17 @@ def transfer_trip():
     search = transfer_trip_search_prototype.find_trip_with_transfer(origin_coords,dest_coords,auto_estimate_radius=True)
     print(search)
     if search["status"] == "Found":
-        return jsonify({
+        return jsonify(sanitize({
             "status": "Found",
             "details": search["details"]
-        })
+        }))
     else:
-        return jsonify({
+        return jsonify(sanitize({
             "status": search["status"],
             "reason": search["reason"],
             "origin_coords":origin_coords,
             "dest_coords":dest_coords
-        })
+        }))
 
 
 @app.route("/api/operators")
