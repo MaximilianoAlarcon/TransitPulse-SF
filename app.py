@@ -103,7 +103,9 @@ def direct_trip():
     if search["status"] == "Found":
         return jsonify({
             "status": "Found",
-            "details": search["details"]
+            "details": search["details"],
+            "origin_coords":origin_coords,
+            "dest_coords":dest_coords
         })
     else:
         return jsonify({

@@ -44,26 +44,106 @@ function formatDuration(seconds) {
     return `${minutes} min`
 }
 
+function getRouteInfo(routeType) {
+    const map = {
+        0: {
+            label: "Tranvía",
+            key: "tram",
+            color: "#f39c12",
+            icon: "🚋"
+        },
+        1: {
+            label: "Metro",
+            key: "metro",
+            color: "#e74c3c",
+            icon: "🚇"
+        },
+        2: {
+            label: "Tren",
+            key: "train",
+            color: "#3498db",
+            icon: "🚆"
+        },
+        3: {
+            label: "Bus",
+            key: "bus",
+            color: "#27ae60",
+            icon: "🚌"
+        },
+        4: {
+            label: "Ferry",
+            key: "ferry",
+            color: "#00BFFF",
+            icon: "⛴️"
+        },
+        5: {
+            label: "Cable Car",
+            key: "cable",
+            color: "#8e44ad",
+            icon: "🚠"
+        },
+        6: {
+            label: "Góndola",
+            key: "gondola",
+            color: "#16a085",
+            icon: "🚡"
+        },
+        7: {
+            label: "Funicular",
+            key: "funicular",
+            color: "#2c3e50",
+            icon: "🚞"
+        }
+    };
 
-function markRouteStops(map, originLat, originLon, destLat, destLon) {
+    return map[routeType] || {
+        label: "Transporte",
+        key: "other",
+        color: "#7f8c8d",
+        icon: "❓"
+    };
+}
 
-    const blueIcon = new L.Icon({
-        iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png",
-        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-        iconSize: [25,41],
-        iconAnchor: [12,41]
-    })
+async function getWalkingRoute(lat1, lon1, lat2, lon2) {
+    const url = `https://router.project-osrm.org/route/v1/foot/${lon1},${lat1};${lon2},${lat2}?overview=full&geometries=geojson`;
 
-    const redIcon = new L.Icon({
-        iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-        iconSize: [25,41],
-        iconAnchor: [12,41]
-    })
+    const response = await fetch(url);
+    const data = await response.json();
 
-    originMarker = L.marker([originLat, originLon], {icon: blueIcon}).addTo(map)
-    destMarker = L.marker([destLat, destLon], {icon: redIcon}).addTo(map)
+    // convertir [lon, lat] → [lat, lon] (Leaflet lo necesita así)
+    const coords = data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
 
+    return coords;
+}
+
+async function drawWalkingRoute(map, lat1, lon1, lat2, lon2) {
+
+    const coords = await getWalkingRoute(lat1, lon1, lat2, lon2);
+
+    L.polyline(coords, {
+        color: "#00BFFF",
+        weight: 4,
+        dashArray: "5,10"
+    }).addTo(map);
+}
+
+function markRouteStops(map, originLat, originLon, destLat, destLon, originColor = "#FFFFFF", destColor = "#FFFFFF") {
+
+    originMarker = L.circleMarker([originLat, originLon], {
+        radius: 8,
+        color: originColor,
+        weight: 2,
+        fillColor: originColor,
+        fillOpacity: 0.8
+    }).addTo(map);
+
+    destMarker = L.circleMarker([destLat, destLon], {
+        radius: 8,
+        color: destColor,
+        weight: 2,
+        fillColor: destColor,
+        fillOpacity: 0.8
+    }).addTo(map);
 }
 
 
@@ -175,12 +255,29 @@ chatSend.addEventListener("click", async () => {
                 });
                 */
 
-                markRouteStops(map, trip_details.stop_lat_origin, trip_details.stop_lon_origin, trip_details.stop_lat_dest, trip_details.stop_lon_dest)
+                markRouteStops(
+                    map, 
+                    trip_details.stop_lat_origin, 
+                    trip_details.stop_lon_origin, 
+                    trip_details.stop_lat_dest, 
+                    trip_details.stop_lon_dest,
+                    trip_details.route_color,
+                    trip_details.route_color
+                )
             } else if(data["status"] == "Canceled") {
                 document.getElementById("chat-result").innerHTML = `
                 <p>${data.reason}</p>
                 `;
-                markRouteStops(map, data["origin_coords"][1], data["origin_coords"][0], data["dest_coords"][1], data["dest_coords"][0])
+                markRouteStops(
+                    map, 
+                    data["origin_coords"][1], 
+                    data["origin_coords"][0], 
+                    data["dest_coords"][1], 
+                    data["dest_coords"][0],
+                    "#2a93ee",
+                    "#2a93ee"
+                )
+                drawWalkingRoute(map,data["origin_coords"][1],data["origin_coords"][0],data["dest_coords"][1],data["dest_coords"][0])
             } else {
                 //Search transfer trip
                 document.getElementById("chat-result").innerHTML = `

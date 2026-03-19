@@ -219,7 +219,9 @@ def find_direct_trip(origin_coords, dest_coords, search_radius=800):
                             "route_long_name":transport_details["route_long_name"],
                             "route_desc":transport_details["route_desc"],
                             "route_type":int(transport_details["route_type"]),
-                            "route_url":transport_details["route_url"]
+                            "route_url":transport_details["route_url"],
+                            "route_color":transport_details["route_color"],
+                            "route_type":transport_details["route_type"]
                         }
                     }
                 else:
