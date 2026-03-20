@@ -127,7 +127,7 @@ async function drawWalkingRoute(map, lat1, lon1, lat2, lon2) {
     }).addTo(map);
 }
 
-function markRouteStops(map, originLat, originLon, destLat, destLon, originColor = "#FFFFFF", destColor = "#FFFFFF") {
+function markRouteStops(map, originLat, originLon, destLat, destLon, originColor = "#000000", destColor = "#000000") {
 
     originMarker = L.circleMarker([originLat, originLon], {
         radius: 8,
@@ -147,7 +147,7 @@ function markRouteStops(map, originLat, originLon, destLat, destLon, originColor
 }
 
 
-function drawShapeRoute(map, coords, options = {}, defaultColor = "#FFFFFF") {
+function drawShapeRoute(map, coords, options = {}, defaultColor = "#000000") {
 
     const {
         color = defaultColor,
@@ -165,7 +165,7 @@ function drawShapeRoute(map, coords, options = {}, defaultColor = "#FFFFFF") {
 }
 
 
-function drawStopsRoute(map, coords, options = {}, defaultColor = "#FFFFFF") {
+function drawStopsRoute(map, coords, options = {}, defaultColor = "#000000") {
 
     const {
         color = defaultColor,
@@ -315,9 +315,9 @@ chatSend.addEventListener("click", async () => {
                     transport_desc["color"]
                 )
                 if (trip_details["trip_geometry"]["geometry_type"] == "shape"){
-                    drawShapeRoute(map, trip_details["trip_geometry"]["coordinates"], color = transport_desc["color"])
+                    drawShapeRoute(map, trip_details["trip_geometry"]["coordinates"], defaultColor = transport_desc["color"])
                 } else if (trip_details["trip_geometry"]["geometry_type"] == "stops"){
-                    drawStopsRoute(map, trip_details["trip_geometry"]["coordinates"], color = transport_desc["color"])
+                    drawStopsRoute(map, trip_details["trip_geometry"]["coordinates"], defaultColor = transport_desc["color"])
                 }
             } else if(data["status"] == "Canceled") {
                 document.getElementById("chat-result").innerHTML = `
