@@ -96,21 +96,7 @@ def get_direct_trip_geometry(cur, trip_details, transport_details):
     # ---------------------------------------
     # 4. Si shape falló → intentar shape completo
     # ---------------------------------------
-    if not coords and has_shape:
-
-        cur.execute("""
-            SELECT shape_pt_lat, shape_pt_lon
-            FROM shapes
-            WHERE operator_id = %s
-            AND shape_id = %s
-            ORDER BY shape_pt_sequence
-        """, (operator_id, shape_id))
-
-        rows = cur.fetchall()
-        coords = [(float(lat), float(lon)) for lat, lon in rows]
-
-        if coords:
-            geometry_type = "shape"
+    # ELIMINADO
 
     # ---------------------------------------
     # 5. Fallback final → stops
