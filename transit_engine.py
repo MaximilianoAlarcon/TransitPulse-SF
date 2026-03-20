@@ -148,8 +148,13 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
 
             if df_final.shape[0] > 0:
                 # Hora actual como timedelta
-                current_time = datetime.now().strftime("%H:%M:%S")
-                now = pd.to_timedelta(current_time)
+                
+                #current_time = datetime.now().strftime("%H:%M:%S")
+                #now = pd.to_timedelta(current_time)
+                
+                now_sf = datetime.now(ZoneInfo("America/Los_Angeles"))
+                now = pd.to_timedelta(now_sf.hour, unit='h') + pd.to_timedelta(now_sf.minute, unit='m') + pd.to_timedelta(now_sf.second, unit='s')
+            
                 # Convertir arrival_time a timedelta
                 df_final['arrival_time_origin'] = pd.to_timedelta(df_final['arrival_time_origin'])
                 df_final['arrival_time_dest'] = pd.to_timedelta(df_final['arrival_time_dest'])
