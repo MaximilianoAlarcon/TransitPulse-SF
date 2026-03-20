@@ -51,9 +51,9 @@ def geocode_address(address):
         location = resp["results"][0]["geometry"]["location"]
         return location["lat"], location["lng"], None
     elif status == "ZERO_RESULTS":
-        return None, None, "Dirección no encontrada"
+        return None, None, "Address not found"
     else:
-        return None, None, f"Error de geocoding: {status}"
+        return None, None, f"Geocoding error: {status}"
 
 # Función para obtener la parada más cercana
 def get_closest_stop(lat, lon):
