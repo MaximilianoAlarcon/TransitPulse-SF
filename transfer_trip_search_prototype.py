@@ -250,7 +250,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             "operator_id_origin": transport_map[trip2]["operator_id"],
             "route_type": transport_map[trip2]["route_type"],
             "route_long_name": transport_map[trip2]["route_long_name"],
-            "stop_name_origin":transfer_stop[1]
+            "stop_name_origin":transfer_stop[1],
 
             "stop_lat_origin": transfer_stop[2],
             "stop_lon_origin": transfer_stop[3],
