@@ -2,15 +2,15 @@ import math
 
 import requests
 
-import requests
-
 # Cache simple en memoria
 SHAPE_CACHE = {}
 
-def get_direct_trip_geometry(cur, trip_details, transport_details, use_routing_api=True, osrm_url="http://router.project-osrm.org/route/v1/driving/"):
+def get_direct_trip_geometry(cur, trip_details, transport_details,
+                             use_routing_api=True,
+                             osrm_url="http://router.project-osrm.org/route/v1/driving/"):
     trip_id = trip_details["trip_id"]
     operator_id = trip_details["operator_id_origin"]
-    route_type = transport_details["route_type"]  # bus=3, metro=1-2 por ejemplo
+    route_type = transport_details["route_type"]  # bus=3, metro=1-2, etc.
 
     seq_origin = trip_details["stop_sequence_origin"]
     seq_dest = trip_details["stop_sequence_dest"]
@@ -47,7 +47,6 @@ def get_direct_trip_geometry(cur, trip_details, transport_details, use_routing_a
     # 2. Intentar usar SHAPES reales
     # ------------------------------
     if shape_id and seq_origin is not None and seq_dest is not None:
-
         cur.execute("""
             SELECT stop_sequence, shape_dist_traveled
             FROM stop_times
@@ -118,6 +117,7 @@ def get_direct_trip_geometry(cur, trip_details, transport_details, use_routing_a
             """, (trip_id, operator_id))
 
         stops_coords = [(float(lat), float(lon)) for lat, lon in cur.fetchall()]
+        stops_coords = [s for s in stops_coords if None not in s]  # filtrar coordenadas inválidas
 
         # ------------------------------
         # 3a. Para buses, usar OSRM (solo si tenemos >=2 stops)
@@ -132,7 +132,19 @@ def get_direct_trip_geometry(cur, trip_details, transport_details, use_routing_a
                     resp = requests.get(f"{osrm_url}{coords_str}?overview=full&geometries=geojson")
                     data = resp.json()
                     if "routes" in data and len(data["routes"]) > 0:
-                        coords = [(lat, lon) for lon, lat in data["routes"][0]["geometry"]["coordinates"]]
+                        coords_raw = [(lat, lon) for lon, lat in data["routes"][0]["geometry"]["coordinates"]]
+
+                        # RECORTE FINO sobre shape reconstruido
+                        def closest_point_index(shape, target):
+                            return min(range(len(shape)),
+                                       key=lambda i: (shape[i][0]-target[0])**2 + (shape[i][1]-target[1])**2)
+
+                        start_idx = closest_point_index(coords_raw, origin_coords)
+                        end_idx = closest_point_index(coords_raw, dest_coords)
+                        if start_idx > end_idx:
+                            start_idx, end_idx = end_idx, start_idx
+                        coords = coords_raw[start_idx:end_idx+1]
+
                         geometry_type = "shape"
                         SHAPE_CACHE[trip_id] = coords
                     else:
