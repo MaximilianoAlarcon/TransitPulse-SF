@@ -363,7 +363,7 @@ chatSend.addEventListener("click", async () => {
                         )
                         if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "shape"){
                             drawShapeRoute(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
-                        } else if (trip_details["trip_geometry"]["geometry_type"] == "stops"){
+                        } else if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "stops"){
                             drawStopsRoute(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
                         }
 
@@ -386,7 +386,7 @@ chatSend.addEventListener("click", async () => {
                         )
                         if (data["details"][0]["leg2"]["trip_geometry"]["geometry_type"] == "shape"){
                             drawShapeRoute(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
-                        } else if (trip_details["trip_geometry"]["geometry_type"] == "stops"){
+                        } else if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "stops"){
                             drawStopsRoute(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
                         }
 
