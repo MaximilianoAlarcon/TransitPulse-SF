@@ -147,6 +147,64 @@ function markRouteStops(map, originLat, originLon, destLat, destLon, originColor
 }
 
 
+function drawShapeRoute(map, coords, options = {}, color = "#FFFFFF") {
+
+    const {
+        color = color,
+        weight = 5,
+        opacity = 0.9
+    } = options;
+
+    return L.polyline(coords, {
+        color: color,
+        weight: weight,
+        opacity: opacity,
+        lineCap: "round",
+        lineJoin: "round"
+    }).addTo(map);
+}
+
+
+function drawStopsRoute(map, coords, options = {}, color = "#FFFFFF") {
+
+    const {
+        color = color,
+        weight = 4,
+        dashArray = "6, 10",
+        opacity = 0.9,
+        showMarkers = true
+    } = options;
+
+    const polyline = L.polyline(coords, {
+        color: color,
+        weight: weight,
+        dashArray: dashArray,
+        opacity: opacity,
+        lineCap: "round"
+    }).addTo(map);
+
+    // Opcional: dibujar puntos de parada
+    let markers = [];
+
+    if (showMarkers) {
+        markers = coords.map(([lat, lon]) => 
+            L.circleMarker([lat, lon], {
+                radius: 4,
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.8
+            }).addTo(map)
+        );
+    }
+
+    return {
+        polyline,
+        markers
+    };
+}
+
+
+
 if (navigator.geolocation) {
 
     navigator.geolocation.getCurrentPosition(function(position) {
@@ -265,6 +323,12 @@ chatSend.addEventListener("click", async () => {
                     trip_details.route_color,
                     trip_details.route_color
                 )
+
+                if (trip_details["trip_geometry"]["geometry_type"] == "shape"){
+                    drawShapeRoute(map, trip_details["trip_geometry"]["coordinates"], color = trip_details.route_color)
+                } else if (trip_details["trip_geometry"]["geometry_type"] == "stops"){
+                    drawStopsRoute(map, trip_details["trip_geometry"]["coordinates"], color = trip_details.route_color)
+                }
             } else if(data["status"] == "Canceled") {
                 document.getElementById("chat-result").innerHTML = `
                 <p>${data.reason}</p>
