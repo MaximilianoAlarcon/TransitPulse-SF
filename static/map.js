@@ -14,6 +14,8 @@ if (window.innerWidth <= 1024) {
 const stopsLayer = L.markerClusterGroup();
 map.addLayer(stopsLayer);
 
+let routesLayer = L.layerGroup().addTo(map);
+
 let originMarker = null
 let destMarker = null
 
@@ -161,7 +163,7 @@ function drawShapeRoute(map, coords, options = {}, defaultColor = "#000000") {
         opacity: opacity,
         lineCap: "round",
         lineJoin: "round"
-    }).addTo(map);
+    }).addTo(routesLayer);
 }
 
 
@@ -169,40 +171,29 @@ function drawStopsRoute(map, coords, options = {}, defaultColor = "#000000") {
 
     const {
         color = defaultColor,
-        weight = 4,
-        dashArray = "6, 10",
-        opacity = 0.9,
-        showMarkers = true
+        radius = 5,
+        fillOpacity = 0.9
     } = options;
 
-    const polyline = L.polyline(coords, {
-        color: color,
-        weight: weight,
-        dashArray: dashArray,
-        opacity: opacity,
-        lineCap: "round"
-    }).addTo(map);
-
-    // Opcional: dibujar puntos de parada
     let markers = [];
 
-    if (showMarkers) {
-        markers = coords.map(([lat, lon]) => 
-            L.circleMarker([lat, lon], {
-                radius: 4,
-                color: color,
-                fillColor: color,
-                fillOpacity: 0.8
-            }).addTo(map)
-        );
-    }
+    coords.forEach(([lat, lon]) => {
+        const marker = L.circleMarker([lat, lon], {
+            radius: radius,
+            color: color,
+            fillColor: color,
+            fillOpacity: fillOpacity
+        }).addTo(routesLayer);
 
-    return {
-        polyline,
-        markers
-    };
+        markers.push(marker);
+    });
+
+    return markers;
 }
 
+function clearRoutes() {
+    routesLayer.clearLayers();
+}
 
 
 if (navigator.geolocation) {
@@ -274,6 +265,7 @@ const chatResult = document.getElementById("chat-result");
 
 chatSend.addEventListener("click", async () => {
     clearRouteMarkers(map)
+    clearRoutes()
     document.getElementById("chat-result").innerHTML = `
     <p>Searching direct trip...</p>
     <div class="spinner"></div>`;
