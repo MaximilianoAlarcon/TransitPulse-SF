@@ -307,9 +307,9 @@ chatSend.addEventListener("click", async () => {
                     transport_desc["color"]
                 )
                 if (trip_details["trip_geometry"]["geometry_type"] == "shape"){
-                    drawShapeRoute(map, trip_details["trip_geometry"]["coordinates"], defaultColor = transport_desc["color"])
+                    drawShapeRoute(map, trip_details["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
                 } else if (trip_details["trip_geometry"]["geometry_type"] == "stops"){
-                    drawStopsRoute(map, trip_details["trip_geometry"]["coordinates"], defaultColor = transport_desc["color"])
+                    drawStopsRoute(map, trip_details["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
                 }
             } else if(data["status"] == "Canceled") {
                 document.getElementById("chat-result").innerHTML = `
