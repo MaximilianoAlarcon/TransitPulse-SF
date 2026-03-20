@@ -94,32 +94,33 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
 
             now_sf = datetime.now(ZoneInfo("America/Los_Angeles")) 
             current_sec = now_sf.hour*3600 + now_sf.minute*60 + now_sf.second
+            arrival_end = current_sec + WAIT_TRANSPORT_LIMIT
 
             print("Ejecutando query 3")
             origin_trips = pd.read_sql(
                 """
-                SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time FROM stop_times st 
-                WHERE st.stop_id IN %s 
+                SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time, st.arrival_sec 
+                FROM stop_times st 
+                WHERE st.stop_id IN %s
                 AND st.arrival_sec IS NOT NULL
-                AND st.arrival_sec >= %s 
-                AND st.arrival_sec <= %s + """+str(WAIT_TRANSPORT_LIMIT)+"""
+                AND st.arrival_sec BETWEEN %s AND %s
                 """,
                 conn,
-                params=(origin_ids,current_sec,current_sec)
+                params=(origin_ids,current_sec,arrival_end)
             )
 
             # --- 4. Traer trips que pasan por paradas de destino ---
             print("Ejecutando query 4")
             dest_trips = pd.read_sql(
                 """
-                SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time FROM stop_times st 
+                SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time, st.arrival_sec 
+                FROM stop_times st 
                 WHERE st.stop_id IN %s
                 AND st.arrival_sec IS NOT NULL
-                AND st.arrival_sec >= %s 
-                AND st.arrival_sec <= %s + """+str(WAIT_TRANSPORT_LIMIT)+"""
+                AND st.arrival_sec BETWEEN %s AND %s
                 """,
                 conn,
-                params=(dest_ids,current_sec,current_sec)
+                params=(dest_ids,current_sec,arrival_end)
             )
 
             # --- Bloque completo para combinar trips y agregar nombres de paradas ---

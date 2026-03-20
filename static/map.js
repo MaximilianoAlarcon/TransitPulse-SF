@@ -179,19 +179,16 @@ function drawStopsRoute(map, coords, options = {}, defaultColor = "#000000") {
 }
 
 function drawLine(map, coordinates, defaultColor = "#3388ff") {
-    if (!map || !Array.isArray(coordinates) || coordinates.length < 2) {
-        console.error("Parámetros inválidos para drawLine");
-        return null;
-    }
+    if (!coordinates || coordinates.length < 2) return;
 
-    const polyline = L.polyline(coordinates, {
-        color: defaultColor,
-        weight: 4,      // grosor de la línea
-        opacity: 0.8,
-        smoothFactor: 1
-    }).addTo(routesLayer);
+    // Convertir cada punto a {lat, lng} si es array de 2 elementos
+    const latlngs = coordinates.map(pt => ({ lat: pt[0], lng: pt[1] }));
 
-    return polyline;
+    // Crear polyline
+    const polyline = L.polyline(latlngs, { color: defaultColor, weight: 4, opacity: 0.8 });
+
+    polyline.addTo(maroutesLayerp);
+    map.fitBounds(polyline.getBounds());
 }
 
 function clearRoutes() {
