@@ -2,10 +2,15 @@ import math
 
 import requests
 
-def get_direct_trip_geometry(cur, trip_details, transport_details, use_routing_api=True, osrm_url="http://router.project-osrm.org/route/v1/driving/"):
+import requests
 
+# Cache simple en memoria
+SHAPE_CACHE = {}
+
+def get_direct_trip_geometry(cur, trip_details, transport_details, use_routing_api=True, osrm_url="http://router.project-osrm.org/route/v1/driving/"):
     trip_id = trip_details["trip_id"]
     operator_id = trip_details["operator_id_origin"]
+    route_type = transport_details["route_type"]  # bus=3, metro=1-2 por ejemplo
 
     seq_origin = trip_details["stop_sequence_origin"]
     seq_dest = trip_details["stop_sequence_dest"]
@@ -35,12 +40,11 @@ def get_direct_trip_geometry(cur, trip_details, transport_details, use_routing_a
         WHERE trip_id = %s
         AND operator_id = %s
     """, (trip_id, operator_id))
-
     row = cur.fetchone()
     shape_id = row[0] if row else None
 
     # ------------------------------
-    # 2. Intentar usar SHAPES
+    # 2. Intentar usar SHAPES reales
     # ------------------------------
     if shape_id and seq_origin is not None and seq_dest is not None:
 
@@ -53,48 +57,42 @@ def get_direct_trip_geometry(cur, trip_details, transport_details, use_routing_a
         """, (trip_id, operator_id, min(seq_origin, seq_dest), max(seq_origin, seq_dest)))
 
         rows = cur.fetchall()
+        dist_map = {r[0]: r[1] for r in rows if r[1] is not None}
+        dist_start = dist_map.get(seq_origin)
+        dist_end = dist_map.get(seq_dest)
 
-        if rows:
-            dist_values = [r[1] for r in rows if r[1] is not None]
+        if dist_start is not None and dist_end is not None:
+            cur.execute("""
+                SELECT shape_pt_lat, shape_pt_lon
+                FROM shapes
+                WHERE operator_id = %s
+                AND shape_id = %s
+                AND shape_dist_traveled BETWEEN %s AND %s
+                ORDER BY shape_pt_sequence
+            """, (operator_id, shape_id, min(dist_start, dist_end), max(dist_start, dist_end)))
 
-            if dist_values:
-                dist_start = min(dist_values)
-                dist_end = max(dist_values)
+            shape_rows = cur.fetchall()
+            coords = [(float(lat), float(lon)) for lat, lon in shape_rows]
 
-                cur.execute("""
-                    SELECT shape_pt_lat, shape_pt_lon
-                    FROM shapes
-                    WHERE operator_id = %s
-                    AND shape_id = %s
-                    AND shape_dist_traveled BETWEEN %s AND %s
-                    ORDER BY shape_pt_sequence
-                """, (operator_id, shape_id, dist_start, dist_end))
+            # RECORTE FINO
+            if coords:
+                def closest_point_index(shape, target):
+                    return min(range(len(shape)),
+                               key=lambda i: (shape[i][0]-target[0])**2 + (shape[i][1]-target[1])**2)
 
-                shape_rows = cur.fetchall()
-                coords = [(float(lat), float(lon)) for lat, lon in shape_rows]
-
-                # RECORTE FINO
+                start_idx = closest_point_index(coords, origin_coords)
+                end_idx = closest_point_index(coords, dest_coords)
+                if start_idx > end_idx:
+                    start_idx, end_idx = end_idx, start_idx
+                coords = coords[start_idx:end_idx+1]
                 if coords:
-
-                    def closest_point_index(shape, target):
-                        return min(
-                            range(len(shape)),
-                            key=lambda i: (shape[i][0]-target[0])**2 + (shape[i][1]-target[1])**2
-                        )
-
-                    start_idx = closest_point_index(coords, origin_coords)
-                    end_idx = closest_point_index(coords, dest_coords)
-                    if start_idx > end_idx:
-                        start_idx, end_idx = end_idx, start_idx
-                    coords = coords[start_idx:end_idx+1]
-                    if coords:
-                        geometry_type = "shape"
+                    geometry_type = "shape"
 
     # ------------------------------
-    # 3. Fallback → reconstruir shape a partir de stops
+    # 3. Fallback → reconstruir shape
     # ------------------------------
     if not coords:
-
+        # Traer stops
         if seq_origin is not None and seq_dest is not None:
             cur.execute("""
                 SELECT s.stop_lat, s.stop_lon
@@ -122,23 +120,29 @@ def get_direct_trip_geometry(cur, trip_details, transport_details, use_routing_a
         stops_coords = [(float(lat), float(lon)) for lat, lon in cur.fetchall()]
 
         # ------------------------------
-        # 3a. Usar API de routing si está activo
+        # 3a. Para buses, usar OSRM (solo si tenemos >=2 stops)
         # ------------------------------
-        if stops_coords and use_routing_api and len(stops_coords) >= 2:
-
-            try:
-                # coords como lon,lat para OSRM
-                coords_str = ";".join([f"{lon},{lat}" for lat, lon in stops_coords])
-                resp = requests.get(f"{osrm_url}{coords_str}?overview=full&geometries=geojson")
-                data = resp.json()
-                if "routes" in data and len(data["routes"]) > 0:
-                    coords = [(lat, lon) for lon, lat in data["routes"][0]["geometry"]["coordinates"]]
-                    geometry_type = "shape"
-            except Exception as e:
-                # si falla, fallback a stops
-                coords = stops_coords
-                geometry_type = "stops"
+        if route_type in [3, 700] and stops_coords and use_routing_api and len(stops_coords) >= 2:
+            if trip_id in SHAPE_CACHE:
+                coords = SHAPE_CACHE[trip_id]
+                geometry_type = "shape"
+            else:
+                try:
+                    coords_str = ";".join([f"{lon},{lat}" for lat, lon in stops_coords])
+                    resp = requests.get(f"{osrm_url}{coords_str}?overview=full&geometries=geojson")
+                    data = resp.json()
+                    if "routes" in data and len(data["routes"]) > 0:
+                        coords = [(lat, lon) for lon, lat in data["routes"][0]["geometry"]["coordinates"]]
+                        geometry_type = "shape"
+                        SHAPE_CACHE[trip_id] = coords
+                    else:
+                        coords = stops_coords
+                        geometry_type = "stops"
+                except Exception:
+                    coords = stops_coords
+                    geometry_type = "stops"
         else:
+            # tren/metro o bus sin routing → fallback stops
             coords = stops_coords
             geometry_type = "stops"
 
