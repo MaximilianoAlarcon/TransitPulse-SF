@@ -311,13 +311,13 @@ chatSend.addEventListener("click", async () => {
                     trip_details.stop_lon_origin, 
                     trip_details.stop_lat_dest, 
                     trip_details.stop_lon_dest,
-                    trip_details.route_color,
-                    trip_details.route_color
+                    transport_desc["color"],
+                    transport_desc["color"]
                 )
                 if (trip_details["trip_geometry"]["geometry_type"] == "shape"){
-                    drawShapeRoute(map, trip_details["trip_geometry"]["coordinates"], color = trip_details.route_color)
+                    drawShapeRoute(map, trip_details["trip_geometry"]["coordinates"], color = transport_desc["color"])
                 } else if (trip_details["trip_geometry"]["geometry_type"] == "stops"){
-                    drawStopsRoute(map, trip_details["trip_geometry"]["coordinates"], color = trip_details.route_color)
+                    drawStopsRoute(map, trip_details["trip_geometry"]["coordinates"], color = transport_desc["color"])
                 }
             } else if(data["status"] == "Canceled") {
                 document.getElementById("chat-result").innerHTML = `
