@@ -16,9 +16,9 @@ map.addLayer(stopsLayer);
 
 let routesLayer = L.featureGroup().addTo(map);
 
-L.polyline([[37.78, -122.41], [37.76, -122.50]], {color:'red', weight:5}).addTo(map);
+//L.polyline([[37.78, -122.41], [37.76, -122.50]], {color:'red', weight:5}).addTo(map);
 
-L.polyline([[37.7845, -122.4145], [37.7645, -122.5045]], {color:'violet', weight:5}).addTo(routesLayer);
+//L.polyline([[37.7845, -122.4145], [37.7645, -122.5045]], {color:'violet', weight:5}).addTo(routesLayer);
 
 let originMarker = null
 let destMarker = null
@@ -185,19 +185,16 @@ function drawStopsRoute(map, coords, options = {}, defaultColor = "#000000") {
 function drawLine(map, coordinates, defaultColor = "#3388ff") {
     if (!coordinates || coordinates.length < 2) return;
 
-    // Convertir cada punto a {lat, lng} si es array de 2 elementos
-    const latlngs = coordinates.map(pt => ({ lat: pt[0], lng: pt[1] }));
-
-    // Crear polyline
-    const polyline = L.polyline(latlngs, { color: defaultColor, weight: 4, opacity: 0.8 });
-
+    console.log("Coordenadas para dibujar la linea")
+    console.log(coordinates)
+    // Usar arrays [lat, lon] directamente
+    const polyline = L.polyline(coordinates, { color: defaultColor, weight: 5, opacity: 1 });
+    
     // Agregar al layer
     polyline.addTo(routesLayer);
 
-    // Ajustar la vista al layer completo
-    if (routesLayer.getLayers().length > 0) {
-        map.fitBounds(routesLayer.getBounds());
-    }
+    // Ajustar la vista al polyline
+    map.fitBounds(polyline.getBounds());
 }
 
 function clearRoutes() {
