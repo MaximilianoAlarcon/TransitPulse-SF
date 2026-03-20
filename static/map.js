@@ -329,7 +329,7 @@ chatSend.addEventListener("click", async () => {
                 if (trip_details["trip_geometry"]["geometry_type"] == "shape"){
                     drawShapeRoute(map, trip_details["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
                 } else if (trip_details["trip_geometry"]["geometry_type"] == "line"){
-                    drawLine(map, trip_details["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
+                    drawLine(map, trip_details["trip_geometry"]["coordinates"], defaultColor = transport_desc["color"])
                 }
                 markDest(data["dest_coords"][1], data["dest_coords"][0])
             } else if(data["status"] == "Canceled") {
@@ -378,7 +378,7 @@ chatSend.addEventListener("click", async () => {
                         if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "shape"){
                             drawShapeRoute(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
                         } else if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "line"){
-                            drawLine(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
+                            drawLine(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], defaultColor = transport_desc["color"])
                         }
 
                         text_response += `
@@ -402,7 +402,7 @@ chatSend.addEventListener("click", async () => {
                         if (data["details"][0]["leg2"]["trip_geometry"]["geometry_type"] == "shape"){
                             drawShapeRoute(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
                         } else if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "line"){
-                            drawLine(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
+                            drawLine(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], defaultColor = transport_desc["color"])
                         }
 
                         markDest(data["dest_coords"][1], data["dest_coords"][0])
