@@ -355,7 +355,7 @@ chatSend.addEventListener("click", async () => {
                 } else {
                     if (data["status"] == "Found"){
                         //trips = data["details"][0]
-                        //console.log(trips)
+                        console.log(data["details"][0])
 
                         text_response = ``
 

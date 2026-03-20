@@ -49,6 +49,13 @@ def init_db(conn):
     GROUP BY hour_bin
     ORDER BY hour_bin;
     """)
+
+    select(cur,"""
+    SELECT
+        *
+    FROM stop_times
+    LIMIT 5
+    """)
     print("Query ejecutada")
 
 def run():
