@@ -18,6 +18,9 @@ def get_direct_trip_geometry(cur, trip_details, transport_details):
         trip_details["stop_lon_dest"]
     )
 
+    coords = []
+    geometry_type = "stops"  # default seguro
+
     # ---------------------------------------
     # 1. Obtener shape_id
     # ---------------------------------------
@@ -45,7 +48,7 @@ def get_direct_trip_geometry(cur, trip_details, transport_details):
         has_shape = cur.fetchone() is not None
 
     # ---------------------------------------
-    # 2. Intentar recorte con shape_dist_traveled
+    # 2. Intentar obtener distancias
     # ---------------------------------------
     dist_start = None
     dist_end = None
@@ -66,8 +69,12 @@ def get_direct_trip_geometry(cur, trip_details, transport_details):
         dist_start = dist_map.get(seq_origin)
         dist_end = dist_map.get(seq_dest)
 
+        # 🔥 asegurar orden correcto
+        if dist_start is not None and dist_end is not None:
+            dist_start, dist_end = sorted([dist_start, dist_end])
+
     # ---------------------------------------
-    # 3. SHAPE recortado (si se puede)
+    # 3. Intentar SHAPE recortado
     # ---------------------------------------
     if has_shape and dist_start is not None and dist_end is not None:
 
@@ -80,14 +87,16 @@ def get_direct_trip_geometry(cur, trip_details, transport_details):
             ORDER BY shape_pt_sequence
         """, (operator_id, shape_id, dist_start, dist_end))
 
-        coords = [(float(lat), float(lon)) for lat, lon in cur.fetchall()]
+        rows = cur.fetchall()
+        coords = [(float(lat), float(lon)) for lat, lon in rows]
 
-        geometry_type = "shape"
+        if coords:
+            geometry_type = "shape"
 
     # ---------------------------------------
-    # 4. SHAPE completo (fallback parcial)
+    # 4. Si shape falló → intentar shape completo
     # ---------------------------------------
-    elif has_shape:
+    if not coords and has_shape:
 
         cur.execute("""
             SELECT shape_pt_lat, shape_pt_lon
@@ -97,14 +106,16 @@ def get_direct_trip_geometry(cur, trip_details, transport_details):
             ORDER BY shape_pt_sequence
         """, (operator_id, shape_id))
 
-        coords = [(float(lat), float(lon)) for lat, lon in cur.fetchall()]
+        rows = cur.fetchall()
+        coords = [(float(lat), float(lon)) for lat, lon in rows]
 
-        geometry_type = "shape"
+        if coords:
+            geometry_type = "shape"
 
     # ---------------------------------------
-    # 5. Fallback total → stops
+    # 5. Fallback final → stops
     # ---------------------------------------
-    else:
+    if not coords:
 
         cur.execute("""
             SELECT s.stop_lat, s.stop_lon
@@ -114,12 +125,11 @@ def get_direct_trip_geometry(cur, trip_details, transport_details):
              AND st.operator_id = s.operator_id
             WHERE st.trip_id = %s
             AND st.operator_id = %s
-            AND st.stop_sequence BETWEEN %s AND %s
+            AND (%s IS NULL OR %s IS NULL OR st.stop_sequence BETWEEN %s AND %s)
             ORDER BY st.stop_sequence
-        """, (trip_id, operator_id, seq_origin, seq_dest))
+        """, (trip_id, operator_id, seq_origin, seq_dest, seq_origin, seq_dest))
 
         coords = [(float(lat), float(lon)) for lat, lon in cur.fetchall()]
-
         geometry_type = "stops"
 
     # ---------------------------------------
