@@ -6,6 +6,7 @@ import psycopg2
 import json
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from utils import get_direct_trip_geometry,estimate_radius,should_use_transit
 import math
 
@@ -91,19 +92,34 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
 
         if len(origin_ids) > 0 and len(dest_ids) > 0:
 
+            now_sf = datetime.now(ZoneInfo("America/Los_Angeles")) 
+            current_sec = now_sf.hour*3600 + now_sf.minute*60 + now_sf.second
+
             print("Ejecutando query 3")
             origin_trips = pd.read_sql(
-                "SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time FROM stop_times st WHERE st.stop_id IN %s",
+                """
+                SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time FROM stop_times st 
+                WHERE st.stop_id IN %s 
+                AND st.arrival_sec IS NOT NULL
+                AND st.arrival_sec >= %s 
+                AND st.arrival_sec <= %s + 3600
+                """,
                 conn,
-                params=(origin_ids,)
+                params=(origin_ids,current_sec,current_sec)
             )
 
             # --- 4. Traer trips que pasan por paradas de destino ---
             print("Ejecutando query 4")
             dest_trips = pd.read_sql(
-                "SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time FROM stop_times st WHERE st.stop_id IN %s",
+                """
+                SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time FROM stop_times st 
+                WHERE st.stop_id IN %s
+                AND st.arrival_sec IS NOT NULL
+                AND st.arrival_sec >= %s 
+                AND st.arrival_sec <= %s + 3600
+                """,
                 conn,
-                params=(dest_ids,)
+                params=(dest_ids,current_sec,current_sec)
             )
 
             # --- Bloque completo para combinar trips y agregar nombres de paradas ---

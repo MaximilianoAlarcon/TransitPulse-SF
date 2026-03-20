@@ -183,6 +183,20 @@ function clearRoutes() {
 }
 
 
+function markDest(destLat, destLon) {
+
+    const redIcon = new L.Icon({
+        iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+        iconSize: [25,41],
+        iconAnchor: [12,41]
+    })
+
+    destMarker = L.marker([destLat, destLon], {icon: redIcon}).addTo(routesLayer)
+
+}
+
+
 if (navigator.geolocation) {
 
     navigator.geolocation.getCurrentPosition(function(position) {
@@ -297,10 +311,12 @@ chatSend.addEventListener("click", async () => {
                 } else if (trip_details["trip_geometry"]["geometry_type"] == "stops"){
                     drawStopsRoute(map, trip_details["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
                 }
+                markDest(data["dest_coords"][1], data["dest_coords"][0])
             } else if(data["status"] == "Canceled") {
                 document.getElementById("chat-result").innerHTML = `
                 <p>${data.reason}</p>
                 `;
+                /*
                 markRouteStops(
                     map, 
                     data["origin_coords"][1], 
@@ -310,7 +326,9 @@ chatSend.addEventListener("click", async () => {
                     "#2a93ee",
                     "#2a93ee"
                 )
+                */
                 drawWalkingRoute(map,data["origin_coords"][1],data["origin_coords"][0],data["dest_coords"][1],data["dest_coords"][0])
+                markDest(data["dest_coords"][1], data["dest_coords"][0])
             } else {
                 //Search transfer trip
                 document.getElementById("chat-result").innerHTML = `
@@ -375,6 +393,8 @@ chatSend.addEventListener("click", async () => {
                         } else if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "stops"){
                             drawStopsRoute(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
                         }
+
+                        markDest(data["dest_coords"][1], data["dest_coords"][0])
 
                         text_response += `
                         <p>Then you should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name}</b></p>
