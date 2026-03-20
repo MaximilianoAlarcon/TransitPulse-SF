@@ -14,7 +14,7 @@ if (window.innerWidth <= 1024) {
 const stopsLayer = L.markerClusterGroup();
 map.addLayer(stopsLayer);
 
-let routesLayer = L.layerGroup().addTo(map);
+let routesLayer = L.featureGroup().addTo(map);
 
 let originMarker = null
 let destMarker = null
