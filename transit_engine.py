@@ -27,7 +27,7 @@ pd.set_option('display.max_columns', None)  # mostrar todas las columnas
 pd.set_option('display.width', 200)         # ancho de la tabla en consola
 pd.set_option('display.max_rows', 50)      # mostrar hasta 50 filas
 
-
+WAIT_TRANSPORT_LIMIT = 7200
 
 def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, search_radius_dest=800, auto_estimate_radius=False):
 
@@ -102,7 +102,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
                 WHERE st.stop_id IN %s 
                 AND st.arrival_sec IS NOT NULL
                 AND st.arrival_sec >= %s 
-                AND st.arrival_sec <= %s + 3600
+                AND st.arrival_sec <= %s + """+str(WAIT_TRANSPORT_LIMIT)+"""
                 """,
                 conn,
                 params=(origin_ids,current_sec,current_sec)
@@ -116,7 +116,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
                 WHERE st.stop_id IN %s
                 AND st.arrival_sec IS NOT NULL
                 AND st.arrival_sec >= %s 
-                AND st.arrival_sec <= %s + 3600
+                AND st.arrival_sec <= %s + """+str(WAIT_TRANSPORT_LIMIT)+"""
                 """,
                 conn,
                 params=(dest_ids,current_sec,current_sec)

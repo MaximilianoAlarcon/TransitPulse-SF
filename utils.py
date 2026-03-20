@@ -5,25 +5,28 @@ def get_direct_trip_geometry(cur, trip_details, transport_details):
     trip_id = trip_details["trip_id"]
     operator_id = trip_details["operator_id_origin"]
 
-    seq_origin = int(trip_details["stop_sequence_origin"]) if trip_details["stop_sequence_origin"] is not None else None
-    seq_dest = int(trip_details["stop_sequence_dest"]) if trip_details["stop_sequence_dest"] is not None else None
+    seq_origin = trip_details["stop_sequence_origin"]
+    seq_dest = trip_details["stop_sequence_dest"]
+
+    seq_origin = int(seq_origin) if seq_origin is not None else None
+    seq_dest = int(seq_dest) if seq_dest is not None else None
 
     origin_coords = (
-        trip_details["stop_lat_origin"],
-        trip_details["stop_lon_origin"]
+        float(trip_details["stop_lat_origin"]),
+        float(trip_details["stop_lon_origin"])
     )
 
     dest_coords = (
-        trip_details["stop_lat_dest"],
-        trip_details["stop_lon_dest"]
+        float(trip_details["stop_lat_dest"]),
+        float(trip_details["stop_lon_dest"])
     )
 
     coords = []
-    geometry_type = "stops"  # default seguro
+    geometry_type = "stops"
 
-    # ---------------------------------------
+    # -------------------------------------------------
     # 1. Obtener shape_id
-    # ---------------------------------------
+    # -------------------------------------------------
     cur.execute("""
         SELECT shape_id
         FROM trips
@@ -34,93 +37,105 @@ def get_direct_trip_geometry(cur, trip_details, transport_details):
     row = cur.fetchone()
     shape_id = row[0] if row else None
 
-    has_shape = False
+    # -------------------------------------------------
+    # 2. Intentar usar SHAPES
+    # -------------------------------------------------
+    if shape_id and seq_origin is not None and seq_dest is not None:
 
-    if shape_id:
-        cur.execute("""
-            SELECT 1
-            FROM shapes
-            WHERE operator_id = %s
-            AND shape_id = %s
-            LIMIT 1
-        """, (operator_id, shape_id))
-
-        has_shape = cur.fetchone() is not None
-
-    # ---------------------------------------
-    # 2. Intentar obtener distancias
-    # ---------------------------------------
-    dist_start = None
-    dist_end = None
-
-    if has_shape and seq_origin is not None and seq_dest is not None:
-
+        # Obtener distancias
         cur.execute("""
             SELECT stop_sequence, shape_dist_traveled
             FROM stop_times
             WHERE trip_id = %s
             AND operator_id = %s
-            AND stop_sequence IN (%s, %s)
-        """, (trip_id, operator_id, seq_origin, seq_dest))
+            AND stop_sequence BETWEEN %s AND %s
+        """, (trip_id, operator_id, min(seq_origin, seq_dest), max(seq_origin, seq_dest)))
 
         rows = cur.fetchall()
-        dist_map = {r[0]: r[1] for r in rows}
 
-        dist_start = dist_map.get(seq_origin)
-        dist_end = dist_map.get(seq_dest)
+        if rows:
+            dist_values = [r[1] for r in rows if r[1] is not None]
 
-        # 🔥 asegurar orden correcto
-        if dist_start is not None and dist_end is not None:
-            dist_start, dist_end = sorted([dist_start, dist_end])
+            if dist_values:
+                dist_start = min(dist_values)
+                dist_end = max(dist_values)
 
-    # ---------------------------------------
-    # 3. Intentar SHAPE recortado
-    # ---------------------------------------
-    if has_shape and dist_start is not None and dist_end is not None:
+                # -----------------------------------------
+                # 2.1 Traer shape aproximado
+                # -----------------------------------------
+                cur.execute("""
+                    SELECT shape_pt_lat, shape_pt_lon
+                    FROM shapes
+                    WHERE operator_id = %s
+                    AND shape_id = %s
+                    AND shape_dist_traveled BETWEEN %s AND %s
+                    ORDER BY shape_pt_sequence
+                """, (operator_id, shape_id, dist_start, dist_end))
 
-        cur.execute("""
-            SELECT shape_pt_lat, shape_pt_lon
-            FROM shapes
-            WHERE operator_id = %s
-            AND shape_id = %s
-            AND shape_dist_traveled BETWEEN %s AND %s
-            ORDER BY shape_pt_sequence
-        """, (operator_id, shape_id, dist_start, dist_end))
+                shape_rows = cur.fetchall()
 
-        rows = cur.fetchall()
-        coords = [(float(lat), float(lon)) for lat, lon in rows]
+                coords = [(float(lat), float(lon)) for lat, lon in shape_rows]
 
-        if coords:
-            geometry_type = "shape"
+                # -----------------------------------------
+                # 2.2 RECORTE FINO (CLAVE)
+                # -----------------------------------------
+                if coords:
 
-    # ---------------------------------------
-    # 4. Si shape falló → intentar shape completo
-    # ---------------------------------------
-    # ELIMINADO
+                    def closest_point_index(shape, target):
+                        return min(
+                            range(len(shape)),
+                            key=lambda i: (
+                                (shape[i][0] - target[0]) ** 2 +
+                                (shape[i][1] - target[1]) ** 2
+                            )
+                        )
 
-    # ---------------------------------------
-    # 5. Fallback final → stops
-    # ---------------------------------------
+                    start_idx = closest_point_index(coords, origin_coords)
+                    end_idx = closest_point_index(coords, dest_coords)
+
+                    if start_idx > end_idx:
+                        start_idx, end_idx = end_idx, start_idx
+
+                    coords = coords[start_idx:end_idx + 1]
+
+                    if coords:
+                        geometry_type = "shape"
+
+    # -------------------------------------------------
+    # 3. Fallback → stops
+    # -------------------------------------------------
     if not coords:
 
-        cur.execute("""
-            SELECT s.stop_lat, s.stop_lon
-            FROM stop_times st
-            JOIN stops s
-              ON st.stop_id = s.stop_id
-             AND st.operator_id = s.operator_id
-            WHERE st.trip_id = %s
-            AND st.operator_id = %s
-            AND (%s IS NULL OR %s IS NULL OR st.stop_sequence BETWEEN %s AND %s)
-            ORDER BY st.stop_sequence
-        """, (trip_id, operator_id, seq_origin, seq_dest, seq_origin, seq_dest))
+        if seq_origin is not None and seq_dest is not None:
+            cur.execute("""
+                SELECT s.stop_lat, s.stop_lon
+                FROM stop_times st
+                JOIN stops s
+                  ON st.stop_id = s.stop_id
+                 AND st.operator_id = s.operator_id
+                WHERE st.trip_id = %s
+                AND st.operator_id = %s
+                AND st.stop_sequence BETWEEN %s AND %s
+                ORDER BY st.stop_sequence
+            """, (trip_id, operator_id, min(seq_origin, seq_dest), max(seq_origin, seq_dest)))
+        else:
+            cur.execute("""
+                SELECT s.stop_lat, s.stop_lon
+                FROM stop_times st
+                JOIN stops s
+                  ON st.stop_id = s.stop_id
+                 AND st.operator_id = s.operator_id
+                WHERE st.trip_id = %s
+                AND st.operator_id = %s
+                ORDER BY st.stop_sequence
+            """, (trip_id, operator_id))
 
         coords = [(float(lat), float(lon)) for lat, lon in cur.fetchall()]
         geometry_type = "stops"
 
-    # ---------------------------------------
-    # 6. Resultado final
-    # ---------------------------------------
+    # -------------------------------------------------
+    # 4. Resultado
+    # -------------------------------------------------
     return {
         "geometry_type": geometry_type,
         "coordinates": coords,
