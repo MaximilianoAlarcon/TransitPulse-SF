@@ -5,8 +5,8 @@ def get_direct_trip_geometry(cur, trip_details, transport_details):
     trip_id = trip_details["trip_id"]
     operator_id = trip_details["operator_id_origin"]
 
-    seq_origin = trip_details["stop_sequence_origin"]
-    seq_dest = trip_details["stop_sequence_dest"]
+    seq_origin = int(trip_details["stop_sequence_origin"]) if trip_details["stop_sequence_origin"] is not None else None
+    seq_dest = int(trip_details["stop_sequence_dest"]) if trip_details["stop_sequence_dest"] is not None else None
 
     origin_coords = (
         trip_details["stop_lat_origin"],
