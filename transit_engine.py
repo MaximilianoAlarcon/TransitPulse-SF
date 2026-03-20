@@ -40,9 +40,6 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
             search_radius_origin =  estimate_radius(conn,origin_coords)
             search_radius_dest =  estimate_radius(conn,dest_coords)
 
-        print("Radio para origen: "+str(search_radius_origin))
-        print("Radio para destino: "+str(search_radius_dest))
-
         # activar PostGIS
 
         # --- 1. Buscar paradas cercanas al origen ---
@@ -57,7 +54,6 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
         """, conn)
 
         if origin_stops.empty:
-            print("❌ No se encontraron paradas cercanas al ORIGEN dentro del radio especificado.")
             return {
                 "status":"Not found",
                 "reason":"There is no stop near the origin"
@@ -75,7 +71,6 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
         """, conn)
 
         if dest_stops.empty:
-            print("❌ No se encontraron paradas cercanas al DESTINO dentro del radio especificado.")
             return {
                 "status":"Not found",
                 "reason":"There is no stop near the destination."
@@ -83,12 +78,8 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
 
         # --- 3. Traer trips que pasan por paradas de origen ---
         origin_ids = tuple(origin_stops['stop_id'].tolist())
-        print("Origin ids")
-        print(origin_ids)
 
         dest_ids = tuple(dest_stops['stop_id'].tolist())
-        print("Destination ids")
-        print(dest_ids)
 
         if len(origin_ids) > 0 and len(dest_ids) > 0:
 
@@ -96,7 +87,6 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
             current_sec = now_sf.hour*3600 + now_sf.minute*60 + now_sf.second
             arrival_end = current_sec + WAIT_TRANSPORT_LIMIT
 
-            print("Ejecutando query 3")
             origin_trips = pd.read_sql(
                 """
                 SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time, st.arrival_sec 
@@ -110,7 +100,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
             )
 
             # --- 4. Traer trips que pasan por paradas de destino ---
-            print("Ejecutando query 4")
+
             dest_trips = pd.read_sql(
                 """
                 SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time, st.arrival_sec 
@@ -157,8 +147,6 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
             'arrival_time_dest', 'stop_sequence_origin', 'stop_sequence_dest', 'operator_id_origin', 
             'operator_id_dest','stop_lat_origin','stop_lon_origin','stop_lat_dest','stop_lon_dest']]
             df_final = df_final.drop_duplicates(subset=['trip_id', 'stop_sequence_origin', 'stop_sequence_dest'])
-            print("Tamaño del dataframe final")
-            print(df_final.shape)
 
             if df_final.shape[0] > 0:
                 # Hora actual como timedelta
@@ -176,7 +164,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
                 # Elegir bus que llega primero considerando espera
                 df_fastest = df_final.sort_values('total_time').head(1)
                 if df_fastest.shape[0] > 0:
-                    print("✅ Bus que te lleva al destino más rápido desde ahora:")
+                    print("✅ Transporte que lleva al destino más rápido desde ahora:")
                     print(df_fastest.head())
                     trip_details = df_fastest.iloc[0]
                     transport_details = pd.read_sql("SELECT * FROM routes WHERE route_id IN (SELECT route_id FROM trips WHERE trip_id = %s AND operator_id = %s);",conn,params=(df_fastest['trip_id'].iloc[0], df_fastest['operator_id_origin'].iloc[0]))
@@ -186,9 +174,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
                     transport_details = transport_details.iloc[0]
                     t1 = trip_details["arrival_time_origin"]
                     t2 = trip_details["arrival_time_dest"]
-                    print("Buscando los shapes de la ruta")
                     trip_geometry = get_direct_trip_geometry(cur, trip_details, transport_details)
-                    print(trip_geometry)
                     return {
                         "status":"Found",
                         "details":{
@@ -214,19 +200,16 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
                         }
                     }
                 else:
-                    print("⚠️ No se encontraron viajes directos porque no hay paradas cercanas al origen o destino.")
                     return {
                         "status":"Not found",
                         "reason":"No direct trips were found between the origin and destination"
                     }
             else:
-                print("⚠️ No se encontraron viajes directos porque no hay paradas cercanas al origen o destino.")
                 return {
                     "status":"Not found",
                     "reason":"No direct trips were found between the origin and destination"
                 }
         else:
-            print("⚠️ No se encontraron viajes directos porque no hay paradas cercanas al origen o destino.")
             return {
                 "status":"Not found",
                 "reason":"No direct trips were found between the origin and destination"

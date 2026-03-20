@@ -37,9 +37,6 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         search_radius_origin =  estimate_radius(conn,origin_coords)
         search_radius_dest =  estimate_radius(conn,dest_coords)
 
-    print("Radio para origen: "+str(search_radius_origin))
-    print("Radio para destino: "+str(search_radius_dest))
-
     query = f"""
     WITH origin AS (
         SELECT stop_id, geom
@@ -143,8 +140,6 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     )
 
     df = pd.read_sql(query, conn, params=params)
-    print("Dataframe:")
-    print(df.head())
     
     if df.shape[0] == 0:
         return {"status": "Not found","reason":"We found no trips with transfers within the next hour"}
@@ -228,6 +223,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             "operator_id_origin": transport_map[trip1]["operator_id"],
             "route_type": transport_map[trip1]["route_type"],
             "route_long_name": transport_map[trip1]["route_long_name"],
+            "route_short_name": transport_map[trip1]["route_short_name"],
+            "route_color": transport_map[trip1]["route_color"],
             "stop_name_origin":origin_stop[1],
 
             "stop_lat_origin": origin_stop[2],
@@ -250,6 +247,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             "operator_id_origin": transport_map[trip2]["operator_id"],
             "route_type": transport_map[trip2]["route_type"],
             "route_long_name": transport_map[trip2]["route_long_name"],
+            "route_short_name": transport_map[trip2]["route_short_name"],
+            "route_color": transport_map[trip1]["route_color"],
             "stop_name_origin":transfer_stop[1],
 
             "stop_lat_origin": transfer_stop[2],
@@ -307,5 +306,4 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
         routes.append(route)
     cur.close()
-    print(json.dumps(routes, indent=2))
     return {"status": "Found", "details": routes}

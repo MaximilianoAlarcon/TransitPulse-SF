@@ -91,7 +91,7 @@ function getRouteInfo(routeType) {
 
     return map[routeType] || {
         label: "Transporte",
-        key: "other",
+        key: "transport",
         color: "#7f8c8d",
         icon: "❓"
     };
@@ -310,7 +310,7 @@ chatSend.addEventListener("click", async () => {
                 transport_desc = getRouteInfo(trip_details.route_type)
                 document.getElementById("chat-result").innerHTML = `
                 <p>If you want to go to: ${address}</p>
-                <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name}</b></p>
+                <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_short_name} ${trip_details.route_long_name}</b></p>
                 <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_time)}</p>
                 <p>Your trip will last approximately ${formatDuration(trip_details.total_time)}</p>
                 `;
@@ -383,7 +383,7 @@ chatSend.addEventListener("click", async () => {
 
                         text_response += `
                         <p>If you want to go to: ${address}</p>
-                        <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name}</b></p>
+                        <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_short_name} ${trip_details.route_long_name}</b></p>
                         <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop</p>
                         `
                         //Leg 2
@@ -408,7 +408,7 @@ chatSend.addEventListener("click", async () => {
                         markDest(data["dest_coords"][1], data["dest_coords"][0])
 
                         text_response += `
-                        <p>Then you should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name}</b></p>
+                        <p>Then you should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_short_name} ${trip_details.route_long_name}</b></p>
                         <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop</p>
                         <p></p>
                         <p>Your trip wil last approximately ${formatDuration(data["details"][0]["total_time"])}</p>
