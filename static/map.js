@@ -344,11 +344,58 @@ chatSend.addEventListener("click", async () => {
                     `;
                 } else {
                     if (data["status"] == "Found"){
-                        trip_details = data["details"]
-                        console.log(trip_details)
-                        document.getElementById("chat-result").innerHTML = `
-                        <p>We found it! Yaaay</p>
-                        `;
+                        //trips = data["details"][0]
+                        //console.log(trips)
+
+                        text_response = ``
+
+                        //Leg 1
+                        trip_details = data["details"][0]["leg1"]["trip_details"]
+                        transport_desc = getRouteInfo(trip_details.route_type)
+                        markRouteStops(
+                            map, 
+                            trip_details.stop_lat_origin, 
+                            trip_details.stop_lon_origin, 
+                            trip_details.stop_lat_dest, 
+                            trip_details.stop_lon_dest,
+                            transport_desc["color"],
+                            transport_desc["color"]
+                        )
+                        if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "shape"){
+                            drawShapeRoute(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
+                        } else if (trip_details["trip_geometry"]["geometry_type"] == "stops"){
+                            drawStopsRoute(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
+                        }
+
+                        text_response += `
+                        <p>If you want to go to: ${address}</p>
+                        <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name}</b></p>
+                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_time)}</p>
+                        `
+                        //Leg 2
+                        trip_details = data["details"][0]["leg2"]["trip_details"]
+                        transport_desc = getRouteInfo(trip_details.route_type)
+                        markRouteStops(
+                            map, 
+                            trip_details.stop_lat_origin, 
+                            trip_details.stop_lon_origin, 
+                            trip_details.stop_lat_dest, 
+                            trip_details.stop_lon_dest,
+                            transport_desc["color"],
+                            transport_desc["color"]
+                        )
+                        if (data["details"][0]["leg2"]["trip_geometry"]["geometry_type"] == "shape"){
+                            drawShapeRoute(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
+                        } else if (trip_details["trip_geometry"]["geometry_type"] == "stops"){
+                            drawStopsRoute(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
+                        }
+
+                        text_response += `
+                        <p>Then you should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name}</b></p>
+                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_time)}</p>
+                        `
+                        document.getElementById("chat-result").innerHTML = text_response;
+
                     } else {
                         document.getElementById("chat-result").innerHTML = `
                         <p>${data.reason}</p>
