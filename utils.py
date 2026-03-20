@@ -1,3 +1,5 @@
+import math
+
 def get_direct_trip_geometry(cur, trip_details, transport_details):
 
     trip_id = trip_details["trip_id"]
@@ -94,3 +96,76 @@ def get_direct_trip_geometry(cur, trip_details, transport_details):
             "route_name": transport_details["route_short_name"]
         }
     }
+
+def time_to_seconds(t):
+    """Convert GTFS HH:MM:SS to seconds"""
+    if pd.isna(t):
+        return None
+    h, m, s = map(int, t.split(":"))
+    return h*3600 + m*60 + s
+
+def estimate_radius(conn, coords):
+    lon, lat = coords
+
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM stops
+        WHERE ST_DWithin(
+            geom::geography,
+            ST_SetSRID(ST_Point(%s,%s),4326)::geography,
+            500
+        );
+    """, (lon, lat))
+
+    count = cur.fetchone()[0]
+    cur.close()
+
+    if count > 30:
+        return 600
+    elif count > 10:
+        return 1000
+    else:
+        return 1500
+
+
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """Distancia en metros entre dos coordenadas"""
+    R = 6371000  # radio de la Tierra en metros
+
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
+    return R * c
+
+
+def should_use_transit(origin_coords, dest_coords):
+    """
+    Decide si conviene usar transporte o caminar
+    origin_coords = (lon, lat)
+    dest_coords = (lon, lat)
+    """
+
+    lon1, lat1 = origin_coords
+    lon2, lat2 = dest_coords
+
+    distance = haversine_distance(lat1, lon1, lat2, lon2)
+
+    # 👴 velocidad conservadora (todas las edades)
+    walking_speed = 1.0  # m/s
+
+    walking_time = distance / walking_speed  # en segundos
+
+    # 🔥 reglas
+    if distance < 350:
+        return False  # caminar
+
+    if walking_time < 420:  # 7 minutos
+        return False
+
+    return True  # usar transporte

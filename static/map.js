@@ -147,10 +147,10 @@ function markRouteStops(map, originLat, originLon, destLat, destLon, originColor
 }
 
 
-function drawShapeRoute(map, coords, options = {}, color = "#FFFFFF") {
+function drawShapeRoute(map, coords, options = {}, defaultColor = "#FFFFFF") {
 
     const {
-        color = color,
+        color = defaultColor,
         weight = 5,
         opacity = 0.9
     } = options;
@@ -165,10 +165,10 @@ function drawShapeRoute(map, coords, options = {}, color = "#FFFFFF") {
 }
 
 
-function drawStopsRoute(map, coords, options = {}, color = "#FFFFFF") {
+function drawStopsRoute(map, coords, options = {}, defaultColor = "#FFFFFF") {
 
     const {
-        color = color,
+        color = defaultColor,
         weight = 4,
         dashArray = "6, 10",
         opacity = 0.9,
@@ -303,17 +303,8 @@ chatSend.addEventListener("click", async () => {
                 <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_time)}</p>
                 <p>Your trip will last approximately ${formatDuration(trip_details.total_time)}</p>
                 `;
-                // Centrar mapa en la parada más cercana
                 map.setView([trip_details.stop_lat_origin, trip_details.stop_lon_origin], 15);
                 document.getElementById("chat-input").value = "";
-                /*
-                markClosestStop({
-                    "stop_name":trip_details.stop_name_origin,
-                    "stop_lat":trip_details.stop_lat_origin,
-                    "stop_lon":trip_details.stop_lon_origin
-                });
-                */
-
                 markRouteStops(
                     map, 
                     trip_details.stop_lat_origin, 
@@ -323,7 +314,6 @@ chatSend.addEventListener("click", async () => {
                     trip_details.route_color,
                     trip_details.route_color
                 )
-
                 if (trip_details["trip_geometry"]["geometry_type"] == "shape"){
                     drawShapeRoute(map, trip_details["trip_geometry"]["coordinates"], color = trip_details.route_color)
                 } else if (trip_details["trip_geometry"]["geometry_type"] == "stops"){

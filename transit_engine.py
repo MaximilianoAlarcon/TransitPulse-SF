@@ -6,7 +6,8 @@ import psycopg2
 import json
 import os
 from datetime import datetime
-from utils import get_direct_trip_geometry
+from utils import get_direct_trip_geometry,estimate_radius,should_use_transit
+import math
 
 API_KEY = os.environ.get("API_511_KEY")
 
@@ -26,55 +27,21 @@ pd.set_option('display.width', 200)         # ancho de la tabla en consola
 pd.set_option('display.max_rows', 50)      # mostrar hasta 50 filas
 
 
-import math
 
-def haversine_distance(lat1, lon1, lat2, lon2):
-    """Distancia en metros entre dos coordenadas"""
-    R = 6371000  # radio de la Tierra en metros
-
-    phi1 = math.radians(lat1)
-    phi2 = math.radians(lat2)
-    dphi = math.radians(lat2 - lat1)
-    dlambda = math.radians(lon2 - lon1)
-
-    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-
-    return R * c
-
-
-def should_use_transit(origin_coords, dest_coords):
-    """
-    Decide si conviene usar transporte o caminar
-    origin_coords = (lon, lat)
-    dest_coords = (lon, lat)
-    """
-
-    lon1, lat1 = origin_coords
-    lon2, lat2 = dest_coords
-
-    distance = haversine_distance(lat1, lon1, lat2, lon2)
-
-    # 👴 velocidad conservadora (todas las edades)
-    walking_speed = 1.0  # m/s
-
-    walking_time = distance / walking_speed  # en segundos
-
-    # 🔥 reglas
-    if distance < 350:
-        return False  # caminar
-
-    if walking_time < 420:  # 7 minutos
-        return False
-
-    return True  # usar transporte
-
-
-def find_direct_trip(origin_coords, dest_coords, search_radius=800):
+def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, search_radius_dest=800, auto_estimate_radius=False):
 
     if should_use_transit(origin_coords,dest_coords):
+
         conn = psycopg2.connect(**DB_CONFIG)
         cur = conn.cursor()
+
+        if auto_estimate_radius:
+            search_radius_origin =  estimate_radius(conn,origin_coords)
+            search_radius_dest =  estimate_radius(conn,dest_coords)
+
+        print("Radio para origen: "+str(search_radius_origin))
+        print("Radio para destino: "+str(search_radius_dest))
+
         # activar PostGIS
 
         # --- 1. Buscar paradas cercanas al origen ---
@@ -84,7 +51,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius=800):
         WHERE ST_DWithin(
             s.geom::geography,
             ST_SetSRID(ST_Point({origin_coords[0]}, {origin_coords[1]}), 4326)::geography,
-            {search_radius}
+            {search_radius_origin}
         )
         """, conn)
 
@@ -102,7 +69,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius=800):
         WHERE ST_DWithin(
             s.geom::geography,
             ST_SetSRID(ST_Point({dest_coords[0]}, {dest_coords[1]}), 4326)::geography,
-            {search_radius}
+            {search_radius_dest}
         )
         """, conn)
 
