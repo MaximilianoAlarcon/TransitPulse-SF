@@ -19,19 +19,6 @@ let routesLayer = L.layerGroup().addTo(map);
 let originMarker = null
 let destMarker = null
 
-function clearRouteMarkers(map) {
-
-    if (originMarker) {
-        map.removeLayer(originMarker)
-        originMarker = null
-    }
-
-    if (destMarker) {
-        map.removeLayer(destMarker)
-        destMarker = null
-    }
-
-}
 
 function formatDuration(seconds) {
     seconds = Math.floor(seconds)
@@ -137,7 +124,7 @@ function markRouteStops(map, originLat, originLon, destLat, destLon, originColor
         weight: 2,
         fillColor: originColor,
         fillOpacity: 0.8
-    }).addTo(map);
+    }).addTo(routesLayer);
 
     destMarker = L.circleMarker([destLat, destLon], {
         radius: 8,
@@ -145,7 +132,7 @@ function markRouteStops(map, originLat, originLon, destLat, destLon, originColor
         weight: 2,
         fillColor: destColor,
         fillOpacity: 0.8
-    }).addTo(map);
+    }).addTo(routesLayer);
 }
 
 
@@ -264,7 +251,6 @@ const chatInput = document.getElementById("chat-input");
 const chatResult = document.getElementById("chat-result");
 
 chatSend.addEventListener("click", async () => {
-    clearRouteMarkers(map)
     clearRoutes()
     document.getElementById("chat-result").innerHTML = `
     <p>Searching direct trip...</p>
