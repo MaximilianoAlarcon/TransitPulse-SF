@@ -145,9 +145,10 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         return {"status": "Not found","reason":"We found no trips with transfers within the next hour"}
 
     # Mantener solo mejores 3 rutas sin duplicados
+    df = df[df["total_travel_time"] >= 0]
     df = df.sort_values("total_travel_time")
     df = df.drop_duplicates(subset=["leg2_stop", "dest_stop"], keep="first")
-    df = df.head(3)
+    df = df.head(1)
 
     routes = []
     cur = conn.cursor()
