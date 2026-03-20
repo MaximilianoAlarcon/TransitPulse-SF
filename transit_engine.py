@@ -6,6 +6,7 @@ import psycopg2
 import json
 import os
 from datetime import datetime
+from utils import get_direct_trip_geometry
 
 API_KEY = os.environ.get("API_511_KEY")
 
@@ -201,6 +202,9 @@ def find_direct_trip(origin_coords, dest_coords, search_radius=800):
                     transport_details = transport_details.iloc[0]
                     t1 = trip_details["arrival_time_origin"]
                     t2 = trip_details["arrival_time_dest"]
+                    print("Buscando los shapes de la ruta")
+                    trip_geometry = get_direct_trip_geometry(cur, trip_details, transport_details)
+                    print(trip_geometry)
                     return {
                         "status":"Found",
                         "details":{
@@ -221,7 +225,8 @@ def find_direct_trip(origin_coords, dest_coords, search_radius=800):
                             "route_type":int(transport_details["route_type"]),
                             "route_url":transport_details["route_url"],
                             "route_color":transport_details["route_color"],
-                            "route_type":transport_details["route_type"]
+                            "route_type":transport_details["route_type"],
+                            "trip_geometry":trip_geometry
                         }
                     }
                 else:
