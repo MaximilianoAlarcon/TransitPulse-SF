@@ -18,6 +18,8 @@ let routesLayer = L.featureGroup().addTo(map);
 
 L.polyline([[37.78, -122.41], [37.76, -122.50]], {color:'red', weight:5}).addTo(map);
 
+L.polyline([[37.7845, -122.4145], [37.7645, -122.5045]], {color:'violet', weight:5}).addTo(routesLayer);
+
 let originMarker = null
 let destMarker = null
 
