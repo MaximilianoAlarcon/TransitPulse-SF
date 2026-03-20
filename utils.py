@@ -5,7 +5,7 @@ import requests
 # Cache simple en memoria
 SHAPE_CACHE = {}
 
-def get_direct_trip_geometry(cur, trip_details, transport_details):
+def get_direct_trip_geometry(cur, trip_details, transport_details, search_shapes=False):
     trip_id = trip_details["trip_id"]
     operator_id = trip_details["operator_id_origin"]
 
@@ -26,65 +26,65 @@ def get_direct_trip_geometry(cur, trip_details, transport_details):
     )
 
     coords = []
-    """
-    geometry_type = "stops"
 
-    # ------------------------------
-    # 1. Obtener shape_id
-    # ------------------------------
-    cur.execute("
-        SELECT shape_id
-        FROM trips
-        WHERE trip_id = %s
-        AND operator_id = %s
-    ", (trip_id, operator_id))
-    row = cur.fetchone()
-    shape_id = row[0] if row else None
+    if search_shapes:
+        geometry_type = "stops"
 
-    # ------------------------------
-    # 2. Intentar usar SHAPES reales
-    # ------------------------------
-    if shape_id and seq_origin is not None and seq_dest is not None:
-        cur.execute("
-            SELECT stop_sequence, shape_dist_traveled
-            FROM stop_times
+        # ------------------------------
+        # 1. Obtener shape_id
+        # ------------------------------
+        cur.execute("""
+            SELECT shape_id
+            FROM trips
             WHERE trip_id = %s
             AND operator_id = %s
-            AND stop_sequence BETWEEN %s AND %s
-        ", (trip_id, operator_id, min(seq_origin, seq_dest), max(seq_origin, seq_dest)))
+        """, (trip_id, operator_id))
+        row = cur.fetchone()
+        shape_id = row[0] if row else None
 
-        rows = cur.fetchall()
-        dist_map = {r[0]: r[1] for r in rows if r[1] is not None}
-        dist_start = dist_map.get(seq_origin)
-        dist_end = dist_map.get(seq_dest)
+        # ------------------------------
+        # 2. Intentar usar SHAPES reales
+        # ------------------------------
+        if shape_id and seq_origin is not None and seq_dest is not None:
+            cur.execute("""
+                SELECT stop_sequence, shape_dist_traveled
+                FROM stop_times
+                WHERE trip_id = %s
+                AND operator_id = %s
+                AND stop_sequence BETWEEN %s AND %s
+            """, (trip_id, operator_id, min(seq_origin, seq_dest), max(seq_origin, seq_dest)))
 
-        if dist_start is not None and dist_end is not None:
-            cur.execute("
-                SELECT shape_pt_lat, shape_pt_lon
-                FROM shapes
-                WHERE operator_id = %s
-                AND shape_id = %s
-                AND shape_dist_traveled BETWEEN %s AND %s
-                ORDER BY shape_pt_sequence
-            ", (operator_id, shape_id, min(dist_start, dist_end), max(dist_start, dist_end)))
+            rows = cur.fetchall()
+            dist_map = {r[0]: r[1] for r in rows if r[1] is not None}
+            dist_start = dist_map.get(seq_origin)
+            dist_end = dist_map.get(seq_dest)
 
-            shape_rows = cur.fetchall()
-            coords = [(float(lat), float(lon)) for lat, lon in shape_rows]
+            if dist_start is not None and dist_end is not None:
+                cur.execute("""
+                    SELECT shape_pt_lat, shape_pt_lon
+                    FROM shapes
+                    WHERE operator_id = %s
+                    AND shape_id = %s
+                    AND shape_dist_traveled BETWEEN %s AND %s
+                    ORDER BY shape_pt_sequence
+                """, (operator_id, shape_id, min(dist_start, dist_end), max(dist_start, dist_end)))
 
-            # Recorte fino
-            if coords:
-                def closest_point_index(shape, target):
-                    return min(range(len(shape)),
-                               key=lambda i: (shape[i][0]-target[0])**2 + (shape[i][1]-target[1])**2)
+                shape_rows = cur.fetchall()
+                coords = [(float(lat), float(lon)) for lat, lon in shape_rows]
 
-                start_idx = closest_point_index(coords, origin_coords)
-                end_idx = closest_point_index(coords, dest_coords)
-                if start_idx > end_idx:
-                    start_idx, end_idx = end_idx, start_idx
-                coords = coords[start_idx:end_idx+1]
+                # Recorte fino
                 if coords:
-                    geometry_type = "shape"
-    """
+                    def closest_point_index(shape, target):
+                        return min(range(len(shape)),
+                                key=lambda i: (shape[i][0]-target[0])**2 + (shape[i][1]-target[1])**2)
+
+                    start_idx = closest_point_index(coords, origin_coords)
+                    end_idx = closest_point_index(coords, dest_coords)
+                    if start_idx > end_idx:
+                        start_idx, end_idx = end_idx, start_idx
+                    coords = coords[start_idx:end_idx+1]
+                    if coords:
+                        geometry_type = "shape"
 
     # ------------------------------
     # 3. Fallback → línea recta entre origen y destino

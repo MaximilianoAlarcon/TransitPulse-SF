@@ -92,11 +92,9 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
                 SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time, st.arrival_sec 
                 FROM stop_times st 
                 WHERE st.stop_id IN %s
-                AND st.arrival_sec IS NOT NULL
-                AND st.arrival_sec BETWEEN %s AND %s
                 """,
                 conn,
-                params=(origin_ids,current_sec,arrival_end)
+                params=(origin_ids)
             )
 
             # --- 4. Traer trips que pasan por paradas de destino ---
@@ -106,11 +104,9 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
                 SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time, st.arrival_sec 
                 FROM stop_times st 
                 WHERE st.stop_id IN %s
-                AND st.arrival_sec IS NOT NULL
-                AND st.arrival_sec BETWEEN %s AND %s
                 """,
                 conn,
-                params=(dest_ids,current_sec,arrival_end)
+                params=(dest_ids)
             )
 
             # --- Bloque completo para combinar trips y agregar nombres de paradas ---
@@ -174,7 +170,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
                     transport_details = transport_details.iloc[0]
                     t1 = trip_details["arrival_time_origin"]
                     t2 = trip_details["arrival_time_dest"]
-                    trip_geometry = get_direct_trip_geometry(cur, trip_details, transport_details)
+                    trip_geometry = get_direct_trip_geometry(cur, trip_details, transport_details,search_shapes=True)
                     return {
                         "status":"Found",
                         "details":{
