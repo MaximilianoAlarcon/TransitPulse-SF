@@ -91,7 +91,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
                 """
                 SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time, st.arrival_sec 
                 FROM stop_times st 
-                WHERE st.stop_id IN %s
+                WHERE st.stop_id IN %s AND st.arrival_sec IS NOT NULL
                 """,
                 conn,
                 params=(origin_ids)
@@ -103,7 +103,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
                 """
                 SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time, st.arrival_sec 
                 FROM stop_times st 
-                WHERE st.stop_id IN %s
+                WHERE st.stop_id IN %s AND st.arrival_sec IS NOT NULL
                 """,
                 conn,
                 params=(dest_ids)
