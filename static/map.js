@@ -113,10 +113,10 @@ async function drawWalkingRoute(map, lat1, lon1, lat2, lon2) {
         color: "#00BFFF",
         weight: 4,
         dashArray: "5,10"
-    }).addTo(map);
+    }).addTo(routesLayer);
 }
 
-function markRouteStops(map, originLat, originLon, destLat, destLon, originColor = "#000000", destColor = "#000000") {
+function markRouteStops(map, originLat, originLon, destLat, destLon, originColor = "#000000", destColor = "#000000",labelorigin="",labeldest="") {
 
     originMarker = L.circleMarker([originLat, originLon], {
         radius: 8,
@@ -124,7 +124,7 @@ function markRouteStops(map, originLat, originLon, destLat, destLon, originColor
         weight: 2,
         fillColor: originColor,
         fillOpacity: 0.8
-    }).addTo(routesLayer);
+    }).addTo(routesLayer).bindPopup(labelorigin);
 
     destMarker = L.circleMarker([destLat, destLon], {
         radius: 8,
@@ -132,7 +132,7 @@ function markRouteStops(map, originLat, originLon, destLat, destLon, originColor
         weight: 2,
         fillColor: destColor,
         fillOpacity: 0.8
-    }).addTo(routesLayer);
+    }).addTo(routesLayer).bindPopup(labeldest);
 }
 
 
@@ -304,7 +304,8 @@ chatSend.addEventListener("click", async () => {
                     trip_details.stop_lat_dest, 
                     trip_details.stop_lon_dest,
                     transport_desc["color"],
-                    transport_desc["color"]
+                    transport_desc["color"],
+                    labelorigin="Origin stop",labeldest="Dest stop"
                 )
                 if (trip_details["trip_geometry"]["geometry_type"] == "shape"){
                     drawShapeRoute(map, trip_details["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
@@ -316,17 +317,6 @@ chatSend.addEventListener("click", async () => {
                 document.getElementById("chat-result").innerHTML = `
                 <p>${data.reason}</p>
                 `;
-                /*
-                markRouteStops(
-                    map, 
-                    data["origin_coords"][1], 
-                    data["origin_coords"][0], 
-                    data["dest_coords"][1], 
-                    data["dest_coords"][0],
-                    "#2a93ee",
-                    "#2a93ee"
-                )
-                */
                 drawWalkingRoute(map,data["origin_coords"][1],data["origin_coords"][0],data["dest_coords"][1],data["dest_coords"][0])
                 markDest(data["dest_coords"][1], data["dest_coords"][0])
             } else {
@@ -363,7 +353,8 @@ chatSend.addEventListener("click", async () => {
                             trip_details.stop_lat_dest, 
                             trip_details.stop_lon_dest,
                             transport_desc["color"],
-                            transport_desc["color"]
+                            transport_desc["color"],
+                            labelorigin="Trip 1: Origin stop",labeldest="Trip 1: Dest stop"
                         )
                         if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "shape"){
                             drawShapeRoute(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
@@ -386,7 +377,8 @@ chatSend.addEventListener("click", async () => {
                             trip_details.stop_lat_dest, 
                             trip_details.stop_lon_dest,
                             transport_desc["color"],
-                            transport_desc["color"]
+                            transport_desc["color"],
+                            labelorigin="Trip 2: Origin stop",labeldest="Trip 2: Dest stop"
                         )
                         if (data["details"][0]["leg2"]["trip_geometry"]["geometry_type"] == "shape"){
                             drawShapeRoute(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
@@ -408,7 +400,8 @@ chatSend.addEventListener("click", async () => {
                         document.getElementById("chat-result").innerHTML = `
                         <p>${data.reason}</p>
                         `;
-                        markRouteStops(map, data["origin_coords"][1], data["origin_coords"][0], data["dest_coords"][1], data["dest_coords"][0])                        
+                        markRouteStops(map, data["origin_coords"][1], data["origin_coords"][0], data["dest_coords"][1], data["dest_coords"][0],
+                            labelorigin="Origin",labeldest="Dest")                        
                     }
                 }
             }
