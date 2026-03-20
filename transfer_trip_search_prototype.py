@@ -37,6 +37,9 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         search_radius_origin =  estimate_radius(conn,origin_coords)
         search_radius_dest =  estimate_radius(conn,dest_coords)
 
+    now_sf = datetime.now(ZoneInfo("America/Los_Angeles")) 
+    current_sec = now_sf.hour*3600 + now_sf.minute*60 + now_sf.second
+
     query = f"""
     WITH origin AS (
         SELECT stop_id, geom
@@ -89,7 +92,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             st1.arrival_sec AS t1,
             st2.departure_sec AS t2,
             st1.stop_sequence AS seq1,
-            st2.stop_sequence AS seq2
+            st2.stop_sequence AS seq2,
+            st2.arrival_time AS arrival_time_second_trip 
         FROM stop_times st1
         JOIN stops s1 ON st1.stop_id = s1.stop_id
         JOIN stop_times st2 ON st2.trip_id IS NOT NULL  -- mantiene todos los trips
@@ -110,6 +114,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             t.t2,
             t.seq1,
             t.seq2,
+            t.arrival_time_second_trip,
             st3.arrival_sec AS dest_time,
             st3.stop_id AS dest_stop,
             st3.stop_sequence AS seq3
@@ -121,14 +126,14 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             AND st3.stop_sequence > t.seq2
     )
     SELECT *,
-        (dest_time - t1) AS total_travel_time
+        (dest_time - t1) AS total_travel_time,
+        ("""+str(current_sec)+""" - t1) AS arrival_time_first_trip 
     FROM final_routes
     ORDER BY total_travel_time
     LIMIT 20;
     """
 
-    now_sf = datetime.now(ZoneInfo("America/Los_Angeles")) 
-    current_sec = now_sf.hour*3600 + now_sf.minute*60 + now_sf.second
+
 
     params = (
         origin_coords[0], origin_coords[1], search_radius_origin,
@@ -235,7 +240,9 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             "stop_lon_dest": transfer_stop[3],
 
             "stop_sequence_origin": 0,
-            "stop_sequence_dest": row["seq1"]
+            "stop_sequence_dest": row["seq1"],
+
+            "arrival_time_first_trip":row["arrival_time_first_trip"]
         }
 
         leg1_transport = transport_map[trip1]
@@ -259,7 +266,9 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             "stop_lon_dest": dest_stop[3],
 
             "stop_sequence_origin": row["seq2"],
-            "stop_sequence_dest": row["seq3"]
+            "stop_sequence_dest": row["seq3"],
+
+            "arrival_time_second_trip":row["arrival_time_second_trip"]
         }
 
         leg2_transport = transport_map[trip2]

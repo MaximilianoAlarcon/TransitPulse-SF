@@ -310,7 +310,7 @@ chatSend.addEventListener("click", async () => {
                 transport_desc = getRouteInfo(trip_details.route_type)
                 document.getElementById("chat-result").innerHTML = `
                 <p>If you want to go to: ${address}</p>
-                <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_short_name} ${trip_details.route_long_name}</b></p>
+                <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name} - ${trip_details.route_short_name}</b></p>
                 <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_time)}</p>
                 <p>Your trip will last approximately ${formatDuration(trip_details.total_time)}</p>
                 `;
@@ -383,8 +383,8 @@ chatSend.addEventListener("click", async () => {
 
                         text_response += `
                         <p>If you want to go to: ${address}</p>
-                        <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_short_name} ${trip_details.route_long_name}</b></p>
-                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop</p>
+                        <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name} - ${trip_details.route_short_name}</b></p>
+                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.arrival_time_first_trip)}</p>
                         `
                         //Leg 2
                         trip_details = data["details"][0]["leg2"]["trip_details"]
@@ -408,8 +408,8 @@ chatSend.addEventListener("click", async () => {
                         markDest(data["dest_coords"][1], data["dest_coords"][0])
 
                         text_response += `
-                        <p>Then you should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_short_name} ${trip_details.route_long_name}</b></p>
-                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop</p>
+                        <p>Then you should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name} - ${trip_details.route_short_name}</b></p>
+                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop at ${trip_details.arrival_time_second_trip} hs</p>
                         <p></p>
                         <p>Your trip wil last approximately ${formatDuration(data["details"][0]["total_time"])}</p>
                         `
