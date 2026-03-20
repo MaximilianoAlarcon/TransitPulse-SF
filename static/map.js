@@ -370,7 +370,7 @@ chatSend.addEventListener("click", async () => {
                         text_response += `
                         <p>If you want to go to: ${address}</p>
                         <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name}</b></p>
-                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_time)}</p>
+                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop</p>
                         `
                         //Leg 2
                         trip_details = data["details"][0]["leg2"]["trip_details"]
@@ -392,7 +392,9 @@ chatSend.addEventListener("click", async () => {
 
                         text_response += `
                         <p>Then you should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name}</b></p>
-                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_time)}</p>
+                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop</p>
+                        <p></p>
+                        <p>Your trip wil last approximately ${formatDuration(data["details"][0]["total_time"])}</p>
                         `
                         document.getElementById("chat-result").innerHTML = text_response;
 
