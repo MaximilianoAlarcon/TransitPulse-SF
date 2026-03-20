@@ -90,7 +90,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
             dest_placeholders = ','.join(['%s'] * len(dest_ids))
 
             origin_trips = pd.read_sql(
-                """
+                f"""
                 SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time, st.arrival_sec 
                 FROM stop_times st 
                 WHERE st.stop_id IN ({origin_placeholders}) AND st.arrival_sec IS NOT NULL
@@ -102,7 +102,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
             # --- 4. Traer trips que pasan por paradas de destino ---
 
             dest_trips = pd.read_sql(
-                """
+                f"""
                 SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time, st.arrival_sec 
                 FROM stop_times st 
                 WHERE st.stop_id IN ({dest_placeholders}) AND st.arrival_sec IS NOT NULL
