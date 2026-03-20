@@ -35,29 +35,20 @@ pd.set_option('display.max_rows', 50)      # mostrar hasta 50 filas
 def init_db(conn):
     cur = conn.cursor()
     queries = [
-        """
-        CREATE TABLE IF NOT EXISTS shapes (
-            operator_id TEXT NOT NULL,
-            shape_id TEXT NOT NULL,
-            shape_pt_sequence INTEGER NOT NULL,
-            shape_pt_lat DOUBLE PRECISION NOT NULL,
-            shape_pt_lon DOUBLE PRECISION NOT NULL,
-            shape_dist_traveled DOUBLE PRECISION
-        );
-        """,
-        """
-        CREATE INDEX IF NOT EXISTS idx_shapes_op_shape
-        ON shapes(operator_id, shape_id);
-        """,
-        """
-        CREATE INDEX IF NOT EXISTS idx_shapes_op_shape_seq
-        ON shapes(operator_id, shape_id, shape_pt_sequence);
-        """
     ]
     for q in queries:
         print("Ejecutando:", q.split("\n")[0])
         cur.execute(q)
     conn.commit()
+
+    select(cur,"""
+    SELECT
+        (arrival_sec / 3600) AS hour_bin,
+        COUNT(*) AS trips_count
+    FROM stop_times
+    GROUP BY hour_bin
+    ORDER BY hour_bin;
+    """)
     print("Query ejecutada")
 
 def run():

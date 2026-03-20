@@ -5,12 +5,9 @@ import requests
 # Cache simple en memoria
 SHAPE_CACHE = {}
 
-def get_direct_trip_geometry(cur, trip_details, transport_details,
-                             use_routing_api=True,
-                             osrm_url="http://router.project-osrm.org/route/v1/driving/"):
+def get_direct_trip_geometry(cur, trip_details, transport_details):
     trip_id = trip_details["trip_id"]
     operator_id = trip_details["operator_id_origin"]
-    route_type = transport_details["route_type"]  # bus=3, metro=1-2, etc.
 
     seq_origin = trip_details["stop_sequence_origin"]
     seq_dest = trip_details["stop_sequence_dest"]
@@ -73,7 +70,7 @@ def get_direct_trip_geometry(cur, trip_details, transport_details,
             shape_rows = cur.fetchall()
             coords = [(float(lat), float(lon)) for lat, lon in shape_rows]
 
-            # RECORTE FINO
+            # Recorte fino
             if coords:
                 def closest_point_index(shape, target):
                     return min(range(len(shape)),
@@ -88,75 +85,11 @@ def get_direct_trip_geometry(cur, trip_details, transport_details,
                     geometry_type = "shape"
 
     # ------------------------------
-    # 3. Fallback → reconstruir shape
+    # 3. Fallback → línea recta entre origen y destino
     # ------------------------------
     if not coords:
-        # Traer stops
-        if seq_origin is not None and seq_dest is not None:
-            cur.execute("""
-                SELECT s.stop_lat, s.stop_lon
-                FROM stop_times st
-                JOIN stops s
-                  ON st.stop_id = s.stop_id
-                 AND st.operator_id = s.operator_id
-                WHERE st.trip_id = %s
-                AND st.operator_id = %s
-                AND st.stop_sequence BETWEEN %s AND %s
-                ORDER BY st.stop_sequence
-            """, (trip_id, operator_id, min(seq_origin, seq_dest), max(seq_origin, seq_dest)))
-        else:
-            cur.execute("""
-                SELECT s.stop_lat, s.stop_lon
-                FROM stop_times st
-                JOIN stops s
-                  ON st.stop_id = s.stop_id
-                 AND st.operator_id = s.operator_id
-                WHERE st.trip_id = %s
-                AND st.operator_id = %s
-                ORDER BY st.stop_sequence
-            """, (trip_id, operator_id))
-
-        stops_coords = [(float(lat), float(lon)) for lat, lon in cur.fetchall()]
-        stops_coords = [s for s in stops_coords if None not in s]  # filtrar coordenadas inválidas
-
-        # ------------------------------
-        # 3a. Para buses, usar OSRM (solo si tenemos >=2 stops)
-        # ------------------------------
-        if route_type in [3, 700] and stops_coords and use_routing_api and len(stops_coords) >= 2:
-            if trip_id in SHAPE_CACHE:
-                coords = SHAPE_CACHE[trip_id]
-                geometry_type = "shape"
-            else:
-                try:
-                    coords_str = ";".join([f"{lon},{lat}" for lat, lon in stops_coords])
-                    resp = requests.get(f"{osrm_url}{coords_str}?overview=full&geometries=geojson")
-                    data = resp.json()
-                    if "routes" in data and len(data["routes"]) > 0:
-                        coords_raw = [(lat, lon) for lon, lat in data["routes"][0]["geometry"]["coordinates"]]
-
-                        # RECORTE FINO sobre shape reconstruido
-                        def closest_point_index(shape, target):
-                            return min(range(len(shape)),
-                                       key=lambda i: (shape[i][0]-target[0])**2 + (shape[i][1]-target[1])**2)
-
-                        start_idx = closest_point_index(coords_raw, origin_coords)
-                        end_idx = closest_point_index(coords_raw, dest_coords)
-                        if start_idx > end_idx:
-                            start_idx, end_idx = end_idx, start_idx
-                        coords = coords_raw[start_idx:end_idx+1]
-
-                        geometry_type = "shape"
-                        SHAPE_CACHE[trip_id] = coords
-                    else:
-                        coords = stops_coords
-                        geometry_type = "stops"
-                except Exception:
-                    coords = stops_coords
-                    geometry_type = "stops"
-        else:
-            # tren/metro o bus sin routing → fallback stops
-            coords = stops_coords
-            geometry_type = "stops"
+        coords = [origin_coords, dest_coords]
+        geometry_type = "line"
 
     # ------------------------------
     # 4. Resultado

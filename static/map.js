@@ -178,6 +178,22 @@ function drawStopsRoute(map, coords, options = {}, defaultColor = "#000000") {
     return markers;
 }
 
+function drawLine(map, coordinates, defaultColor = "#3388ff") {
+    if (!map || !Array.isArray(coordinates) || coordinates.length < 2) {
+        console.error("Parámetros inválidos para drawLine");
+        return null;
+    }
+
+    const polyline = L.polyline(coordinates, {
+        color: defaultColor,
+        weight: 4,      // grosor de la línea
+        opacity: 0.8,
+        smoothFactor: 1
+    }).addTo(routesLayer);
+
+    return polyline;
+}
+
 function clearRoutes() {
     routesLayer.clearLayers();
 }
@@ -309,8 +325,8 @@ chatSend.addEventListener("click", async () => {
                 )
                 if (trip_details["trip_geometry"]["geometry_type"] == "shape"){
                     drawShapeRoute(map, trip_details["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
-                } else if (trip_details["trip_geometry"]["geometry_type"] == "stops"){
-                    drawStopsRoute(map, trip_details["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
+                } else if (trip_details["trip_geometry"]["geometry_type"] == "line"){
+                    drawLine(map, trip_details["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
                 }
                 markDest(data["dest_coords"][1], data["dest_coords"][0])
             } else if(data["status"] == "Canceled") {
@@ -358,8 +374,8 @@ chatSend.addEventListener("click", async () => {
                         )
                         if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "shape"){
                             drawShapeRoute(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
-                        } else if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "stops"){
-                            drawStopsRoute(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
+                        } else if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "line"){
+                            drawLine(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
                         }
 
                         text_response += `
@@ -382,8 +398,8 @@ chatSend.addEventListener("click", async () => {
                         )
                         if (data["details"][0]["leg2"]["trip_geometry"]["geometry_type"] == "shape"){
                             drawShapeRoute(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
-                        } else if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "stops"){
-                            drawStopsRoute(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
+                        } else if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "line"){
+                            drawLine(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
                         }
 
                         markDest(data["dest_coords"][1], data["dest_coords"][0])
