@@ -187,8 +187,13 @@ function drawLine(map, coordinates, defaultColor = "#3388ff") {
     // Crear polyline
     const polyline = L.polyline(latlngs, { color: defaultColor, weight: 4, opacity: 0.8 });
 
+    // Agregar al layer
     polyline.addTo(routesLayer);
-    routesLayer.fitBounds(polyline.getBounds());
+
+    // Ajustar la vista al layer completo
+    if (routesLayer.getLayers().length > 0) {
+        map.fitBounds(routesLayer.getBounds());
+    }
 }
 
 function clearRoutes() {
