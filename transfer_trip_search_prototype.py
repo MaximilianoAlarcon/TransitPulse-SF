@@ -44,10 +44,12 @@ def find_trip_with_transfer(
         search_radius_origin = estimate_radius(conn, origin_coords)
         search_radius_dest = estimate_radius(conn, dest_coords)
 
+    # hora actual en SF
     now_sf = datetime.now(ZoneInfo("America/Los_Angeles"))
     current_sec = now_sf.hour * 3600 + now_sf.minute * 60 + now_sf.second
 
-    query = f"""
+    # Query con 14 placeholders %s
+    query = """
     WITH origin AS (
         SELECT stop_id, geom
         FROM stops
@@ -73,12 +75,8 @@ def find_trip_with_transfer(
         WHERE
             st.stop_id IN (SELECT stop_id FROM origin)
             AND st.arrival_sec IS NOT NULL
-            -- FIX Bug 5: el primer bus debe salir a partir de ahora
             AND st.departure_sec >= %s
             AND st.departure_sec <= %s + 3600
-
-            -- Filtro direccional: el stop de origen debe estar más cerca
-            -- al origen que al destino (con tolerancia del 20%)
             AND ST_Distance(
                 s.geom::geography,
                 ST_SetSRID(ST_Point(%s, %s), 4326)::geography
@@ -88,7 +86,6 @@ def find_trip_with_transfer(
                 ST_SetSRID(ST_Point(%s, %s), 4326)::geography,
                 ST_SetSRID(ST_Point(%s, %s), 4326)::geography
             ) * 1.2
-
         ORDER BY st.departure_sec
         LIMIT 150
     ),
@@ -110,9 +107,8 @@ def find_trip_with_transfer(
         WHERE
             ST_DWithin(s1.geom::geography, s2.geom::geography, 200)
             AND st1.trip_id IN (SELECT trip_id FROM first_leg)
-            -- FIX Bug 5: el segundo bus debe salir después del actual moment
             AND st2.departure_sec > st1.arrival_sec
-            AND st2.departure_sec >= {current_sec}
+            AND st2.departure_sec >= %s
             AND st2.departure_sec < st1.arrival_sec + 7200
     ),
     final_routes AS (
@@ -137,23 +133,24 @@ def find_trip_with_transfer(
     )
     SELECT *,
         (dest_time - t1)      AS total_travel_time,
-        -- FIX Bug 1: era (current_sec - t1) que daba negativo
-        -- ahora es tiempo restante hasta que llega el primer bus
-        (t1 - {current_sec}) AS wait_for_first_bus
+        (t1 - %s) AS wait_for_first_bus
     FROM final_routes
     ORDER BY total_travel_time
     LIMIT 20;
     """
 
+    # Params en orden exacto de los %s
     params = (
-        origin_coords[0], origin_coords[1], search_radius_origin,
-        dest_coords[0],   dest_coords[1],   search_radius_dest,
-        current_sec, current_sec,
-        dest_coords[0], dest_coords[1],
-        origin_coords[0], origin_coords[1],
-        dest_coords[0],   dest_coords[1]
+        origin_coords[0], origin_coords[1], search_radius_origin,  # 3
+        dest_coords[0], dest_coords[1], search_radius_dest,        # 3 → total 6
+        current_sec, current_sec,                                   # 2 → total 8
+        dest_coords[0], dest_coords[1],                             # 2 → total 10
+        origin_coords[0], origin_coords[1],                         # 2 → total 12
+        current_sec,                                                # st2.departure_sec >= %s → 13
+        current_sec                                                 # wait_for_first_bus → 14
     )
 
+    # Ejecutar query y traer df
     df = pd.read_sql(query, conn, params=params)
 
     if df.shape[0] == 0:
