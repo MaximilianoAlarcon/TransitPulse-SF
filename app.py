@@ -4,7 +4,7 @@ import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes
 import load_gtfs_trips,load_gtfs_stop_times,load_gtfs_shapes
 import direct_trip_search_prototype,transfer_trip_search_prototype,claude_test
 from claude import transform_input_address
-from transit_engine import find_direct_trip
+from transit_engine import find_direct_trip,find_trip_with_transfer
 import psycopg2
 import numpy as np
 from utils import geocode
@@ -167,8 +167,7 @@ def transfer_trip():
     origin_coords = my_location
     dest_coords = (lon,lat)
 
-    search = transfer_trip_search_prototype.find_trip_with_transfer(origin_coords,dest_coords,auto_estimate_radius=True)
-    print(search)
+    search = find_trip_with_transfer(origin_coords,dest_coords,auto_estimate_radius=True)
     if search["status"] == "Found":
         return jsonify(sanitize({
             "status": "Found",

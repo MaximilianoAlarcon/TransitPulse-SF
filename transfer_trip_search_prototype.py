@@ -7,7 +7,6 @@ import json
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from collections import defaultdict
 from utils import get_direct_trip_geometry, time_to_seconds, estimate_radius
 
 API_KEY = os.environ.get("API_511_KEY")
