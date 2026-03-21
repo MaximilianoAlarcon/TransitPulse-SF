@@ -287,8 +287,10 @@ const chatInput = document.getElementById("chat-input");
 const chatResult = document.getElementById("chat-result");
 
 chatSend.addEventListener("click", async () => {
-    suggestionsBox.innerHTML = ""
     suggestionsBox.classList.remove("active");
+    suggestionsBox.innerHTML = ""
+    let address = document.getElementById("chat-input").value.trim();
+    if (!address) return alert("Enter your destination");
     clearRoutes()
     lat = null
     lon = null
@@ -296,12 +298,9 @@ chatSend.addEventListener("click", async () => {
         lat = selectedPlace.lat
         lon = selectedPlace.lon
     } 
-
     document.getElementById("chat-result").innerHTML = `
     <p>Searching direct trip...</p>
     <div class="spinner"></div>`;
-    let address = document.getElementById("chat-input").value.trim();
-    if (!address) return alert("Enter your destination");
     try {
         //Search direct trip
         let response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}&lat=${lat}&lon=${lon}`);

@@ -42,20 +42,35 @@ def init_db(conn):
     conn.commit()
 
     select(cur,"""
+SELECT 
+    c.table_schema,
+    c.table_name,
+    c.column_name,
+    c.data_type,
+    c.is_nullable,
+    c.column_default,
+    COALESCE(i.index_name, '') AS index_name,
+    COALESCE(i.is_unique, false) AS is_unique,
+    COALESCE(i.is_primary, false) AS is_primary
+FROM information_schema.columns c
+LEFT JOIN (
     SELECT
-        (arrival_sec / 3600) AS hour_bin,
-        COUNT(*) AS trips_count
-    FROM stop_times
-    GROUP BY hour_bin
-    ORDER BY hour_bin;
+        t.relname AS table_name,
+        i.relname AS index_name,
+        a.attname AS column_name,
+        ix.indisunique AS is_unique,
+        ix.indisprimary AS is_primary
+    FROM pg_class t
+    JOIN pg_index ix ON t.oid = ix.indrelid
+    JOIN pg_class i ON i.oid = ix.indexrelid
+    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
+    WHERE t.relkind = 'r'
+) i
+ON c.table_name = i.table_name AND c.column_name = i.column_name
+WHERE c.table_schema NOT IN ('information_schema','pg_catalog')
+ORDER BY c.table_name, c.ordinal_position;
     """)
 
-    select(cur,"""
-    SELECT
-        *
-    FROM stop_times
-    LIMIT 5
-    """)
     print("Query ejecutada")
 
 def run():

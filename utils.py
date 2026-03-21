@@ -176,10 +176,10 @@ def should_use_transit(origin_coords, dest_coords):
     walking_time = distance / walking_speed  # en segundos
 
     # 🔥 reglas
-    if distance < 350:
+    if distance < 700:
         return False  # caminar
 
-    if walking_time < 420:  # 7 minutos
+    if walking_time < 600:  # 10 minutos
         return False
 
     return True  # usar transporte
