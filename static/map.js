@@ -299,7 +299,7 @@ chatSend.addEventListener("click", async () => {
     if (!address) return alert("Enter your destination");
     try {
         //Search direct trip
-        let response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}&lat=${lat}&lat=${lon}`);
+        let response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}&lat=${lat}&lon=${lon}`);
         if (!response.ok) {
             let errData = await response.json();
             document.getElementById("chat-result").innerText = errData.error || "Unknown error";
@@ -351,7 +351,7 @@ chatSend.addEventListener("click", async () => {
                 <p>Searching transfer trip...</p>
                 <div class="spinner"></div>`;
                 address = document.getElementById("chat-input").value.trim();
-                response = await fetch(`/transfer-trip?address=${encodeURIComponent(address)}&lat=${lat}&lat=${lon}`);
+                response = await fetch(`/transfer-trip?address=${encodeURIComponent(address)}&lat=${lat}&lon=${lon}`);
                 if (!response.ok) {
                     errData = await response.json();
                     document.getElementById("chat-result").innerText = errData.error || "Unknown error";

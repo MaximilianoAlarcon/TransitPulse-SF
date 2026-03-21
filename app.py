@@ -105,8 +105,13 @@ def direct_trip():
     my_location = (-122.4120372,37.7803603)
 
     address = request.args.get("address")
-    lat = float(request.args.get("lat"))
-    lon = float(request.args.get("lon"))
+    lat = request.args.get("lat")
+    lon = request.args.get("lon")
+    try:
+        lat = float(lat) if lat is not None else None
+        lon = float(lon) if lon is not None else None
+    except ValueError:
+        lat, lon = None, None
 
     if lat is None or lon is None:
         if not address:
@@ -142,8 +147,13 @@ def transfer_trip():
     my_location = (-122.4120372,37.7803603)
 
     address = request.args.get("address")
-    lat = float(request.args.get("lat"))
-    lon = float(request.args.get("lon"))
+    lat = request.args.get("lat")
+    lon = request.args.get("lon")
+    try:
+        lat = float(lat) if lat is not None else None
+        lon = float(lon) if lon is not None else None
+    except ValueError:
+        lat, lon = None, None
 
     if lat is None or lon is None:
         if not address:
