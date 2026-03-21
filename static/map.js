@@ -395,7 +395,7 @@ chatSend.addEventListener("click", async () => {
                         text_response += `
                         <p>If you want to go to: ${address}</p>
                         <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name} - ${trip_details.route_short_name}</b></p>
-                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.arrival_time_first_trip)}</p>
+                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_for_first_bus)}</p>
                         `
                         //Leg 2
                         trip_details = data["details"][0]["leg2"]["trip_details"]
