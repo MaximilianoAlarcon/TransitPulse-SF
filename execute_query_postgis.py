@@ -60,16 +60,21 @@ pd.set_option('display.max_rows', 50)      # mostrar hasta 50 filas
 def init_db(conn):
     cur = conn.cursor()
     queries = [
-        "CREATE INDEX IF NOT EXISTS idx_stops_geom ON stops USING GIST(geom);",
-        "CREATE INDEX IF NOT EXISTS idx_stops_geom_stopid ON stops USING GIST(geom) INCLUDE (stop_id);",
-        "CREATE INDEX IF NOT EXISTS idx_stop_times_stopid_departure ON stop_times(stop_id, departure_sec);",
-        "CREATE INDEX IF NOT EXISTS idx_stop_times_trip_stop_seq ON stop_times(trip_id, stop_sequence);",
-        "CREATE INDEX IF NOT EXISTS idx_trip_departure_arrival ON stop_times(trip_id, departure_sec, arrival_sec);"
     ]
     for q in queries:
         print("Ejecutando:", q.split("\n")[0])
         cur.execute(q)
     conn.commit()
+
+    select(cur,"""
+    SELECT EXTRACT(HOUR FROM TO_TIMESTAMP(st.departure_sec)) AS hour_of_day,
+        COUNT(*) AS transfers_available
+    FROM stop_times st
+    JOIN stop_times st2 ON ST_DWithin(st.geom::geography, st2.geom::geography, 200)
+                        AND st2.departure_sec > st.arrival_sec
+    GROUP BY hour_of_day
+    ORDER BY hour_of_day;
+    """)
 
     print("Query ejecutada")
 
