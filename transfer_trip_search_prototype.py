@@ -134,7 +134,7 @@ def find_trip_with_transfer(
             AND st3.stop_sequence > t.seq2
     )
     SELECT *,
-        (dest_time - %s) % 86400 AS total_travel_time,
+        (dest_time - %s) %% 86400 AS total_travel_time,
         (t1 - %s) AS wait_for_first_bus
     FROM final_routes
     ORDER BY total_travel_time
