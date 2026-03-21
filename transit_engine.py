@@ -349,7 +349,7 @@ def find_trip_with_transfer(origin_coords,dest_coords,search_radius_origin=800,s
         (departure_origin - %s)           AS wait_for_first_bus
     FROM final_routes
     -- OPT 6: filtro de tiempo total razonable centralizado en un solo lugar
-    WHERE total_travel_time BETWEEN 0 AND """ + str(MAX_TOTAL_TRIP_TIME) + """
+    WHERE (dest_time - %s) %% 86400 BETWEEN 0 AND """ + str(MAX_TOTAL_TRIP_TIME) + """
     ORDER BY total_travel_time
     LIMIT 20;
     """
@@ -363,8 +363,8 @@ def find_trip_with_transfer(origin_coords,dest_coords,search_radius_origin=800,s
         origin_coords[0], origin_coords[1],                         # 2 → dist(origin → dest) punto A
         dest_coords[0],   dest_coords[1],                           # 2 → dist(origin → dest) punto B
         current_sec,                                                # 1 → total_travel_time
-        current_sec                                                # 1 → wait_for_first_bus
-
+        current_sec,                                                # 1 → wait_for_first_bus
+        current_sec
     )
 
     df = pd.read_sql(query, conn, params=params)
