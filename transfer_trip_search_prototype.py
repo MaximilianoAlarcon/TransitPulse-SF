@@ -144,10 +144,11 @@ def find_trip_with_transfer(
         origin_coords[0], origin_coords[1], search_radius_origin,  # 3
         dest_coords[0], dest_coords[1], search_radius_dest,        # 3 → total 6
         current_sec, current_sec,                                   # 2 → total 8
-        dest_coords[0], dest_coords[1],                             # 2 → total 10
-        origin_coords[0], origin_coords[1],                         # 2 → total 12
+        dest_coords[0],   dest_coords[1],                           # 2  → dist(stop → dest)
+        origin_coords[0], origin_coords[1],                         # 2  → dist(origin → dest) punto A
+        dest_coords[0],   dest_coords[1], 
         current_sec,                                                # st2.departure_sec >= %s → 13
-        current_sec                                                 # wait_for_first_bus → 14
+        current_sec,
     )
 
     # Ejecutar query y traer df
