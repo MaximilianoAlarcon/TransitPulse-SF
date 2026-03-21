@@ -196,11 +196,11 @@ def geocode(place):
     # 🔹 intento 1: búsqueda restringida (SF)
     params = {
         "access_token": MAPBOX_API_KEY,
-        "limit": 5,  # más sugerencias
-        "autocomplete": "true",  # sugerencias en tiempo real
-        "proximity": "-122.4194,37.7749",  # San Francisco
-        "types": "poi,poi.landmark,neighborhood,place",  # negocios y atracciones
-        "country": "US"
+        "limit": 1,
+        "proximity": "-122.4194,37.7749",
+        "bbox": "-122.55,37.68,-122.35,37.83",
+        "country": "US",
+        "types": "poi,poi.landmark,neighborhood,place"
     }
 
     response = requests.get(url, params=params)
