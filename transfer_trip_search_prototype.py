@@ -46,6 +46,7 @@ def find_trip_with_transfer(
 
     # hora actual en SF
     now_sf = datetime.now(ZoneInfo("America/Los_Angeles"))
+    now_text = now_sf.strftime("%d/%m/%Y %H:%M:%S")
     current_sec = now_sf.hour * 3600 + now_sf.minute * 60 + now_sf.second
 
     # Query con 14 placeholders %s
@@ -99,7 +100,7 @@ def find_trip_with_transfer(
             st2.departure_sec AS t2,
             st1.stop_sequence AS seq1,
             st2.stop_sequence AS seq2,
-            st2.arrival_time  AS arrival_time_second_trip
+            st2.arrival_time  AS arrival_time_second_trip 
         FROM stop_times st1
         JOIN stops s1 ON st1.stop_id = s1.stop_id
         JOIN stop_times st2 ON st2.trip_id IS NOT NULL
@@ -123,6 +124,7 @@ def find_trip_with_transfer(
             t.seq2,
             t.arrival_time_second_trip,
             st3.arrival_sec   AS dest_time,
+            st3.arrival_time AS dest_arrival_time,
             st3.stop_id       AS dest_stop,
             st3.stop_sequence AS seq3
         FROM transfers t
@@ -162,9 +164,9 @@ def find_trip_with_transfer(
         }
 
     # Mantener solo rutas válidas (tiempo total positivo)
-    df = df[df["total_travel_time"] >= 0]
+    df = df[df["total_travel_time"] > 0]
     # FIX Bug 1 (complemento): descartar filas donde el bus ya pasó
-    df = df[df["wait_for_first_bus"] >= 0]
+    df = df[df["wait_for_first_bus"] > 0]
     df = df.sort_values("total_travel_time")
     df = df.drop_duplicates(subset=["leg2_stop", "dest_stop"], keep="first")
     df = df.head(1)
@@ -296,6 +298,7 @@ def find_trip_with_transfer(
             "stop_sequence_origin": row["seq2"],
             "stop_sequence_dest":   row["seq3"],
             "arrival_time_second_trip": row["arrival_time_second_trip"],
+            "dest_arrival_time": row["dest_arrival_time"]
         }
 
         leg2_transport = transport_map[trip2]
@@ -337,6 +340,7 @@ def find_trip_with_transfer(
             },
             "total_time": row["total_travel_time"],
             "wait_time":  row["t2"] - row["t1"],
+            "now_time": now_text
         }
 
         routes.append(route)

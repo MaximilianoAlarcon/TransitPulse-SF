@@ -423,6 +423,8 @@ chatSend.addEventListener("click", async () => {
                         <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop at ${trip_details.arrival_time_second_trip} hs</p>
                         <p></p>
                         <p>Your trip wil last approximately ${formatDuration(data["details"][0]["total_time"])}</p>
+                        <p>Now, it's ${data["details"][0]["now_time"]}</p>
+                        <p>You will arrive to your destination at ${trip_details.dest_arrival_time}</p>
                         `
                         document.getElementById("chat-result").innerHTML = text_response;
 
