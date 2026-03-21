@@ -23,6 +23,9 @@ let routesLayer = L.featureGroup().addTo(map);
 let originMarker = null
 let destMarker = null
 let selectedPlace = null
+const suggestionsBox = document.getElementById("suggestions")
+
+let timeout = null
 
 function formatDuration(seconds) {
     seconds = Math.floor(seconds)
@@ -284,6 +287,7 @@ const chatInput = document.getElementById("chat-input");
 const chatResult = document.getElementById("chat-result");
 
 chatSend.addEventListener("click", async () => {
+    suggestionsBox.innerHTML = ""
     clearRoutes()
     lat = null
     lon = null
@@ -322,7 +326,7 @@ chatSend.addEventListener("click", async () => {
                 <p>Your trip will last approximately ${formatDuration(trip_details.total_time)}</p>
                 `;
                 map.setView([trip_details.stop_lat_origin, trip_details.stop_lon_origin], 15);
-                document.getElementById("chat-input").value = "";
+                
                 markRouteStops(
                     map, 
                     trip_details.stop_lat_origin, 
@@ -438,18 +442,11 @@ chatSend.addEventListener("click", async () => {
         console.error(error);
     }
     selectedPlace = null;
+    document.getElementById("chat-input").value = "";
 });
 
 // Enter key
 chatInput.addEventListener("keypress", e => { if (e.key === "Enter") chatSend.click(); });
-
-
-
-
-
-
-
-
 
 
 function onPlaceSelected(map, place) {
@@ -460,10 +457,6 @@ function onPlaceSelected(map, place) {
 
     selectedPlace = place
 }
-
-const suggestionsBox = document.getElementById("suggestions")
-
-let timeout = null
 
 chatInput.addEventListener("input", () => {
     const query = chatInput.value
