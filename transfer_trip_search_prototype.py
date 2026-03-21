@@ -134,7 +134,7 @@ def find_trip_with_transfer(
             AND st3.stop_sequence > t.seq2
     )
     SELECT *,
-        (dest_time - %s)      AS total_travel_time,
+        (dest_time)      AS total_travel_time,
         (t1 - %s) AS wait_for_first_bus
     FROM final_routes
     ORDER BY total_travel_time
@@ -150,8 +150,7 @@ def find_trip_with_transfer(
         origin_coords[0], origin_coords[1],                         # 2  → dist(origin → dest) punto A
         dest_coords[0],   dest_coords[1], 
         current_sec,    
-        current_sec,                                            # st2.departure_sec >= %s → 13
-        current_sec,
+        current_sec                                            # st2.departure_sec >= %s → 13
     )
 
     # Ejecutar query y traer df
