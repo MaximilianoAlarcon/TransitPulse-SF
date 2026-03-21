@@ -12,6 +12,7 @@ app = Flask(__name__)
 
 API_KEY = os.environ.get("API_511_KEY")
 API_GEO_KEY = os.environ.get("API_GEO_KEY")
+MAPBOX_API_KEY = os.environ.get("MAPBOX_API_KEY")
 
 # Configuración DB
 DB_CONFIG = {
@@ -165,6 +166,44 @@ def transfer_trip():
             "origin_coords":origin_coords,
             "dest_coords":dest_coords
         }))
+
+
+@app.route("/autocomplete")
+def autocomplete():
+    query = request.args.get("q")
+
+    if not query:
+        return jsonify({"error": "Missing input"}), 400
+
+    url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{query}.json"
+
+    params = {
+        "access_token": MAPBOX_API_KEY,
+        "autocomplete": "true",
+        "limit": 5,
+        "proximity": "-122.4194,37.7749",
+        "country": "US",
+        "bbox": "-122.55,37.68,-122.35,37.83",  # 🔥 limitar a SF
+        "types": "place,poi,address"  # 🔥 filtrar tipos útiles
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    suggestions = []
+
+    for feature in data.get("features", []):
+        suggestions.append({
+            "name": feature["place_name"],
+            "lat": feature["center"][1],
+            "lon": feature["center"][0],
+            "type": feature["place_type"][0],
+            "relevance": feature["relevance"]
+        })
+
+    suggestions.sort(key=lambda x: x["relevance"], reverse=True)
+
+    return jsonify(suggestions)
 
 
 @app.route("/api/operators")

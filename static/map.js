@@ -434,3 +434,71 @@ chatSend.addEventListener("click", async () => {
 
 // Enter key
 chatInput.addEventListener("keypress", e => { if (e.key === "Enter") chatSend.click(); });
+
+
+
+
+
+
+
+
+
+
+function onPlaceSelected(place) {
+    console.log("Destino:", place.lat, place.lon)
+
+    // 👉 Ejemplo: centrar mapa (Leaflet)
+    // map.setView([place.lat, place.lon], 14)
+
+    // 👉 Ejemplo: llamar a tu backend de rutas
+    fetch(`/route?lat=${place.lat}&lon=${place.lon}`)
+        .then(res => res.json())
+        .then(data => {
+            console.log("Ruta:", data)
+
+            document.getElementById("chat-result").innerText =
+                "Route found! Duration: " + data.duration
+        })
+}
+
+const suggestionsBox = document.getElementById("suggestions")
+
+let timeout = null
+
+chatInput.addEventListener("input", () => {
+    const query = chatInput.value
+
+    if (query.length < 3) {
+        suggestionsBox.innerHTML = ""
+        return
+    }
+
+    clearTimeout(timeout)
+
+    timeout = setTimeout(() => {
+        fetch(`/autocomplete?q=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(data => {
+                suggestionsBox.innerHTML = ""
+
+                data.forEach(place => {
+                    const div = document.createElement("div")
+                    div.classList.add("suggestion-item")
+
+                    div.innerText = place.name
+
+                    div.addEventListener("click", () => {
+                        chatInput.value = place.name
+                        suggestionsBox.innerHTML = ""
+
+                        console.log("Seleccionado:", place)
+
+                        // 🔥 ACÁ conectás tu GPS
+                        onPlaceSelected(place)
+                    })
+
+                    suggestionsBox.appendChild(div)
+                })
+            })
+    }, 300)
+})
