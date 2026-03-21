@@ -288,6 +288,7 @@ const chatResult = document.getElementById("chat-result");
 
 chatSend.addEventListener("click", async () => {
     suggestionsBox.innerHTML = ""
+    suggestionsBox.classList.remove("active");
     clearRoutes()
     lat = null
     lon = null
@@ -484,6 +485,8 @@ chatInput.addEventListener("input", () => {
                     suggestionsBox.appendChild(div)
                     return
                 }
+
+                suggestionsBox.classList.add("active");
 
                 data.forEach(place => {
                     const div = document.createElement("div")
