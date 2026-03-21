@@ -349,7 +349,7 @@ def find_trip_with_transfer(origin_coords,dest_coords,search_radius_origin=800,s
         (departure_origin - %s)           AS wait_for_first_bus
     FROM final_routes
     -- OPT 6: filtro de tiempo total razonable centralizado en un solo lugar
-    WHERE (dest_time - %s) %% 86400 BETWEEN 0 AND """ + str(MAX_TOTAL_TRIP_TIME) + """
+    WHERE total_travel_time BETWEEN 0 AND """ + str(MAX_TOTAL_TRIP_TIME) + """
     ORDER BY total_travel_time
     LIMIT 20;
     """
@@ -378,7 +378,7 @@ def find_trip_with_transfer(origin_coords,dest_coords,search_radius_origin=800,s
 
     # Mantener solo rutas válidas
     df = df[df["total_travel_time"] > 0]
-    df = df[df["wait_for_first_bus"] >= 0]
+    df = df[df["wait_for_first_bus"] >= 60]
     df = df.sort_values("total_travel_time")
     df = df.drop_duplicates(subset=["leg2_stop", "dest_stop"], keep="first")
     df = df.head(1)
@@ -521,8 +521,8 @@ def find_trip_with_transfer(origin_coords,dest_coords,search_radius_origin=800,s
             "stop_sequence_origin": row["seq2"],
             "stop_sequence_dest":   row["seq3"],
             # OPT 8: nomenclatura clara — transfer vs destino final
-            "arrival_time_transfer": row["arrival_time_second_trip"],
-            "arrival_time_dest":     row["dest_arrival_time"],
+            "arrival_time_second_trip": row["arrival_time_second_trip"],
+            "dest_arrival_time":     row["dest_arrival_time"],
         }
 
         leg2_transport = transport_map[trip2]
