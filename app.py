@@ -308,7 +308,7 @@ def load_shapes():
 def run_query_postgis():
     execute_query_postgis.run()
 
-@app.route("/query-postgis")
+@app.route("/query")
 def query_postgis():
 
     thread = threading.Thread(target=run_query_postgis)

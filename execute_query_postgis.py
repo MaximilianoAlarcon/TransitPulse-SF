@@ -60,41 +60,16 @@ pd.set_option('display.max_rows', 50)      # mostrar hasta 50 filas
 def init_db(conn):
     cur = conn.cursor()
     queries = [
+        "CREATE INDEX IF NOT EXISTS idx_stops_geom ON stops USING GIST(geom);",
+        "CREATE INDEX IF NOT EXISTS idx_stops_geom_stopid ON stops USING GIST(geom) INCLUDE (stop_id);",
+        "CREATE INDEX IF NOT EXISTS idx_stop_times_stopid_departure ON stop_times(stop_id, departure_sec);",
+        "CREATE INDEX IF NOT EXISTS idx_stop_times_trip_stop_seq ON stop_times(trip_id, stop_sequence);",
+        "CREATE INDEX IF NOT EXISTS idx_trip_departure_arrival ON stop_times(trip_id, departure_sec, arrival_sec);"
     ]
     for q in queries:
         print("Ejecutando:", q.split("\n")[0])
         cur.execute(q)
     conn.commit()
-
-    select(cur,"""
-SELECT 
-    table_name,
-    column_name,
-    data_type,
-    is_nullable,
-    column_default
-FROM information_schema.columns
-WHERE table_schema = 'public'
-ORDER BY table_name, ordinal_position;
-    """)
-
-
-    select(cur,"""
-SELECT
-    t.relname AS table_name,
-    i.relname AS index_name,
-    a.attname AS column_name,
-    ix.indisunique AS is_unique,
-    ix.indisprimary AS is_primary
-FROM pg_class t
-JOIN pg_index ix ON t.oid = ix.indrelid
-JOIN pg_class i ON i.oid = ix.indexrelid
-JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
-WHERE t.relkind = 'r' AND t.relnamespace IN (
-    SELECT oid FROM pg_namespace WHERE nspname = 'public'
-)
-ORDER BY t.relname, i.relname;
-    """)
 
     print("Query ejecutada")
 
