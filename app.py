@@ -200,7 +200,6 @@ def autocomplete():
         "limit": 5,
         "proximity": "-122.4194,37.7749",
         "country": "US",
-        "bbox": "-122.55,37.68,-122.35,37.83",  # 🔥 limitar a SF
         "types": "poi,poi.landmark,neighborhood,place"  # 🔥 filtrar tipos útiles
     }
 

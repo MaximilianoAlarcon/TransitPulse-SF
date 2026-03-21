@@ -198,7 +198,6 @@ def geocode(place):
         "access_token": MAPBOX_API_KEY,
         "limit": 1,
         "proximity": "-122.4194,37.7749",
-        "bbox": "-122.55,37.68,-122.35,37.83",
         "country": "US",
         "types": "poi,poi.landmark,neighborhood,place"
     }
