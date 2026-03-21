@@ -20,12 +20,37 @@ DB_CONFIG = {
     "port": os.environ.get("DB_PORT")
 }
 
-def select(cur,query):
-    print("Ejecutando consulta")
+def select(cur, query):
+    # Ejecutar la consulta
     cur.execute(query)
-    rows = cur.fetchall()  # trae todos los resultados
+    rows = cur.fetchall()
+    
+    if not rows:
+        print("No hay resultados")
+        return
+
+    # Obtener nombres de columnas
+    col_names = [desc[0] for desc in cur.description]
+
+    # Calcular ancho máximo de cada columna (para alinear)
+    col_widths = []
+    for i, col in enumerate(col_names):
+        max_len = max(len(str(row[i])) for row in rows)
+        col_widths.append(max(max_len, len(col)))
+
+    # Construir la línea de encabezados
+    header = " | ".join(col.ljust(col_widths[i]) for i, col in enumerate(col_names))
+    separator = "-+-".join("-" * col_widths[i] for i in range(len(col_names)))
+
+    # Construir las filas
+    data_lines = []
     for row in rows:
-        print(row)
+        line = " | ".join(str(item).ljust(col_widths[i]) for i, item in enumerate(row))
+        data_lines.append(line)
+
+    # Combinar todo en un solo texto
+    output = "\n".join([header, separator] + data_lines)
+    print(output)
 
 pd.set_option('display.max_columns', None)  # mostrar todas las columnas
 pd.set_option('display.width', 200)         # ancho de la tabla en consola
@@ -43,32 +68,32 @@ def init_db(conn):
 
     select(cur,"""
 SELECT 
-    c.table_schema,
-    c.table_name,
-    c.column_name,
-    c.data_type,
-    c.is_nullable,
-    c.column_default,
-    COALESCE(i.index_name, '') AS index_name,
-    COALESCE(i.is_unique, false) AS is_unique,
-    COALESCE(i.is_primary, false) AS is_primary
-FROM information_schema.columns c
-LEFT JOIN (
-    SELECT
-        t.relname AS table_name,
-        i.relname AS index_name,
-        a.attname AS column_name,
-        ix.indisunique AS is_unique,
-        ix.indisprimary AS is_primary
-    FROM pg_class t
-    JOIN pg_index ix ON t.oid = ix.indrelid
-    JOIN pg_class i ON i.oid = ix.indexrelid
-    JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
-    WHERE t.relkind = 'r'
-) i
-ON c.table_name = i.table_name AND c.column_name = i.column_name
-WHERE c.table_schema NOT IN ('information_schema','pg_catalog')
-ORDER BY c.table_name, c.ordinal_position;
+    table_name,
+    column_name,
+    data_type,
+    is_nullable,
+    column_default
+FROM information_schema.columns
+WHERE table_schema = 'public'
+ORDER BY table_name, ordinal_position;
+    """)
+
+
+    select(cur,"""
+SELECT
+    t.relname AS table_name,
+    i.relname AS index_name,
+    a.attname AS column_name,
+    ix.indisunique AS is_unique,
+    ix.indisprimary AS is_primary
+FROM pg_class t
+JOIN pg_index ix ON t.oid = ix.indrelid
+JOIN pg_class i ON i.oid = ix.indexrelid
+JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(ix.indkey)
+WHERE t.relkind = 'r' AND t.relnamespace IN (
+    SELECT oid FROM pg_namespace WHERE nspname = 'public'
+)
+ORDER BY t.relname, i.relname;
     """)
 
     print("Query ejecutada")
