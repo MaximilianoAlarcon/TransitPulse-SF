@@ -248,14 +248,14 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         FROM stops
         WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_Point(%s, %s),4326)::geography, %s)
         ORDER BY ST_Distance(geom::geography, ST_SetSRID(ST_Point(%s, %s),4326)::geography)
-        LIMIT """+str(limit_stops_origin)+"""
+        LIMIT {limit_stops_origin}
     ),
     dest AS (
         SELECT stop_id, geom
         FROM stops
         WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_Point(%s, %s),4326)::geography, %s)
         ORDER BY ST_Distance(geom::geography, ST_SetSRID(ST_Point(%s, %s),4326)::geography)
-        LIMIT """+str(limit_stops_dest)+"""
+        LIMIT {limit_stops_dest}
     ),
     first_leg AS (
         SELECT st.*
