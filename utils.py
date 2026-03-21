@@ -190,7 +190,7 @@ def should_use_transit(origin_coords, dest_coords):
 def geocode(place):
 
     if not place:
-        return jsonify({"error": "Missing input"}), 400
+        return {"error": "Missing input"}, 400
 
     url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{place}.json"
 
@@ -229,7 +229,7 @@ def geocode(place):
 
     # ❌ si aun así no hay nada
     if not features:
-        return jsonify({"error": "Place not found"}), 404
+        return {"error": "Place not found"}, 404
 
     feature = features[0]
 
