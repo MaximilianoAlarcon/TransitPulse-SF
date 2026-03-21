@@ -363,8 +363,8 @@ def find_trip_with_transfer(origin_coords,dest_coords,search_radius_origin=800,s
         origin_coords[0], origin_coords[1],                         # 2 → dist(origin → dest) punto A
         dest_coords[0],   dest_coords[1],                           # 2 → dist(origin → dest) punto B
         current_sec,                                                # 1 → total_travel_time
-        current_sec,                                                # 1 → wait_for_first_bus
-        current_sec,                                                # 1 → WHERE BETWEEN
+        current_sec                                                # 1 → wait_for_first_bus
+
     )
 
     df = pd.read_sql(query, conn, params=params)
