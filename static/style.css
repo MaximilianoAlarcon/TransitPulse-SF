@@ -2,7 +2,6 @@ html, body {
     margin: 0;
     padding: 0;
     height: 100%;
-    overflow: hidden;
     font-family: Arial, sans-serif;
 }
 
@@ -23,7 +22,7 @@ html, body {
 
 #sidebar-content {
     flex: 1;
-    overflow-y: auto;
+    /*overflow-y: auto;*/
 }
 
 /* Drag handle */
@@ -75,7 +74,7 @@ html, body {
 #suggestions {
     top: 100%;
     left: 0;
-    z-index: 4000;
+    z-index: 99999;
     max-height: 250px;
     overflow-y: auto;
     border: 1px solid #ddd;
@@ -83,6 +82,7 @@ html, body {
     background-color: white;
     border-radius: 0 0 8px 8px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    position: absolute;
 }
 
 .suggestion-item {
@@ -108,9 +108,9 @@ html, body {
     z-index: 1000;
 }
 
-#sidebar > .p-2 {
+#search-container {
     position: sticky;
     top: 0;
     background: white;
-    z-index: 10;
+    z-index: 1000;
 }
