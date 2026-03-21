@@ -1,6 +1,5 @@
 import math
 import requests
-from flask import jsonify
 import os
 
 MAPBOX_API_KEY = os.environ.get("MAPBOX_API_KEY")
@@ -233,11 +232,9 @@ def geocode(place):
 
     feature = features[0]
 
-    result = {
+    return {
         "name": feature["place_name"],
         "lat": feature["center"][1],
         "lon": feature["center"][0],
         "type": feature["place_type"][0]
     }
-
-    return jsonify(result)
