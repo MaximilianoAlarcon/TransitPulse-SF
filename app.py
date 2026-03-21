@@ -199,8 +199,7 @@ def autocomplete():
         "autocomplete": "true",
         "limit": 5,
         "proximity": "-122.4194,37.7749",
-        "country": "US",
-        "types": "poi,poi.landmark,neighborhood,place"  # 🔥 filtrar tipos útiles
+        "country": "US"
     }
 
     response = requests.get(url, params=params)
