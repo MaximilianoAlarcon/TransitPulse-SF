@@ -7,6 +7,7 @@ from claude import transform_input_address
 from transit_engine import find_direct_trip
 import psycopg2
 import numpy as np
+from utils import geocode
 
 app = Flask(__name__)
 
@@ -104,14 +105,17 @@ def direct_trip():
     my_location = (-122.4120372,37.7803603)
 
     address = request.args.get("address")
-    if not address:
-        return jsonify({"error": "No address received"}), 400
-    address_transformed = transform_input_address(address)
-    if address_transformed != "UNKNOWN":
-        address = address_transformed
-    lat, lon, error = geocode_address(address)
-    if error:
-        return jsonify({"error": error}), 404
+    lat = float(request.args.get("lat"))
+    lon = float(request.args.get("lon"))
+
+    if lat is None or lon is None:
+        if not address:
+            return jsonify({"error": "No address received"}), 400
+        search_coords = geocode(address)
+        if "error" in search_coords:
+            return jsonify({"error": search_coords["error"]}), 404
+        lat = search_coords["lat"]
+        lon = search_coords["lon"]
 
     origin_coords = my_location
     dest_coords = (lon,lat)
@@ -138,14 +142,17 @@ def transfer_trip():
     my_location = (-122.4120372,37.7803603)
 
     address = request.args.get("address")
-    if not address:
-        return jsonify({"error": "No address received"}), 400
-    address_transformed = transform_input_address(address)
-    if address_transformed != "UNKNOWN":
-        address = address_transformed
-    lat, lon, error = geocode_address(address)
-    if error:
-        return jsonify({"error": error}), 404
+    lat = float(request.args.get("lat"))
+    lon = float(request.args.get("lon"))
+
+    if lat is None or lon is None:
+        if not address:
+            return jsonify({"error": "No address received"}), 400
+        search_coords = geocode(address)
+        if "error" in search_coords:
+            return jsonify({"error": search_coords["error"]}), 404
+        lat = search_coords["lat"]
+        lon = search_coords["lon"]
 
     origin_coords = my_location
     dest_coords = (lon,lat)
@@ -204,6 +211,10 @@ def autocomplete():
     suggestions.sort(key=lambda x: x["relevance"], reverse=True)
 
     return jsonify(suggestions)
+
+
+
+
 
 
 @app.route("/api/operators")

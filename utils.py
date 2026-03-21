@@ -1,6 +1,8 @@
 import math
-
 import requests
+from flask import jsonify
+
+MAPBOX_API_KEY = os.environ.get("MAPBOX_API_KEY")
 
 # Cache simple en memoria
 SHAPE_CACHE = {}
@@ -181,3 +183,60 @@ def should_use_transit(origin_coords, dest_coords):
         return False
 
     return True  # usar transporte
+
+
+
+def geocode(place):
+
+    if not place:
+        return jsonify({"error": "Missing input"}), 400
+
+    url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{place}.json"
+
+    # 🔹 intento 1: búsqueda restringida (SF)
+    params = {
+        "access_token": MAPBOX_API_KEY,
+        "limit": 1,
+        "proximity": "-122.4194,37.7749",
+        "bbox": "-122.55,37.68,-122.35,37.83",
+        "country": "US"
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    features = data.get("features", [])
+
+    # 🔥 fallback: si no hay resultados, ampliar búsqueda
+    if not features:
+        params.pop("bbox", None)  # quitar restricción fuerte
+
+        response = requests.get(url, params=params)
+        data = response.json()
+        features = data.get("features", [])
+
+    # 🔥 fallback 2: sin restricciones
+    if not features:
+        params = {
+            "access_token": MAPBOX_API_KEY,
+            "limit": 1
+        }
+
+        response = requests.get(url, params=params)
+        data = response.json()
+        features = data.get("features", [])
+
+    # ❌ si aun así no hay nada
+    if not features:
+        return jsonify({"error": "Place not found"}), 404
+
+    feature = features[0]
+
+    result = {
+        "name": feature["place_name"],
+        "lat": feature["center"][1],
+        "lon": feature["center"][0],
+        "type": feature["place_type"][0]
+    }
+
+    return jsonify(result)

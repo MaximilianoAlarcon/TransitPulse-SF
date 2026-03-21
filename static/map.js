@@ -22,7 +22,7 @@ let routesLayer = L.featureGroup().addTo(map);
 
 let originMarker = null
 let destMarker = null
-
+let selectedPlace = null
 
 function formatDuration(seconds) {
     seconds = Math.floor(seconds)
@@ -285,6 +285,13 @@ const chatResult = document.getElementById("chat-result");
 
 chatSend.addEventListener("click", async () => {
     clearRoutes()
+    lat = null
+    lon = null
+    if (selectedPlace){
+        lat = selectedPlace.lat
+        lon = selectedPlace.lon
+    } 
+
     document.getElementById("chat-result").innerHTML = `
     <p>Searching direct trip...</p>
     <div class="spinner"></div>`;
@@ -292,7 +299,7 @@ chatSend.addEventListener("click", async () => {
     if (!address) return alert("Enter your destination");
     try {
         //Search direct trip
-        let response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}`);
+        let response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}&lat=${lat}&lat=${lon}`);
         if (!response.ok) {
             let errData = await response.json();
             document.getElementById("chat-result").innerText = errData.error || "Unknown error";
@@ -344,7 +351,7 @@ chatSend.addEventListener("click", async () => {
                 <p>Searching transfer trip...</p>
                 <div class="spinner"></div>`;
                 address = document.getElementById("chat-input").value.trim();
-                response = await fetch(`/transfer-trip?address=${encodeURIComponent(address)}`);
+                response = await fetch(`/transfer-trip?address=${encodeURIComponent(address)}&lat=${lat}&lat=${lon}`);
                 if (!response.ok) {
                     errData = await response.json();
                     document.getElementById("chat-result").innerText = errData.error || "Unknown error";
@@ -430,6 +437,7 @@ chatSend.addEventListener("click", async () => {
         document.getElementById("chat-result").innerText = "Internal Error";
         console.error(error);
     }
+    selectedPlace = null;
 });
 
 // Enter key
@@ -444,21 +452,13 @@ chatInput.addEventListener("keypress", e => { if (e.key === "Enter") chatSend.cl
 
 
 
-function onPlaceSelected(place) {
+function onPlaceSelected(map, place) {
     console.log("Destino:", place.lat, place.lon)
 
     // 👉 Ejemplo: centrar mapa (Leaflet)
-    // map.setView([place.lat, place.lon], 14)
+    map.setView([place.lat, place.lon], 14)
 
-    // 👉 Ejemplo: llamar a tu backend de rutas
-    fetch(`/route?lat=${place.lat}&lon=${place.lon}`)
-        .then(res => res.json())
-        .then(data => {
-            console.log("Ruta:", data)
-
-            document.getElementById("chat-result").innerText =
-                "Route found! Duration: " + data.duration
-        })
+    selectedPlace = place
 }
 
 const suggestionsBox = document.getElementById("suggestions")
@@ -481,6 +481,16 @@ chatInput.addEventListener("input", () => {
             .then(data => {
                 suggestionsBox.innerHTML = ""
 
+                // 🔥 NUEVO: manejar sin resultados
+                if (!data || data.length === 0) {
+                    const div = document.createElement("div")
+                    div.classList.add("suggestion-item")
+                    div.innerText = "No suggestions to show"
+
+                    suggestionsBox.appendChild(div)
+                    return
+                }
+
                 data.forEach(place => {
                     const div = document.createElement("div")
                     div.classList.add("suggestion-item")
@@ -494,7 +504,7 @@ chatInput.addEventListener("input", () => {
                         console.log("Seleccionado:", place)
 
                         // 🔥 ACÁ conectás tu GPS
-                        onPlaceSelected(place)
+                        onPlaceSelected(map,place)
                     })
 
                     suggestionsBox.appendChild(div)
