@@ -485,8 +485,9 @@ chatInput.addEventListener("input", () => {
                 if (!data || data.length === 0) {
                     const div = document.createElement("div")
                     div.classList.add("suggestion-item")
+                    div.classList.add("no-results") 
                     div.innerText = "No suggestions to show"
-
+                    
                     suggestionsBox.appendChild(div)
                     return
                 }
@@ -511,4 +512,11 @@ chatInput.addEventListener("input", () => {
                 })
             })
     }, 300)
+})
+
+
+document.addEventListener("click", (e) => {
+    if (!chatInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
+        suggestionsBox.innerHTML = ""
+    }
 })
