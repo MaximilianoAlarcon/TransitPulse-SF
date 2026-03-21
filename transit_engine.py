@@ -226,7 +226,7 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
 
 
 MAX_WAIT_FOR_FIRST_BUS = 3600
-MAX_WAIT_FOR_SECOND_BUS = 7200
+MAX_WAIT_FOR_SECOND_BUS = 3600
 
 def find_trip_with_transfer(origin_coords,dest_coords,search_radius_origin=800,search_radius_dest=1200,transfer_radius=350,auto_estimate_radius=False):
     """
@@ -277,7 +277,7 @@ def find_trip_with_transfer(origin_coords,dest_coords,search_radius_origin=800,s
             st.stop_id IN (SELECT stop_id FROM origin)
             AND st.arrival_sec IS NOT NULL
             AND st.departure_sec >= %s
-            --AND st.departure_sec <= %s + """+str(MAX_WAIT_FOR_FIRST_BUS)+"""
+            AND st.departure_sec <= %s + """+str(MAX_WAIT_FOR_FIRST_BUS)+"""
             AND ST_Distance(
                 s.geom::geography,
                 ST_SetSRID(ST_Point(%s, %s), 4326)::geography
@@ -310,7 +310,7 @@ def find_trip_with_transfer(origin_coords,dest_coords,search_radius_origin=800,s
             AND st1.trip_id IN (SELECT trip_id FROM first_leg)
             AND st2.departure_sec > st1.arrival_sec
             AND st2.departure_sec >= %s
-            --AND st2.departure_sec < st1.arrival_sec + """+str(MAX_WAIT_FOR_SECOND_BUS)+"""
+            AND st2.departure_sec < st1.arrival_sec + """+str(MAX_WAIT_FOR_SECOND_BUS)+"""
     ),
     final_routes AS (
         SELECT
