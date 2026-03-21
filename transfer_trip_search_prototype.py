@@ -134,7 +134,7 @@ def find_trip_with_transfer(
             AND st3.stop_sequence > t.seq2
     )
     SELECT *,
-        (dest_time)      AS total_travel_time,
+        (dest_time - %s) % 86400 AS total_travel_time,
         (t1 - %s) AS wait_for_first_bus
     FROM final_routes
     ORDER BY total_travel_time
@@ -150,7 +150,7 @@ def find_trip_with_transfer(
         origin_coords[0], origin_coords[1],                         # 2  → dist(origin → dest) punto A
         dest_coords[0],   dest_coords[1], 
         current_sec,    
-        current_sec                                            # st2.departure_sec >= %s → 13
+        current_sec,current_sec                                            # st2.departure_sec >= %s → 13
     )
 
     # Ejecutar query y traer df
@@ -165,7 +165,7 @@ def find_trip_with_transfer(
     # Mantener solo rutas válidas (tiempo total positivo)
     df = df[df["total_travel_time"] > 0]
     # FIX Bug 1 (complemento): descartar filas donde el bus ya pasó
-    df = df[df["wait_for_first_bus"] > 0]
+    df = df[df["wait_for_first_bus"] >= 0]
     df = df.sort_values("total_travel_time")
     df = df.drop_duplicates(subset=["leg2_stop", "dest_stop"], keep="first")
     df = df.head(1)
