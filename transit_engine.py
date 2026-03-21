@@ -7,7 +7,7 @@ import json
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from utils import get_direct_trip_geometry,estimate_radius,should_use_transit,time_to_seconds
+from utils import get_direct_trip_geometry,estimate_radius,should_use_transit,time_to_seconds,estimate_radius_and_limit
 import math
 
 API_KEY = os.environ.get("API_511_KEY")
@@ -228,17 +228,15 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
 MAX_WAIT_FOR_FIRST_BUS = 3600
 MAX_WAIT_FOR_SECOND_BUS = 3600
 
-def find_trip_with_transfer(origin_coords, dest_coords,
-                                      search_radius_origin=800,
-                                      search_radius_dest=1200,
-                                      transfer_radius=350,
-                                      auto_estimate_radius=False):
+def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800, search_radius_dest=1200, transfer_radius=350, auto_estimate_radius=False):
 
     conn = psycopg2.connect(**DB_CONFIG)
 
+    limit_stops_origin = 20
+    limit_stops_dest = 20
     if auto_estimate_radius:
-        search_radius_origin = estimate_radius(conn, origin_coords)
-        search_radius_dest = estimate_radius(conn, dest_coords)
+        search_radius_origin,limit_stops_origin = estimate_radius_and_limit(conn, origin_coords)
+        search_radius_dest,limit_stops_dest = estimate_radius_and_limit(conn, dest_coords)
 
     now_sf = datetime.now(ZoneInfo("America/Los_Angeles"))
     now_text = now_sf.strftime("%d/%m/%Y %H:%M:%S")
@@ -250,14 +248,14 @@ def find_trip_with_transfer(origin_coords, dest_coords,
         FROM stops
         WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_Point(%s, %s),4326)::geography, %s)
         ORDER BY ST_Distance(geom::geography, ST_SetSRID(ST_Point(%s, %s),4326)::geography)
-        LIMIT 20
+        LIMIT """+str(limit_stops_origin)+"""
     ),
     dest AS (
         SELECT stop_id, geom
         FROM stops
         WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_Point(%s, %s),4326)::geography, %s)
         ORDER BY ST_Distance(geom::geography, ST_SetSRID(ST_Point(%s, %s),4326)::geography)
-        LIMIT 20
+        LIMIT """+str(limit_stops_dest)+"""
     ),
     first_leg AS (
         SELECT st.*

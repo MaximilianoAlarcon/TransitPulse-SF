@@ -143,6 +143,31 @@ def estimate_radius(conn, coords):
         return 1500
 
 
+def estimate_radius_and_limit(conn, coords):
+    lon, lat = coords
+
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM stops
+        WHERE ST_DWithin(
+            geom::geography,
+            ST_SetSRID(ST_Point(%s,%s),4326)::geography,
+            500
+        );
+    """, (lon, lat))
+
+    count = cur.fetchone()[0]
+    cur.close()
+
+    if count > 30:
+        return 600,40
+    elif count > 10:
+        return 1000,25
+    else:
+        return 1500,15
+
+
 def haversine_distance(lat1, lon1, lat2, lon2):
     """Distancia en metros entre dos coordenadas"""
     R = 6371000  # radio de la Tierra en metros
