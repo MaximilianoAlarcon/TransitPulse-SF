@@ -287,6 +287,7 @@ const chatInput = document.getElementById("chat-input");
 const chatResult = document.getElementById("chat-result");
 
 chatSend.addEventListener("click", async () => {
+    chatSend.disabled = true;
     suggestionsBox.classList.remove("active");
     suggestionsBox.innerHTML = ""
     let address = document.getElementById("chat-input").value.trim();
@@ -445,6 +446,7 @@ chatSend.addEventListener("click", async () => {
     }
     selectedPlace = null;
     document.getElementById("chat-input").value = "";
+    chatSend.disabled = false;
 });
 
 // Enter key
