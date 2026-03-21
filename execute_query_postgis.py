@@ -67,13 +67,18 @@ def init_db(conn):
     conn.commit()
 
     select(cur,"""
-    SELECT EXTRACT(HOUR FROM TO_TIMESTAMP(st.departure_sec)) AS hour_of_day,
-        COUNT(*) AS transfers_available
-    FROM stop_times st
-    JOIN stop_times st2 ON ST_DWithin(st.geom::geography, st2.geom::geography, 200)
-                        AND st2.departure_sec > st.arrival_sec
-    GROUP BY hour_of_day
-    ORDER BY hour_of_day;
+SELECT 
+    EXTRACT(HOUR FROM TO_TIMESTAMP(st.departure_sec)) AS hour_of_day,
+    COUNT(*) AS transfers_available
+FROM stop_times st
+JOIN stops s1 ON st.stop_id = s1.stop_id
+JOIN stop_times st2 ON st2.trip_id IS NOT NULL
+JOIN stops s2 ON st2.stop_id = s2.stop_id
+WHERE 
+    ST_DWithin(s1.geom::geography, s2.geom::geography, 200)
+    AND st2.departure_sec > st.arrival_sec
+GROUP BY hour_of_day
+ORDER BY hour_of_day;
     """)
 
     print("Query ejecutada")
