@@ -21,18 +21,19 @@
     <!-- Sidebar -->
     <div id="sidebar" class="bg-light d-flex flex-column">
         <div id="drag-handle" class="bg-secondary"></div>
-        <div id="sidebar-content" class="p-2 flex-fill overflow-auto">
+
+        <!-- 🔍 BUSCADOR -->
+        <div class="p-2">
             <div class="position-relative mb-2">
                 <input id="chat-input" class="form-control" type="text" placeholder="Where do you want to go?">
-                
                 <div id="suggestions" class="list-group position-absolute w-100"></div>
             </div>
 
-            <button id="chat-send" class="btn btn-primary mb-3 w-100">Search</button>
-
-            <div id="chat-result" class="mt-3"></div>
+            <button id="chat-send" class="btn btn-primary w-100">Search</button>
         </div>
-        
+
+        <!-- 📊 RESULTADOS (separados) -->
+        <div id="chat-result" class="p-2 flex-fill overflow-auto border-top"></div>
     </div>
 
     <!-- Map -->

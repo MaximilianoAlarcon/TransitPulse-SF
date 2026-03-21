@@ -98,3 +98,18 @@ html, body {
     color: gray;
     cursor: default;
 }
+
+
+#chat-result {
+    background-color: #fafafa;
+    border-top: 1px solid #e5e5e5;
+    margin-top: 10px;
+    padding-top: 10px;
+}
+
+#sidebar > .p-2 {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+}
