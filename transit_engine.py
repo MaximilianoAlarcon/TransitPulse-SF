@@ -225,10 +225,10 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
 
 
 
-MAX_WAIT_FOR_FIRST_BUS = 7200
-MAX_WAIT_FOR_SECOND_BUS = 7200
+MAX_WAIT_FOR_FIRST_BUS = 3600
+MAX_WAIT_FOR_SECOND_BUS = 3600
 
-def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800, search_radius_dest=1200, transfer_radius=5000, auto_estimate_radius=False):
+def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800, search_radius_dest=1200, transfer_radius=1000, auto_estimate_radius=False):
 
     conn = psycopg2.connect(**DB_CONFIG)
 
