@@ -362,6 +362,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     routes = []
     for _, row in df.iterrows():
+        origin_stop = stops_map[row["leg1_stop"]]
         transfer_stop = stops_map[row["leg2_stop"]]
         dest_stop = stops_map[row["dest_stop"]]
 
@@ -380,7 +381,11 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             "route_color": transport_map[row["trip1"]]["route_color"],
             "stop_sequence_origin": origin_seq,
             "stop_sequence_dest": row["seq1"],
-            "wait_for_first_bus": row["wait_for_first_bus"]
+            "wait_for_first_bus": row["wait_for_first_bus"],
+            "stop_lat_origin": origin_stop[2],
+            "stop_lon_origin": origin_stop[3],
+            "stop_lat_dest": transfer_stop[2],
+            "stop_lon_dest": transfer_stop[3]
         }
 
         leg2_trip_details = {
@@ -393,7 +398,11 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             "stop_sequence_origin": row["seq2"],
             "stop_sequence_dest": row["seq3"],
             "arrival_time_second_trip": row["arrival_time_second_trip"],
-            "dest_arrival_time": row["dest_arrival_time"]
+            "dest_arrival_time": row["dest_arrival_time"],
+            "stop_lat_origin": transfer_stop[2],
+            "stop_lon_origin": transfer_stop[3],
+            "stop_lat_dest": dest_stop[2],
+            "stop_lon_dest": dest_stop[3]
         }
 
         # geometría del viaje
