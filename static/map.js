@@ -469,54 +469,59 @@ function onPlaceSelected(map, place) {
 }
 
 chatInput.addEventListener("input", () => {
-    const query = chatInput.value
+    if (!chatInput.disabled){
+        const query = chatInput.value
 
-    if (query.length < 3) {
+        if (query.length < 3) {
+            suggestionsBox.innerHTML = ""
+            return
+        }
+
+        clearTimeout(timeout)
+
+        timeout = setTimeout(() => {
+            fetch(`/autocomplete?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    suggestionsBox.innerHTML = ""
+
+                    // 🔥 NUEVO: manejar sin resultados
+                    if (!data || data.length === 0) {
+                        const div = document.createElement("div")
+                        div.classList.add("suggestion-item")
+                        div.classList.add("no-results") 
+                        div.innerText = "No suggestions to show"
+                        
+                        suggestionsBox.appendChild(div)
+                        return
+                    }
+
+                    suggestionsBox.classList.add("active");
+
+                    data.forEach(place => {
+                        const div = document.createElement("div")
+                        div.classList.add("suggestion-item")
+
+                        div.innerText = place.name
+
+                        div.addEventListener("click", () => {
+                            chatInput.value = place.name
+                            suggestionsBox.innerHTML = ""
+
+                            console.log("Seleccionado:", place)
+
+                            // 🔥 ACÁ conectás tu GPS
+                            onPlaceSelected(map,place)
+                        })
+
+                        suggestionsBox.appendChild(div)
+                    })
+                })
+        }, 300)
+    } else {
         suggestionsBox.innerHTML = ""
         return
     }
-
-    clearTimeout(timeout)
-
-    timeout = setTimeout(() => {
-        fetch(`/autocomplete?q=${encodeURIComponent(query)}`)
-            .then(res => res.json())
-            .then(data => {
-                suggestionsBox.innerHTML = ""
-
-                // 🔥 NUEVO: manejar sin resultados
-                if (!data || data.length === 0) {
-                    const div = document.createElement("div")
-                    div.classList.add("suggestion-item")
-                    div.classList.add("no-results") 
-                    div.innerText = "No suggestions to show"
-                    
-                    suggestionsBox.appendChild(div)
-                    return
-                }
-
-                suggestionsBox.classList.add("active");
-
-                data.forEach(place => {
-                    const div = document.createElement("div")
-                    div.classList.add("suggestion-item")
-
-                    div.innerText = place.name
-
-                    div.addEventListener("click", () => {
-                        chatInput.value = place.name
-                        suggestionsBox.innerHTML = ""
-
-                        console.log("Seleccionado:", place)
-
-                        // 🔥 ACÁ conectás tu GPS
-                        onPlaceSelected(map,place)
-                    })
-
-                    suggestionsBox.appendChild(div)
-                })
-            })
-    }, 300)
 })
 
 
