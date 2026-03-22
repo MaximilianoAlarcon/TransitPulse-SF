@@ -242,6 +242,9 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     now_text = now_sf.strftime("%d/%m/%Y %H:%M:%S")
     current_sec = now_sf.hour * 3600 + now_sf.minute * 60 + now_sf.second
 
+    print("search_radius_origin -> "+str(search_radius_origin)+" limit_stops_origin -> "+str(limit_stops_origin))
+    print("search_radius_dest -> "+str(search_radius_dest)+" limit_stops_dest -> "+str(limit_stops_dest))
+
     query = f"""
     WITH origin AS (
         SELECT stop_id, geom
