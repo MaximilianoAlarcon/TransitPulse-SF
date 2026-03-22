@@ -469,7 +469,7 @@ function onPlaceSelected(map, place) {
 }
 
 chatInput.addEventListener("input", () => {
-    if (!chatInput.disabled){
+    if (!chatInput.disabled && !chatSend.disabled) {
         const query = chatInput.value
 
         if (query.length < 3) {
