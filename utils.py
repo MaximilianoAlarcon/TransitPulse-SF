@@ -136,11 +136,11 @@ def estimate_radius(conn, coords):
     cur.close()
 
     if count > 30:
-        return 600
+        return 600*2
     elif count > 10:
-        return 1000
+        return 1000*2
     else:
-        return 1500
+        return 1500*2
 
 
 def estimate_radius_and_limit(conn, coords):

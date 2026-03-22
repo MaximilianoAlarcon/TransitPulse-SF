@@ -402,7 +402,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             "stop_lat_origin": transfer_stop[2],
             "stop_lon_origin": transfer_stop[3],
             "stop_lat_dest": dest_stop[2],
-            "stop_lon_dest": dest_stop[3]
+            "stop_lon_dest": dest_stop[3],
+            "stop_name_origin": transfer_stop[1]
         }
 
         # geometría del viaje
