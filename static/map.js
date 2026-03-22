@@ -289,7 +289,7 @@ const chatResult = document.getElementById("chat-result");
 chatSend.addEventListener("click", async () => {
     chatSend.disabled = true;
     chatInput.disabled = true;
-    suggestionsBox.classList.remove("active");
+    suggestionsBox.style.display = "none";
     suggestionsBox.innerHTML = ""
     let address = document.getElementById("chat-input").value.trim();
     if (!address) return alert("Enter your destination");
@@ -351,6 +351,7 @@ chatSend.addEventListener("click", async () => {
                 `;
                 chatSend.disabled = false;
                 chatInput.disabled = false;
+                suggestionsBox.style.display = "block";
                 drawWalkingRoute(map,data["origin_coords"][1],data["origin_coords"][0],data["dest_coords"][1],data["dest_coords"][0])
                 markDest(data["dest_coords"][1], data["dest_coords"][0])
             } else {
@@ -438,6 +439,7 @@ chatSend.addEventListener("click", async () => {
                         `;
                         chatSend.disabled = false;
                         chatInput.disabled = false;
+                        suggestionsBox.style.display = "block";
                         markRouteStops(map, data["origin_coords"][1], data["origin_coords"][0], data["dest_coords"][1], data["dest_coords"][0],
                             labelorigin="Origin",labeldest="Dest")                        
                     }
@@ -453,6 +455,7 @@ chatSend.addEventListener("click", async () => {
     document.getElementById("chat-input").value = "";
     chatSend.disabled = false;
     chatInput.disabled = false;
+    suggestionsBox.style.display = "block";
 });
 
 // Enter key

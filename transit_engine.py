@@ -407,8 +407,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         }
 
         # geometría del viaje
-        leg1_trip_geometry = get_direct_trip_geometry(cur, leg1_trip_details, transport_map[row["trip1"]])
-        leg2_trip_geometry = get_direct_trip_geometry(cur, leg2_trip_details, transport_map[row["trip2"]])
+        leg1_trip_geometry = get_direct_trip_geometry(cur, leg1_trip_details, transport_map[row["trip1"]],search_shapes=True)
+        leg2_trip_geometry = get_direct_trip_geometry(cur, leg2_trip_details, transport_map[row["trip2"]],search_shapes=True)
 
         routes.append({
             "origin": None,  # puedes agregar info de stop origen si querés
