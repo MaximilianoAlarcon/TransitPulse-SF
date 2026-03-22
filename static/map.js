@@ -325,7 +325,7 @@ chatSend.addEventListener("click", async () => {
                 <p>If you want to go to: ${address}</p>
                 <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name} - ${trip_details.route_short_name}</b></p>
                 <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_time)}</p>
-                <p>Your trip will last approximately ${formatDuration(trip_details.total_time)}</p>
+                <p>Your trip will last approximately ${formatDuration(trip_details.total_time - trip_details.wait_time)}</p>
                 `;
                 map.setView([trip_details.stop_lat_origin, trip_details.stop_lon_origin], 15);
                 
