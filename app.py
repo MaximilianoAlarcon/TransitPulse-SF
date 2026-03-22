@@ -119,6 +119,9 @@ def direct_trip():
         search_coords = geocode(address)
         if "error" in search_coords:
             return jsonify({"error": search_coords["error"]}), 404
+        if isinstance(search_coords, tuple):
+            error_dict, status_code = search_coords
+            return jsonify({"error": error_dict["error"]}), status_code
         lat = search_coords["lat"]
         lon = search_coords["lon"]
 
@@ -161,6 +164,9 @@ def transfer_trip():
         search_coords = geocode(address)
         if "error" in search_coords:
             return jsonify({"error": search_coords["error"]}), 404
+        if isinstance(search_coords, tuple):
+            error_dict, status_code = search_coords
+            return jsonify({"error": error_dict["error"]}), status_code
         lat = search_coords["lat"]
         lon = search_coords["lon"]
 
