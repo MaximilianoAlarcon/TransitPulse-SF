@@ -223,6 +223,7 @@ def geocode(place):
         "access_token": MAPBOX_API_KEY,
         "limit": 1,
         "proximity": "-122.4194,37.7749",
+        "bbox": "-124.48,32.53,-114.13,42.01",
         "country": "US"
     }
 
