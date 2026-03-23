@@ -499,8 +499,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     leg1_trip_details["wait_for_first_bus"] = wait_for_first_bus
     leg2_trip_details["arrival_time_second_trip"] = sec_to_time(second_departure)
-    leg2_trip_details["dest_arrival_time"] = sec_to_time(final_arrival)
-
+    leg2_trip_details["dest_arrival_time"] = sec_to_time(earliest[trip2_dest_id])
     total_time = earliest[trip2_dest_id] - current_sec
 
     conn.close()
