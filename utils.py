@@ -49,45 +49,94 @@ def get_direct_trip_geometry(cur, trip_details, transport_details, search_shapes
         # 2. Intentar usar SHAPES reales
         # ------------------------------
         if shape_id and seq_origin is not None and seq_dest is not None:
-            cur.execute("""
-                SELECT stop_sequence, shape_dist_traveled
-                FROM stop_times
-                WHERE trip_id = %s
-                AND operator_id = %s
-                AND stop_sequence BETWEEN %s AND %s
-            """, (trip_id, operator_id, min(seq_origin, seq_dest), max(seq_origin, seq_dest)))
+            seq_min = min(seq_origin, seq_dest)
+            seq_max = max(seq_origin, seq_dest)
 
-            rows = cur.fetchall()
-            dist_map = {r[0]: r[1] for r in rows if r[1] is not None}
-            dist_start = dist_map.get(seq_origin)
-            dist_end = dist_map.get(seq_dest)
-
-            if dist_start is not None and dist_end is not None:
+            # FIX: verificar que el rango de secuencias sea válido (al menos 2 stops)
+            if seq_min == seq_max:
+                # origen y destino son el mismo stop → fallback a línea recta
+                coords = []
+            else:
                 cur.execute("""
-                    SELECT shape_pt_lat, shape_pt_lon
-                    FROM shapes
-                    WHERE operator_id = %s
-                    AND shape_id = %s
-                    AND shape_dist_traveled BETWEEN %s AND %s
-                    ORDER BY shape_pt_sequence
-                """, (operator_id, shape_id, min(dist_start, dist_end), max(dist_start, dist_end)))
+                    SELECT stop_sequence, shape_dist_traveled
+                    FROM stop_times
+                    WHERE trip_id = %s
+                    AND operator_id = %s
+                    AND stop_sequence BETWEEN %s AND %s
+                    ORDER BY stop_sequence
+                """, (trip_id, operator_id, seq_min, seq_max))
 
-                shape_rows = cur.fetchall()
-                coords = [(float(lat), float(lon)) for lat, lon in shape_rows]
+                rows = cur.fetchall()
+                dist_map = {r[0]: r[1] for r in rows if r[1] is not None}
+                dist_start = dist_map.get(seq_origin)
+                dist_end = dist_map.get(seq_dest)
 
-                # Recorte fino
-                if coords:
-                    def closest_point_index(shape, target):
-                        return min(range(len(shape)),
-                                key=lambda i: (shape[i][0]-target[0])**2 + (shape[i][1]-target[1])**2)
+                # FIX: si dist_start == dist_end los shapes colapsarían en un punto
+                # → intentar con shape_pt_sequence directamente sin dist_traveled
+                if dist_start is not None and dist_end is not None and dist_start != dist_end:
+                    cur.execute("""
+                        SELECT shape_pt_lat, shape_pt_lon
+                        FROM shapes
+                        WHERE operator_id = %s
+                        AND shape_id = %s
+                        AND shape_dist_traveled BETWEEN %s AND %s
+                        ORDER BY shape_pt_sequence
+                    """, (operator_id, shape_id, min(dist_start, dist_end), max(dist_start, dist_end)))
 
-                    start_idx = closest_point_index(coords, origin_coords)
-                    end_idx = closest_point_index(coords, dest_coords)
-                    if start_idx > end_idx:
-                        start_idx, end_idx = end_idx, start_idx
-                    coords = coords[start_idx:end_idx+1]
-                    if coords:
-                        geometry_type = "shape"
+                    shape_rows = cur.fetchall()
+                    coords = [(float(lat), float(lon)) for lat, lon in shape_rows]
+
+                    # Recorte fino por proximidad
+                    if len(coords) >= 2:
+                        def closest_point_index(shape, target):
+                            return min(range(len(shape)),
+                                    key=lambda i: (shape[i][0]-target[0])**2 + (shape[i][1]-target[1])**2)
+
+                        start_idx = closest_point_index(coords, origin_coords)
+                        end_idx = closest_point_index(coords, dest_coords)
+                        if start_idx > end_idx:
+                            start_idx, end_idx = end_idx, start_idx
+
+                        sliced = coords[start_idx:end_idx+1]
+
+                        # FIX: solo aceptar el recorte si tiene al menos 2 puntos
+                        if len(sliced) >= 2:
+                            coords = sliced
+                            geometry_type = "shape"
+                        else:
+                            # El recorte colapsó → usar shape completo sin recortar
+                            if len(coords) >= 2:
+                                geometry_type = "shape"
+                            else:
+                                coords = []
+
+                    elif len(coords) == 1:
+                        # Shape devolvió un solo punto → descartar, ir a fallback
+                        coords = []
+
+                else:
+                    # dist_start o dist_end ausentes, o iguales → fallback por stop_sequence
+                    # Intentar obtener shapes ordenados por shape_pt_sequence usando
+                    # los dist extremos de todos los stops del rango
+                    valid_dists = [v for v in dist_map.values() if v is not None]
+                    if len(valid_dists) >= 2:
+                        d_min = min(valid_dists)
+                        d_max = max(valid_dists)
+                        cur.execute("""
+                            SELECT shape_pt_lat, shape_pt_lon
+                            FROM shapes
+                            WHERE operator_id = %s
+                            AND shape_id = %s
+                            AND shape_dist_traveled BETWEEN %s AND %s
+                            ORDER BY shape_pt_sequence
+                        """, (operator_id, shape_id, d_min, d_max))
+
+                        shape_rows = cur.fetchall()
+                        coords = [(float(lat), float(lon)) for lat, lon in shape_rows]
+                        if len(coords) >= 2:
+                            geometry_type = "shape"
+                        else:
+                            coords = []
 
     # ------------------------------
     # 3. Fallback → línea recta entre origen y destino
