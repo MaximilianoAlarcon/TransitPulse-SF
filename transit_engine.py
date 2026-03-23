@@ -273,7 +273,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     cur.execute("""
         SELECT from_stop, to_stop, departure_sec, arrival_sec, trip_id
         FROM connections
-        WHERE departure_sec >= %s AND departure_sec <= %s
+        WHERE departure_sec >= %s AND departure_sec <= %s 
+        AND arrival_sec IS NOT NULL 
         ORDER BY departure_sec
     """, (current_sec, max_time))
 
