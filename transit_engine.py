@@ -31,197 +31,198 @@ WAIT_TRANSPORT_LIMIT = 3600
 
 def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, search_radius_dest=800, auto_estimate_radius=False):
 
-    if should_use_transit(origin_coords,dest_coords):
+    if not should_use_transit(origin_coords, dest_coords):
+        return {"status": "Canceled", "reason": "You should go walking"}
 
-        conn = psycopg2.connect(**DB_CONFIG)
-        cur = conn.cursor()
+    conn = psycopg2.connect(**DB_CONFIG)
+    cur = conn.cursor()
 
-        if auto_estimate_radius:
-            search_radius_origin =  estimate_radius(conn,origin_coords)
-            search_radius_dest =  estimate_radius(conn,dest_coords)
+    if auto_estimate_radius:
+        search_radius_origin = estimate_radius(conn, origin_coords)
+        search_radius_dest   = estimate_radius(conn, dest_coords)
 
-        # activar PostGIS
+    now_sf = datetime.now(ZoneInfo("America/Los_Angeles"))
+    now_text = now_sf.strftime("%H:%M")
+    current_sec = now_sf.hour * 3600 + now_sf.minute * 60 + now_sf.second
 
-        # --- 1. Buscar paradas cercanas al origen ---
-        origin_stops = pd.read_sql(f"""
-        SELECT s.stop_lat, s.stop_lon, s.stop_id, s.stop_name
-        FROM stops s
+    # max_time dinámico según distancia al destino
+    straight_distance = haversine_distance(
+        origin_coords[1], origin_coords[0],
+        dest_coords[1], dest_coords[0]
+    )
+    estimated_travel_sec = (straight_distance / 30000) * 3600  # 30 km/h promedio
+    max_time = current_sec + int(estimated_travel_sec) + 3600   # + 1h buffer
+    max_time = min(max_time, current_sec + 10800)               # cap en 3h
+
+    # --- 1. stops cercanos ---
+    origin_stops = pd.read_sql("""
+        SELECT stop_id, stop_name, stop_lat, stop_lon
+        FROM stops
         WHERE ST_DWithin(
-            s.geom::geography,
-            ST_SetSRID(ST_Point({origin_coords[0]}, {origin_coords[1]}), 4326)::geography,
-            {search_radius_origin}
+            geom::geography,
+            ST_SetSRID(ST_Point(%s, %s), 4326)::geography,
+            %s
         )
-        """, conn)
+    """, conn, params=(origin_coords[0], origin_coords[1], search_radius_origin))
 
-        if origin_stops.empty:
-            return {
-                "status":"Not found",
-                "reason":"There is no stop near the origin"
-            }
-
-        # --- 2. Buscar paradas cercanas al destino ---
-        dest_stops = pd.read_sql(f"""
-        SELECT s.stop_lat, s.stop_lon, s.stop_id, s.stop_name
-        FROM stops s
+    dest_stops = pd.read_sql("""
+        SELECT stop_id, stop_name, stop_lat, stop_lon
+        FROM stops
         WHERE ST_DWithin(
-            s.geom::geography,
-            ST_SetSRID(ST_Point({dest_coords[0]}, {dest_coords[1]}), 4326)::geography,
-            {search_radius_dest}
+            geom::geography,
+            ST_SetSRID(ST_Point(%s, %s), 4326)::geography,
+            %s
         )
-        """, conn)
+    """, conn, params=(dest_coords[0], dest_coords[1], search_radius_dest))
 
-        if dest_stops.empty:
-            return {
-                "status":"Not found",
-                "reason":"There is no stop near the destination."
-            }
+    if origin_stops.empty:
+        conn.close()
+        return {"status": "Not found", "reason": "There is no stop near the origin"}
 
-        # --- 3. Traer trips que pasan por paradas de origen ---
-        origin_ids = tuple(origin_stops['stop_id'].tolist())
-        dest_ids = tuple(dest_stops['stop_id'].tolist())
+    if dest_stops.empty:
+        conn.close()
+        return {"status": "Not found", "reason": "There is no stop near the destination"}
 
-        if len(origin_ids) > 0 and len(dest_ids) > 0:
+    origin_ids = set(origin_stops["stop_id"])
+    dest_ids   = set(dest_stops["stop_id"])
 
-            now_sf = datetime.now(ZoneInfo("America/Los_Angeles")) 
-            current_sec = now_sf.hour*3600 + now_sf.minute*60 + now_sf.second
-            arrival_end = current_sec + WAIT_TRANSPORT_LIMIT
+    # --- 2. connections ---
+    cur.execute("""
+        SELECT from_stop, to_stop, departure_sec, arrival_sec, trip_id
+        FROM connections
+        WHERE departure_sec >= %s AND departure_sec <= %s
+          AND arrival_sec IS NOT NULL
+        ORDER BY departure_sec
+    """, (current_sec, max_time))
 
-            origin_placeholders = ','.join(['%s'] * len(origin_ids))
-            dest_placeholders = ','.join(['%s'] * len(dest_ids))
+    connections = cur.fetchall()
 
-            origin_trips = pd.read_sql(
-                f"""
-                SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time, st.arrival_sec 
-                FROM stop_times st 
-                WHERE st.stop_id IN ({origin_placeholders}) AND st.arrival_sec IS NOT NULL
-                """,
-                conn,
-                params=(origin_ids)
-            )
+    # --- 3. CSA sin trasbordos (max_transfers = 0) ---
+    earliest  = {}
+    prev      = {}
+    trip_used = {}
 
-            # --- 4. Traer trips que pasan por paradas de destino ---
+    for s in origin_ids:
+        earliest[s]  = current_sec
+        trip_used[s] = None
 
-            dest_trips = pd.read_sql(
-                f"""
-                SELECT st.operator_id, st.trip_id, st.stop_sequence, st.stop_id, st.arrival_time, st.arrival_sec 
-                FROM stop_times st 
-                WHERE st.stop_id IN ({dest_placeholders}) AND st.arrival_sec IS NOT NULL
-                """,
-                conn,
-                params=(dest_ids)
-            )
+    best_target = None
 
-            # --- Bloque completo para combinar trips y agregar nombres de paradas ---
-            # 1. Merge de trips por trip_id
-            df = origin_trips.merge(dest_trips, on='trip_id', suffixes=('_origin', '_dest'))
+    for from_stop, to_stop, dep, arr, trip in connections:
 
-            # 2. Filtrar secuencias válidas (destino después del origen)
-            df = df[df['stop_sequence_dest'] > df['stop_sequence_origin']]
+        if from_stop not in earliest:
+            continue
+        if dep < earliest[from_stop]:
+            continue
 
-            # 3. Renombrar columnas de stops para evitar conflictos al merge
-            origin_stops_renamed = origin_stops.rename(columns={
-                'operator_id':'operator_id_origin',
-                'stop_id': 'stop_id_origin',
-                'stop_name': 'stop_name_origin',
-                'arrival_time': 'arrival_time_origin',
-                'stop_lat': 'stop_lat_origin',
-                'stop_lon': 'stop_lon_origin'
-            })
-            dest_stops_renamed = dest_stops.rename(columns={
-                'operator_id':'operator_id_dest',
-                'stop_id': 'stop_id_dest',
-                'stop_name': 'stop_name_dest',
-                'arrival_time': 'arrival_time_dest',
-                'stop_lat': 'stop_lat_dest',
-                'stop_lon': 'stop_lon_dest'
-            })
+        # sin trasbordos: si ya se usó un trip distinto en from_stop, saltar
+        prev_trip = trip_used[from_stop]
+        if prev_trip is not None and prev_trip != trip:
+            continue
 
-            # 4. Merge para agregar nombres de paradas
-            df = df.merge(origin_stops_renamed, on='stop_id_origin')
-            df = df.merge(dest_stops_renamed, on='stop_id_dest')
+        if to_stop not in earliest or arr < earliest[to_stop]:
+            earliest[to_stop] = arr
+            trip_used[to_stop] = trip
+            prev[to_stop] = (from_stop, trip, dep, arr)
 
-            # 5. Selección de columnas finales
-            df_final = df[['trip_id', 'stop_name_origin', 'arrival_time_origin', 'stop_name_dest', 
-            'arrival_time_dest', 'stop_sequence_origin', 'stop_sequence_dest', 'operator_id_origin', 
-            'operator_id_dest','stop_lat_origin','stop_lon_origin','stop_lat_dest','stop_lon_dest']]
-            df_final = df_final.drop_duplicates(subset=['trip_id', 'stop_sequence_origin', 'stop_sequence_dest'])
+            if to_stop in dest_ids:
+                best_target = to_stop
+                break
 
-            if df_final.shape[0] > 0:
-                # Hora actual como timedelta
-                
-                #current_time = datetime.now().strftime("%H:%M:%S")
-                #now = pd.to_timedelta(current_time)
-                
-                now_sf = datetime.now(ZoneInfo("America/Los_Angeles"))
-                now = pd.to_timedelta(now_sf.hour, unit='h') + pd.to_timedelta(now_sf.minute, unit='m') + pd.to_timedelta(now_sf.second, unit='s')
-            
-                # Convertir arrival_time a timedelta
-                df_final['arrival_time_origin'] = pd.to_timedelta(df_final['arrival_time_origin'])
-                df_final['arrival_time_dest'] = pd.to_timedelta(df_final['arrival_time_dest'])
-                # Calcular travel_time
-                df_final['travel_time'] = df_final['arrival_time_dest'] - df_final['arrival_time_origin']
-                # Calcular wait_time y tiempo totalW
-                df_final['wait_time'] = df_final['arrival_time_origin'] - now
-                df_final = df_final[df_final['wait_time'] >= pd.Timedelta(0)]  # descartar buses que ya pasaron
-                df_final['total_time'] = df_final['wait_time'] + df_final['travel_time']
-                # Elegir bus que llega primero considerando espera
-                df_fastest = df_final.sort_values('total_time').head(1)
-                if df_fastest.shape[0] > 0:
-                    #print("✅ Transporte que lleva al destino más rápido desde ahora:")
-                    #print(df_fastest.head())
-                    trip_details = df_fastest.iloc[0]
-                    transport_details = pd.read_sql("SELECT * FROM routes WHERE route_id IN (SELECT route_id FROM trips WHERE trip_id = %s AND operator_id = %s);",conn,params=(df_fastest['trip_id'].iloc[0], df_fastest['operator_id_origin'].iloc[0]))
-                    #print("Detalles del transporte")
-                    #print(transport_details.head())
-                    #print(transport_details.shape)
-                    transport_details = transport_details.iloc[0]
-                    t1 = trip_details["arrival_time_origin"]
-                    t2 = trip_details["arrival_time_dest"]
-                    trip_geometry = get_direct_trip_geometry(cur, trip_details, transport_details,search_shapes=True)
-                    return {
-                        "status":"Found",
-                        "details":{
-                            "stop_name_origin":trip_details["stop_name_origin"],
-                            "arrival_time_origin":f"{t1.components.hours:02}:{t1.components.minutes:02}",
-                            "stop_name_dest":trip_details["stop_name_dest"],
-                            "arrival_time_dest":f"{t2.components.hours:02}:{t2.components.minutes:02}",
-                            "stop_lat_origin":float(trip_details["stop_lat_origin"]),
-                            "stop_lon_origin":float(trip_details["stop_lon_origin"]),
-                            "stop_lat_dest":float(trip_details["stop_lat_dest"]),
-                            "stop_lon_dest":float(trip_details["stop_lon_dest"]),
-                            "travel_time":int(trip_details["travel_time"].total_seconds()),
-                            "wait_time":int(trip_details["wait_time"].total_seconds()),
-                            "total_time":int(trip_details["total_time"].total_seconds()),
-                            "route_short_name":transport_details["route_short_name"],
-                            "route_long_name":transport_details["route_long_name"],
-                            "route_desc":transport_details["route_desc"],
-                            "route_type":int(transport_details["route_type"]),
-                            "route_url":transport_details["route_url"],
-                            "route_color":transport_details["route_color"],
-                            "route_type":transport_details["route_type"],
-                            "trip_geometry":trip_geometry
-                        }
-                    }
-                else:
-                    return {
-                        "status":"Not found",
-                        "reason":"No direct trips were found between the origin and destination"
-                    }
-            else:
-                return {
-                    "status":"Not found",
-                    "reason":"No direct trips were found between the origin and destination"
-                }
-        else:
-            return {
-                "status":"Not found",
-                "reason":"No direct trips were found between the origin and destination"
-            }
-    else:
-        return {
-                "status":"Canceled",
-                "reason":"You should go walking"
-            }
+    if not best_target:
+        conn.close()
+        return {"status": "Not found", "reason": "No direct trips were found between the origin and destination"}
+
+    # --- 4. reconstruir path ---
+    path = []
+    cur_stop = best_target
+    while cur_stop in prev:
+        p = prev[cur_stop]
+        path.append((p[0], cur_stop, p[1], p[2], p[3]))  # (from_stop, to_stop, trip_id, dep, arr)
+        cur_stop = p[0]
+    path.reverse()
+
+    trip_id      = path[0][2]
+    origin_dep   = path[0][3]
+    dest_arr     = earliest[best_target]
+    wait_time    = origin_dep - current_sec
+    travel_time  = dest_arr - origin_dep
+    total_time   = dest_arr - current_sec
+
+    # --- 5. stops ---
+    origin_stop_id = path[0][0]
+    dest_stop_id   = best_target
+
+    cur.execute("""
+        SELECT stop_id, stop_name, stop_lat, stop_lon
+        FROM stops WHERE stop_id = ANY(%s)
+    """, ([origin_stop_id, dest_stop_id],))
+    stops_map   = {row[0]: row for row in cur.fetchall()}
+    origin_stop = stops_map[origin_stop_id]
+    dest_stop   = stops_map[dest_stop_id]
+
+    # --- 6. transport ---
+    cur.execute("""
+        SELECT t.trip_id, t.operator_id, t.route_id,
+               r.route_type, r.route_color, r.route_short_name,
+               r.route_long_name, r.route_desc, r.route_url
+        FROM trips t
+        JOIN routes r ON t.route_id = r.route_id AND t.operator_id = r.operator_id
+        WHERE t.trip_id = %s
+        LIMIT 1
+    """, (trip_id,))
+    row = cur.fetchone()
+    transport = {
+        "trip_id":          row[0],
+        "operator_id":      row[1],
+        "route_id":         row[2],
+        "route_type":       row[3],
+        "route_color":      row[4],
+        "route_short_name": row[5],
+        "route_long_name":  row[6],
+        "route_desc":       row[7],
+        "route_url":        row[8],
+    }
+
+    # --- 7. geometry ---
+    trip_details_for_geom = {
+        "trip_id":              trip_id,
+        "operator_id_origin":   transport["operator_id"],
+        "stop_sequence_origin": 0,
+        "stop_sequence_dest":   len(path),
+        "stop_name_origin":     origin_stop[1],
+        "stop_lat_origin":      origin_stop[2],
+        "stop_lon_origin":      origin_stop[3],
+        "stop_lat_dest":        dest_stop[2],
+        "stop_lon_dest":        dest_stop[3],
+    }
+    trip_geometry = get_direct_trip_geometry(cur, trip_details_for_geom, transport, search_shapes=True)
+
+    conn.close()
+
+    return {
+        "status": "Found",
+        "details": {
+            "stop_name_origin":  origin_stop[1],
+            "arrival_time_origin": f"{origin_dep // 3600 % 24:02d}:{(origin_dep % 3600) // 60:02d}",
+            "stop_name_dest":    dest_stop[1],
+            "arrival_time_dest": f"{dest_arr // 3600 % 24:02d}:{(dest_arr % 3600) // 60:02d}",
+            "stop_lat_origin":   float(origin_stop[2]),
+            "stop_lon_origin":   float(origin_stop[3]),
+            "stop_lat_dest":     float(dest_stop[2]),
+            "stop_lon_dest":     float(dest_stop[3]),
+            "travel_time":       travel_time,
+            "wait_time":         wait_time,
+            "total_time":        total_time,
+            "route_short_name":  transport["route_short_name"],
+            "route_long_name":   transport["route_long_name"],
+            "route_desc":        transport["route_desc"],
+            "route_type":        transport["route_type"],
+            "route_url":         transport["route_url"],
+            "route_color":       transport["route_color"],
+            "trip_geometry":     trip_geometry
+        }
+    }
 
 def sec_to_time(sec):
     h = int(sec // 3600) % 24
