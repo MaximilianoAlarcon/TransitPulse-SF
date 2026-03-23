@@ -67,26 +67,21 @@ def init_db(conn):
     conn.commit()
 
     indexes = [
-        """CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_stop_departure
-        ON stop_times (stop_id, departure_sec)
-        WHERE departure_sec IS NOT NULL""",
+        """CREATE TABLE connections AS
+        SELECT
+            st1.stop_id AS from_stop,
+            st2.stop_id AS to_stop,
+            st1.departure_sec,
+            st2.arrival_sec,
+            st1.trip_id
+        FROM stop_times st1
+        JOIN stop_times st2
+        ON st1.trip_id = st2.trip_id
+        AND st2.stop_sequence = st1.stop_sequence + 1;""",
 
-        """CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_departure_sec
-        ON stop_times (departure_sec)
-        WHERE departure_sec IS NOT NULL""",
+        """CREATE INDEX idx_connections_departure ON connections(departure_sec);""",
 
-        """CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_trip_op_seq
-        ON stop_times (trip_id, operator_id, stop_sequence)""",
-
-        """CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_trip_stop
-        ON stop_times (trip_id, stop_id)""",
-
-        """CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_stops_geog
-        ON stops USING GIST ((geom::geography))""",
-
-        """CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_shapes_op_shape_dist
-        ON shapes (operator_id, shape_id, shape_dist_traveled)
-        WHERE shape_dist_traveled IS NOT NULL""",
+        """CREATE INDEX idx_connections_from_stop ON connections(from_stop);"""
     ]
 
     for idx in indexes:
