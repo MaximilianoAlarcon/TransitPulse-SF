@@ -85,7 +85,7 @@ def init_db(conn):
     ]
 
     for idx in indexes:
-        print(f"Creando: {idx.split('idx_')[1].split()[0]}...")
+        print(f"Ejecutando: {idx}...")
         cur.execute(idx)
         print("OK")
 
