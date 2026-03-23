@@ -388,7 +388,7 @@ chatSend.addEventListener("click", async () => {
                             trip_details.stop_lat_dest, 
                             trip_details.stop_lon_dest,
                             transport_desc["color"],
-                            "#8A2BE2",
+                            transport_desc["color"],
                             labelorigin="Trip 1: Origin stop",labeldest="Trip 1: Dest stop"
                         )
                         if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "shape"){

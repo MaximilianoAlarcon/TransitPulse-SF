@@ -332,8 +332,14 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             trip_used[to_stop] = trip
             prev[to_stop] = (from_stop, trip, dep, arr)
 
+            print(f"dest_ids count: {len(dest_ids)}")
+
             if to_stop in dest_ids:
                 best_target = to_stop
+
+                stop_info = stops_map.get(to_stop)  # no tenés stops_map aún acá, mejor:
+                print(f"best_target encontrado: {to_stop}, arr: {arr} seg = {arr//3600:02d}:{(arr%3600)//60:02d}")
+                
                 break
 
             # propagar caminata desde to_stop hacia paradas cercanas
