@@ -342,12 +342,12 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             trip_used[to_stop] = trip
             prev[to_stop] = (from_stop, trip, dep, arr)
 
-            print(f"dest_ids count: {len(dest_ids)}")
+            #print(f"dest_ids count: {len(dest_ids)}")
 
             if to_stop in dest_ids:
                 best_target = to_stop
 
-                print(f"best_target encontrado: {to_stop}, arr: {arr} seg = {arr//3600:02d}:{(arr%3600)//60:02d}")
+                #print(f"best_target encontrado: {to_stop}, arr: {arr} seg = {arr//3600:02d}:{(arr%3600)//60:02d}")
                 
                 break
 
@@ -360,8 +360,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
                     earliest[fp_to] = walk_arr
                     trip_used[fp_to] = None   # reset: desde acá puede tomar cualquier trip
                     prev[fp_to] = (to_stop, '__walk__', arr, walk_arr)
-        print(f"best_target al salir del loop: {best_target}")
-        print(f"earliest keys count: {len(earliest)}")
+        #print(f"best_target al salir del loop: {best_target}")
+        #print(f"earliest keys count: {len(earliest)}")
 
     if not best_target:
         conn.close()
