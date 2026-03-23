@@ -7,7 +7,7 @@ import json
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from utils import get_direct_trip_geometry,estimate_radius,should_use_transit,time_to_seconds,estimate_radius_and_limit
+from utils import get_direct_trip_geometry,estimate_radius,should_use_transit,time_to_seconds,estimate_radius_and_limit,haversine_distance
 import math
 
 API_KEY = os.environ.get("API_511_KEY")
@@ -239,7 +239,16 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     now_sf = datetime.now(ZoneInfo("America/Los_Angeles"))
     now_text = now_sf.strftime("%H:%M")
     current_sec = now_sf.hour * 3600 + now_sf.minute * 60 + now_sf.second
-    max_time = current_sec + 10800
+
+    # max_time dinámico según distancia al destino
+    # 30 km/h promedio en transporte + 1h de buffer para esperas y trasbordos
+    straight_distance = haversine_distance(
+        origin_coords[1], origin_coords[0],
+        dest_coords[1], dest_coords[0]
+    )
+    estimated_travel_sec = (straight_distance / 30000) * 3600  # 30 km/h
+    max_time = current_sec + int(estimated_travel_sec) + 3600   # + 1h buffer
+    max_time = min(max_time, current_sec + 10800)               # cap en 3h
 
     # --- 1. stops cercanos ---
     origin_stops = pd.read_sql("""
@@ -350,6 +359,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
                     earliest[fp_to] = walk_arr
                     trip_used[fp_to] = None   # reset: desde acá puede tomar cualquier trip
                     prev[fp_to] = (to_stop, '__walk__', arr, walk_arr)
+        print(f"best_target al salir del loop: {best_target}")
+        print(f"earliest keys count: {len(earliest)}")
 
     if not best_target:
         conn.close()
