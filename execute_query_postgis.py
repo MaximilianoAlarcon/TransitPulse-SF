@@ -60,44 +60,46 @@ pd.set_option('display.max_rows', 50)      # mostrar hasta 50 filas
 def init_db(conn):
     cur = conn.cursor()
     queries = [
-        """
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_stop_departure
-    ON stop_times (stop_id, departure_sec)
-    WHERE departure_sec IS NOT NULL;
-        """,
-        """
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_departure_sec
-    ON stop_times (departure_sec)
-    WHERE departure_sec IS NOT NULL;
-        """,
-        """
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_trip_op_seq
-    ON stop_times (trip_id, operator_id, stop_sequence);
-        """,
-        """
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_trip_stop
-    ON stop_times (trip_id, stop_id);
-        """,
-        """
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_stops_geog
-    ON stops USING GIST ((geom::geography));
-        """,
-        """
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_shapes_op_shape_dist
-    ON shapes (operator_id, shape_id, shape_dist_traveled)
-    WHERE shape_dist_traveled IS NOT NULL;
-        """
     ]
     for q in queries:
         print("Ejecutando:", q.split("\n")[0])
         cur.execute(q)
     conn.commit()
 
+    indexes = [
+        """CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_stop_departure
+        ON stop_times (stop_id, departure_sec)
+        WHERE departure_sec IS NOT NULL""",
+
+        """CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_departure_sec
+        ON stop_times (departure_sec)
+        WHERE departure_sec IS NOT NULL""",
+
+        """CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_trip_op_seq
+        ON stop_times (trip_id, operator_id, stop_sequence)""",
+
+        """CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_trip_stop
+        ON stop_times (trip_id, stop_id)""",
+
+        """CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_stops_geog
+        ON stops USING GIST ((geom::geography))""",
+
+        """CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_shapes_op_shape_dist
+        ON shapes (operator_id, shape_id, shape_dist_traveled)
+        WHERE shape_dist_traveled IS NOT NULL""",
+    ]
+
+    for idx in indexes:
+        print(f"Creando: {idx.split('idx_')[1].split()[0]}...")
+        cur.execute(idx)
+        print("OK")
+
     print("Query ejecutada")
 
 def run():
 
     conn = psycopg2.connect(**DB_CONFIG)
+    conn.autocommit = True
 
     init_db(conn)
 
