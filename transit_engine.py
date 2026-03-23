@@ -223,7 +223,10 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
                 "reason":"You should go walking"
             }
 
-
+def sec_to_time(sec):
+    h = int(sec // 3600) % 24
+    m = int((sec % 3600) // 60)
+    return f"{h:02d}:{m:02d}"
 
 MAX_WAIT_FOR_FIRST_BUS = 3600
 MAX_WAIT_FOR_SECOND_BUS = 3600
@@ -304,7 +307,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         if to_stop not in earliest or arr < earliest[to_stop]:
             earliest[to_stop] = arr
             trip_used[to_stop] = trip
-            prev[to_stop] = (from_stop, trip)
+            prev[to_stop] = (from_stop, trip, dep, arr)
 
             if to_stop in dest_ids:
                 best_target = to_stop
@@ -320,7 +323,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     while cur_stop in prev:
         p = prev[cur_stop]
-        path.append((p[0], cur_stop, p[1]))
+        path.append((p[0], cur_stop, p[1], p[2], p[3]))  # 👈 ahora incluye dep/arr
         cur_stop = p[0]
 
     path.reverse()
@@ -345,6 +348,18 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         return {"status": "Not found", "reason": "No transfer route found"}
 
     leg1, leg2 = legs[0], legs[1]
+
+    # --- tiempos reales ---
+    first_leg_steps = leg1[1]
+    second_leg_steps = leg2[1]
+
+    first_departure = first_leg_steps[0][3]
+    transfer_arrival = first_leg_steps[-1][4]
+
+    second_departure = second_leg_steps[0][3]
+    final_arrival = second_leg_steps[-1][4]
+
+    wait_for_first_bus = first_departure - current_sec
 
     # --- 5. stops ---
     origin_stop_id = leg1[1][0][0]
@@ -428,6 +443,10 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     leg1_geom = get_direct_trip_geometry(cur, leg1_trip_details, transport_map[leg1[0]], search_shapes=True)
     leg2_geom = get_direct_trip_geometry(cur, leg2_trip_details, transport_map[leg2[0]], search_shapes=True)
+
+    leg1_trip_details["wait_for_first_bus"] = wait_for_first_bus
+    leg2_trip_details["arrival_time_second_trip"] = sec_to_time(second_departure)
+    leg2_trip_details["dest_arrival_time"] = sec_to_time(final_arrival)
 
     total_time = earliest[dest_stop_id] - current_sec
 
