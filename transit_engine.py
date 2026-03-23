@@ -236,7 +236,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     now_sf = datetime.now(ZoneInfo("America/Los_Angeles"))
     now_text = now_sf.strftime("%d/%m/%Y %H:%M:%S")
     current_sec = now_sf.hour * 3600 + now_sf.minute * 60 + now_sf.second
-    max_time = current_sec + 10800  # 3 horas
+    max_time = current_sec + 10800
 
     # --- 1. stops cercanos ---
     origin_stops = pd.read_sql("""
@@ -266,7 +266,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     origin_ids = set(origin_stops["stop_id"])
     dest_ids = set(dest_stops["stop_id"])
 
-    # --- 2. cargar connections (🔥 clave) ---
+    # --- 2. connections ---
     cur.execute("""
         SELECT from_stop, to_stop, departure_sec, arrival_sec, trip_id
         FROM connections
@@ -277,7 +277,6 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     connections = cur.fetchall()
 
     # --- 3. CSA ---
-    INF = 10**12
     earliest = {}
     prev = {}
     trip_used = {}
@@ -326,7 +325,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     path.reverse()
 
-    # separar legs (máx 2 trips)
+    # separar legs
     legs = []
     current_leg = [path[0]]
     current_trip = path[0][2]
@@ -347,7 +346,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     leg1, leg2 = legs[0], legs[1]
 
-    # --- 5. obtener stops ---
+    # --- 5. stops ---
     origin_stop_id = leg1[1][0][0]
     transfer_stop_id = leg1[1][-1][1]
     dest_stop_id = leg2[1][-1][1]
@@ -360,30 +359,48 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     stops_map = {row[0]: row for row in cur.fetchall()}
 
-    # --- 6. obtener trips info ---
+    # --- 6. transport (🔥 FIX CLAVE) ---
     trip_ids = [leg1[0], leg2[0]]
 
     cur.execute("""
-        SELECT t.trip_id, t.operator_id, r.route_type, r.route_color, r.route_short_name, r.route_long_name
+        SELECT 
+            t.trip_id,
+            t.operator_id,
+            t.route_id,
+            r.route_type,
+            r.route_color,
+            r.route_short_name,
+            r.route_long_name
         FROM trips t
         JOIN routes r ON t.route_id = r.route_id AND t.operator_id = r.operator_id
         WHERE t.trip_id = ANY(%s)
     """, (trip_ids,))
 
-    transport_map = {row[0]: row for row in cur.fetchall()}
+    transport_map = {
+        row[0]: {
+            "trip_id": row[0],
+            "operator_id": row[1],
+            "route_id": row[2],
+            "route_type": row[3],
+            "route_color": row[4],
+            "route_short_name": row[5],
+            "route_long_name": row[6],
+        }
+        for row in cur.fetchall()
+    }
 
     origin_stop = stops_map[origin_stop_id]
     transfer_stop = stops_map[transfer_stop_id]
     dest_stop = stops_map[dest_stop_id]
 
-    # --- 7. construir legs ---
+    # --- 7. legs ---
     leg1_trip_details = {
         "trip_id": leg1[0],
-        "operator_id_origin": transport_map[leg1[0]][1],
-        "route_type": transport_map[leg1[0]][2],
-        "route_color": transport_map[leg1[0]][3],
-        "route_short_name": transport_map[leg1[0]][4],
-        "route_long_name": transport_map[leg1[0]][5],
+        "operator_id_origin": transport_map[leg1[0]]["operator_id"],
+        "route_type": transport_map[leg1[0]]["route_type"],
+        "route_color": transport_map[leg1[0]]["route_color"],
+        "route_short_name": transport_map[leg1[0]]["route_short_name"],
+        "route_long_name": transport_map[leg1[0]]["route_long_name"],
         "stop_sequence_origin": 0,
         "stop_sequence_dest": len(leg1[1]),
         "stop_lat_origin": origin_stop[2],
@@ -395,11 +412,11 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     leg2_trip_details = {
         "trip_id": leg2[0],
-        "operator_id_origin": transport_map[leg2[0]][1],
-        "route_type": transport_map[leg2[0]][2],
-        "route_color": transport_map[leg2[0]][3],
-        "route_short_name": transport_map[leg2[0]][4],
-        "route_long_name": transport_map[leg2[0]][5],
+        "operator_id_origin": transport_map[leg2[0]]["operator_id"],
+        "route_type": transport_map[leg2[0]]["route_type"],
+        "route_color": transport_map[leg2[0]]["route_color"],
+        "route_short_name": transport_map[leg2[0]]["route_short_name"],
+        "route_long_name": transport_map[leg2[0]]["route_long_name"],
         "stop_sequence_origin": 0,
         "stop_sequence_dest": len(leg2[1]),
         "stop_lat_origin": transfer_stop[2],
