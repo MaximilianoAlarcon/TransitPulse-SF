@@ -99,16 +99,18 @@ def get_direct_trip_geometry(cur, trip_details, transport_details, search_shapes
 
                         sliced = coords[start_idx:end_idx+1]
 
-                        # FIX: solo aceptar el recorte si tiene al menos 2 puntos
+                        # Aceptar el recorte solo si tiene al menos 2 puntos
+                        # y cubre bien el origen y destino reales (umbral 300m)
                         if len(sliced) >= 2:
-                            coords = sliced
-                            geometry_type = "shape"
-                        else:
-                            # El recorte colapsó → usar shape completo sin recortar
-                            if len(coords) >= 2:
+                            dist_start = haversine_distance(sliced[0][0], sliced[0][1], origin_coords[0], origin_coords[1])
+                            dist_end   = haversine_distance(sliced[-1][0], sliced[-1][1], dest_coords[0], dest_coords[1])
+                            if dist_start < 300 and dist_end < 300:
+                                coords = sliced
                                 geometry_type = "shape"
                             else:
-                                coords = []
+                                coords = []  # fallback a line
+                        else:
+                            coords = []  # fallback a line
 
                     elif len(coords) == 1:
                         # Shape devolvió un solo punto → descartar, ir a fallback
