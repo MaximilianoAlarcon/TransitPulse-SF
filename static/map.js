@@ -400,7 +400,7 @@ chatSend.addEventListener("click", async () => {
                         text_response += `
                         <p>If you want to go to: ${address}</p>
                         <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name} - ${trip_details.route_short_name}</b></p>
-                        <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_for_first_bus)}</p>
+                        <p>The first transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_for_first_bus)}</p>
                         `
                         //Leg 2
                         trip_details = data["details"][0]["leg2"]["trip_details"]
@@ -427,9 +427,9 @@ chatSend.addEventListener("click", async () => {
                         <p>Then you should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name} - ${trip_details.route_short_name}</b></p>
                         <p>The second transport will arrive at "${trip_details.stop_name_origin}" stop at ${trip_details.arrival_time_second_trip} hs</p>
                         <p></p>
+                        <p>Now, it's ${data["details"][0]["now_time"]} hs</p>
                         <p>Your trip wil last approximately ${formatDuration(data["details"][0]["total_time"])}</p>
-                        <p>Now, it's ${data["details"][0]["now_time"]}</p>
-                        <p>You will arrive to your destination at ${trip_details.dest_arrival_time}</p>
+                        <p>You will arrive to your destination at ${trip_details.dest_arrival_time} hs</p>
                         `
                         document.getElementById("chat-result").innerHTML = text_response;
 
