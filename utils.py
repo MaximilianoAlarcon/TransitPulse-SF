@@ -99,8 +99,7 @@ def get_direct_trip_geometry(cur, trip_details, transport_details, search_shapes
 
                         sliced = coords[start_idx:end_idx+1]
 
-                        # Aceptar el recorte solo si tiene al menos 2 puntos
-                        # y cubre bien el origen y destino reales (umbral 300m)
+                        # Aceptar el recorte solo si cubre bien origen y destino (umbral 300m)
                         if len(sliced) >= 2:
                             dist_start = haversine_distance(sliced[0][0], sliced[0][1], origin_coords[0], origin_coords[1])
                             dist_end   = haversine_distance(sliced[-1][0], sliced[-1][1], dest_coords[0], dest_coords[1])
@@ -111,34 +110,6 @@ def get_direct_trip_geometry(cur, trip_details, transport_details, search_shapes
                                 coords = []  # fallback a line
                         else:
                             coords = []  # fallback a line
-
-                    elif len(coords) == 1:
-                        # Shape devolvió un solo punto → descartar, ir a fallback
-                        coords = []
-
-                else:
-                    # dist_start o dist_end ausentes, o iguales → fallback por stop_sequence
-                    # Intentar obtener shapes ordenados por shape_pt_sequence usando
-                    # los dist extremos de todos los stops del rango
-                    valid_dists = [v for v in dist_map.values() if v is not None]
-                    if len(valid_dists) >= 2:
-                        d_min = min(valid_dists)
-                        d_max = max(valid_dists)
-                        cur.execute("""
-                            SELECT shape_pt_lat, shape_pt_lon
-                            FROM shapes
-                            WHERE operator_id = %s
-                            AND shape_id = %s
-                            AND shape_dist_traveled BETWEEN %s AND %s
-                            ORDER BY shape_pt_sequence
-                        """, (operator_id, shape_id, d_min, d_max))
-
-                        shape_rows = cur.fetchall()
-                        coords = [(float(lat), float(lon)) for lat, lon in shape_rows]
-                        if len(coords) >= 2:
-                            geometry_type = "shape"
-                        else:
-                            coords = []
 
     # ------------------------------
     # 3. Fallback → línea recta entre origen y destino
