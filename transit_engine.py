@@ -337,7 +337,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     print("Rutas encontradas antes del filtrado:")
     print(df.head())
 
-    df = df[(df["total_travel_time"] > 0) & (df["wait_for_first_bus"] >= 60)]
+    df = df[(df["total_travel_time"] > 0) & (df["wait_for_first_bus"] >= 0)]
     df = df.drop_duplicates(subset=["leg2_stop", "dest_stop"], keep="first").head(1)
  
     if df.empty:

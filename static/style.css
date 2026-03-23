@@ -12,7 +12,7 @@ html, body {
 }
 
 .leaflet-tile {
-    filter: grayscale(100%) brightness(90%);
+    filter: grayscale(50%) brightness(105%) saturate(60%) contrast(95%);
 }
 
 
