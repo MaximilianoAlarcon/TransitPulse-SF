@@ -167,13 +167,13 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
                 # Elegir bus que llega primero considerando espera
                 df_fastest = df_final.sort_values('total_time').head(1)
                 if df_fastest.shape[0] > 0:
-                    print("✅ Transporte que lleva al destino más rápido desde ahora:")
-                    print(df_fastest.head())
+                    #print("✅ Transporte que lleva al destino más rápido desde ahora:")
+                    #print(df_fastest.head())
                     trip_details = df_fastest.iloc[0]
                     transport_details = pd.read_sql("SELECT * FROM routes WHERE route_id IN (SELECT route_id FROM trips WHERE trip_id = %s AND operator_id = %s);",conn,params=(df_fastest['trip_id'].iloc[0], df_fastest['operator_id_origin'].iloc[0]))
-                    print("Detalles del transporte")
-                    print(transport_details.head())
-                    print(transport_details.shape)
+                    #print("Detalles del transporte")
+                    #print(transport_details.head())
+                    #print(transport_details.shape)
                     transport_details = transport_details.iloc[0]
                     t1 = trip_details["arrival_time_origin"]
                     t2 = trip_details["arrival_time_dest"]
@@ -225,8 +225,8 @@ def find_direct_trip(origin_coords, dest_coords, search_radius_origin=800, searc
 
 
 
-MAX_WAIT_FOR_FIRST_BUS = 18000
-MAX_WAIT_FOR_SECOND_BUS = 18000
+MAX_WAIT_FOR_FIRST_BUS = 10800
+MAX_WAIT_FOR_SECOND_BUS = 10800
  
 def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800, search_radius_dest=1200, transfer_radius=1000, auto_estimate_radius=False):
  
@@ -244,6 +244,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
  
     print("search_radius_origin -> "+str(search_radius_origin)+" limit_stops_origin -> "+str(limit_stops_origin))
     print("search_radius_dest -> "+str(search_radius_dest)+" limit_stops_dest -> "+str(limit_stops_dest))
+    print("current_sec -> "+str(current_sec))
  
     query = f"""
     WITH origin AS (
@@ -251,14 +252,12 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         FROM stops
         WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_Point(%s, %s),4326)::geography, %s)
         ORDER BY ST_Distance(geom::geography, ST_SetSRID(ST_Point(%s, %s),4326)::geography)
-        --LIMIT {limit_stops_origin}
     ),
     dest AS (
         SELECT stop_id, geom
         FROM stops
         WHERE ST_DWithin(geom::geography, ST_SetSRID(ST_Point(%s, %s),4326)::geography, %s)
         ORDER BY ST_Distance(geom::geography, ST_SetSRID(ST_Point(%s, %s),4326)::geography)
-        --LIMIT {limit_stops_dest}
     ),
     first_leg AS (
         SELECT st.*
@@ -319,8 +318,6 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     LIMIT 10;
     """
  
-    print(query)
- 
     params = (
         origin_coords[0], origin_coords[1], search_radius_origin, origin_coords[0], origin_coords[1],
         dest_coords[0], dest_coords[1], search_radius_dest, dest_coords[0], dest_coords[1],
@@ -332,9 +329,12 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
  
     if df.empty:
         conn.close()
-        return {"status": "Not found", "reason": "No trips with transfer in the next hour"}
+        return {"status": "Not found", "reason": "No trips with transfer in the next 3 hours"}
  
     # Filtrado de filas válidas
+    print("Rutas encontradas antes del filtrado:")
+    print(df.head())
+
     df = df[(df["total_travel_time"] > 0) & (df["wait_for_first_bus"] >= 0)]
     df = df.drop_duplicates(subset=["leg2_stop", "dest_stop"], keep="first").head(1)
  

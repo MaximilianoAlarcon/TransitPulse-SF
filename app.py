@@ -172,6 +172,9 @@ def transfer_trip():
 
     origin_coords = my_location
     dest_coords = (lon,lat)
+    print("Coordenadas enviadas a la función de búsqueda de ruta con transferencia:")
+    print(f"Origen: {origin_coords}")
+    print(f"Destino: {dest_coords}")
 
     search = find_trip_with_transfer(origin_coords,dest_coords,auto_estimate_radius=True)
     if search["status"] == "Found":
