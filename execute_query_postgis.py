@@ -60,38 +60,38 @@ pd.set_option('display.max_rows', 50)      # mostrar hasta 50 filas
 def init_db(conn):
     cur = conn.cursor()
     queries = [
+        """
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_stop_departure
+    ON stop_times (stop_id, departure_sec)
+    WHERE departure_sec IS NOT NULL;
+        """,
+        """
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_departure_sec
+    ON stop_times (departure_sec)
+    WHERE departure_sec IS NOT NULL;
+        """,
+        """
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_trip_op_seq
+    ON stop_times (trip_id, operator_id, stop_sequence);
+        """,
+        """
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_st_trip_stop
+    ON stop_times (trip_id, stop_id);
+        """,
+        """
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_stops_geog
+    ON stops USING GIST ((geom::geography));
+        """,
+        """
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_shapes_op_shape_dist
+    ON shapes (operator_id, shape_id, shape_dist_traveled)
+    WHERE shape_dist_traveled IS NOT NULL;
+        """
     ]
     for q in queries:
         print("Ejecutando:", q.split("\n")[0])
         cur.execute(q)
     conn.commit()
-
-    select(cur,"""
-WITH st_filtered AS (
-    SELECT *
-    FROM stop_times
-    WHERE arrival_sec IS NOT NULL
-      AND departure_sec IS NOT NULL
-),
-transfers AS (
-    SELECT 
-        st.departure_sec AS dep1,
-        st2.departure_sec AS dep2
-    FROM st_filtered st
-    JOIN st_filtered st2 
-      ON st2.departure_sec > st.arrival_sec
-      AND st2.departure_sec < st.arrival_sec + 3600   -- máximo 1h de espera
-    JOIN stops s1 ON st.stop_id = s1.stop_id
-    JOIN stops s2 ON st2.stop_id = s2.stop_id
-    WHERE ST_DWithin(s1.geom::geography, s2.geom::geography, 200)
-)
-SELECT 
-    EXTRACT(HOUR FROM TO_TIMESTAMP(dep1)) AS hour_of_day,
-    COUNT(*) AS transfers_available
-FROM transfers
-GROUP BY hour_of_day
-ORDER BY hour_of_day;
-    """)
 
     print("Query ejecutada")
 
