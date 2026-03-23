@@ -260,126 +260,132 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     """, conn, params=(dest_coords[0], dest_coords[1], search_radius_dest))
 
     if origin_stops.empty or dest_stops.empty:
+        conn.close()
         return {"status": "Not found", "reason": "No nearby stops"}
 
     origin_ids = set(origin_stops["stop_id"])
     dest_ids = set(dest_stops["stop_id"])
 
-    # --- 2. conexiones ---
-    connections = pd.read_sql("""
-        SELECT trip_id, stop_id, stop_sequence, departure_sec, arrival_sec
-        FROM stop_times
+    # --- 2. cargar connections (🔥 clave) ---
+    cur.execute("""
+        SELECT from_stop, to_stop, departure_sec, arrival_sec, trip_id
+        FROM connections
         WHERE departure_sec >= %s AND departure_sec <= %s
-        ORDER BY trip_id, stop_sequence
-    """, conn, params=(current_sec, max_time))
+        ORDER BY departure_sec
+    """, (current_sec, max_time))
 
-    # --- 3. stops necesarios (reducir universo)
-    relevant_stop_ids = set(connections["stop_id"]).union(origin_ids).union(dest_ids)
+    connections = cur.fetchall()
 
-    stops_df = pd.read_sql("""
-        SELECT stop_id, stop_name, stop_lat, stop_lon, geom
-        FROM stops
-        WHERE stop_id = ANY(%s)
-    """, conn, params=(list(relevant_stop_ids),))
+    # --- 3. CSA ---
+    INF = 10**12
+    earliest = {}
+    prev = {}
+    trip_used = {}
 
-    # --- 4. PRECOMPUTAR transferencias (CLAVE 🔥)
-    transfer_map = {}
+    for s in origin_ids:
+        earliest[s] = current_sec
+        trip_used[s] = None
 
-    stops_list = stops_df.to_dict("records")
+    best_target = None
 
-    for s1 in stops_list:
-        s1_id = s1["stop_id"]
+    for from_stop, to_stop, dep, arr, trip in connections:
 
-        nearby = stops_df[
-            ((stops_df["stop_lat"] - s1["stop_lat"])**2 +
-             (stops_df["stop_lon"] - s1["stop_lon"])**2) < (0.01)  # approx ~1km
-        ]
+        if from_stop not in earliest:
+            continue
 
-        transfer_map[s1_id] = set(nearby["stop_id"])
+        if dep < earliest[from_stop]:
+            continue
 
-    # --- 5. agrupar trips
-    trips = {}
-    for _, row in connections.iterrows():
-        trips.setdefault(row["trip_id"], []).append(row)
+        prev_trip = trip_used[from_stop]
+        transfers = 0 if prev_trip is None else (1 if prev_trip != trip else 0)
 
-    best_option = None
+        if transfers > 1:
+            continue
 
-    # --- 6. LOOP SIN DB 🚀
-    for trip_id, stops in trips.items():
+        if to_stop not in earliest or arr < earliest[to_stop]:
+            earliest[to_stop] = arr
+            trip_used[to_stop] = trip
+            prev[to_stop] = (from_stop, trip)
 
-        for i, s in enumerate(stops):
-            if s["stop_id"] in origin_ids and s["departure_sec"] >= current_sec:
+            if to_stop in dest_ids:
+                best_target = to_stop
+                break
 
-                for j in range(i+1, min(i+12, len(stops))):
-                    transfer_stop = stops[j]
-                    nearby_ids = transfer_map.get(transfer_stop["stop_id"], set())
-
-                    # buscar segundo viaje SIN SQL
-                    candidates = connections[
-                        (connections["stop_id"].isin(nearby_ids)) &
-                        (connections["departure_sec"] > transfer_stop["arrival_sec"])
-                    ]
-
-                    for _, st2 in candidates.iterrows():
-                        trip2 = st2["trip_id"]
-                        if trip2 == trip_id:
-                            continue
-
-                        trip2_stops = trips.get(trip2, [])
-
-                        for s2 in trip2_stops:
-                            if (
-                                s2["stop_id"] in dest_ids and
-                                s2["stop_sequence"] > st2["stop_sequence"]
-                            ):
-                                total_time = s2["arrival_sec"] - current_sec
-
-                                if best_option is None or total_time < best_option["total_time"]:
-                                    best_option = {
-                                        "trip1": trip_id,
-                                        "trip2": trip2,
-                                        "origin_stop": s["stop_id"],
-                                        "transfer_stop": transfer_stop["stop_id"],
-                                        "dest_stop": s2["stop_id"],
-                                        "seq_origin": s["stop_sequence"],
-                                        "seq_transfer": transfer_stop["stop_sequence"],
-                                        "seq2": st2["stop_sequence"],
-                                        "seq3": s2["stop_sequence"],
-                                        "total_time": total_time,
-                                        "wait_time": st2["departure_sec"] - transfer_stop["arrival_sec"]
-                                    }
-
-    if not best_option:
+    if not best_target:
         conn.close()
         return {"status": "Not found", "reason": "No trips with transfer in the next 3 hours"}
 
-    # --- 7. reconstrucción ---
-    all_stop_ids = [best_option["origin_stop"], best_option["transfer_stop"], best_option["dest_stop"]]
-    cur.execute("SELECT stop_id, stop_name, stop_lat, stop_lon FROM stops WHERE stop_id = ANY(%s);", (all_stop_ids,))
+    # --- 4. reconstruir path ---
+    path = []
+    cur_stop = best_target
+
+    while cur_stop in prev:
+        p = prev[cur_stop]
+        path.append((p[0], cur_stop, p[1]))
+        cur_stop = p[0]
+
+    path.reverse()
+
+    # separar legs (máx 2 trips)
+    legs = []
+    current_leg = [path[0]]
+    current_trip = path[0][2]
+
+    for step in path[1:]:
+        if step[2] == current_trip:
+            current_leg.append(step)
+        else:
+            legs.append((current_trip, current_leg))
+            current_leg = [step]
+            current_trip = step[2]
+
+    legs.append((current_trip, current_leg))
+
+    if len(legs) < 2:
+        conn.close()
+        return {"status": "Not found", "reason": "No transfer route found"}
+
+    leg1, leg2 = legs[0], legs[1]
+
+    # --- 5. obtener stops ---
+    origin_stop_id = leg1[1][0][0]
+    transfer_stop_id = leg1[1][-1][1]
+    dest_stop_id = leg2[1][-1][1]
+
+    cur.execute("""
+        SELECT stop_id, stop_name, stop_lat, stop_lon
+        FROM stops
+        WHERE stop_id = ANY(%s)
+    """, ([origin_stop_id, transfer_stop_id, dest_stop_id],))
+
     stops_map = {row[0]: row for row in cur.fetchall()}
 
-    trip_ids = [best_option["trip1"], best_option["trip2"]]
+    # --- 6. obtener trips info ---
+    trip_ids = [leg1[0], leg2[0]]
+
     cur.execute("""
         SELECT t.trip_id, t.operator_id, r.route_type, r.route_color, r.route_short_name, r.route_long_name
         FROM trips t
         JOIN routes r ON t.route_id = r.route_id AND t.operator_id = r.operator_id
         WHERE t.trip_id = ANY(%s)
     """, (trip_ids,))
+
     transport_map = {row[0]: row for row in cur.fetchall()}
 
-    origin_stop = stops_map[best_option["origin_stop"]]
-    transfer_stop = stops_map[best_option["transfer_stop"]]
-    dest_stop = stops_map[best_option["dest_stop"]]
+    origin_stop = stops_map[origin_stop_id]
+    transfer_stop = stops_map[transfer_stop_id]
+    dest_stop = stops_map[dest_stop_id]
 
+    # --- 7. construir legs ---
     leg1_trip_details = {
-        "trip_id": best_option["trip1"],
-        "operator_id_origin": transport_map[best_option["trip1"]][1],
-        "route_type": transport_map[best_option["trip1"]][2],
-        "route_color": transport_map[best_option["trip1"]][3],
-        "route_short_name": transport_map[best_option["trip1"]][4],
-        "route_long_name": transport_map[best_option["trip1"]][5],
-        "stop_sequence_origin": best_option["seq_origin"],
-        "stop_sequence_dest": best_option["seq_transfer"],
+        "trip_id": leg1[0],
+        "operator_id_origin": transport_map[leg1[0]][1],
+        "route_type": transport_map[leg1[0]][2],
+        "route_color": transport_map[leg1[0]][3],
+        "route_short_name": transport_map[leg1[0]][4],
+        "route_long_name": transport_map[leg1[0]][5],
+        "stop_sequence_origin": 0,
+        "stop_sequence_dest": len(leg1[1]),
         "stop_lat_origin": origin_stop[2],
         "stop_lon_origin": origin_stop[3],
         "stop_lat_dest": transfer_stop[2],
@@ -388,14 +394,14 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     }
 
     leg2_trip_details = {
-        "trip_id": best_option["trip2"],
-        "operator_id_origin": transport_map[best_option["trip2"]][1],
-        "route_type": transport_map[best_option["trip2"]][2],
-        "route_color": transport_map[best_option["trip2"]][3],
-        "route_short_name": transport_map[best_option["trip2"]][4],
-        "route_long_name": transport_map[best_option["trip2"]][5],
-        "stop_sequence_origin": best_option["seq2"],
-        "stop_sequence_dest": best_option["seq3"],
+        "trip_id": leg2[0],
+        "operator_id_origin": transport_map[leg2[0]][1],
+        "route_type": transport_map[leg2[0]][2],
+        "route_color": transport_map[leg2[0]][3],
+        "route_short_name": transport_map[leg2[0]][4],
+        "route_long_name": transport_map[leg2[0]][5],
+        "stop_sequence_origin": 0,
+        "stop_sequence_dest": len(leg2[1]),
         "stop_lat_origin": transfer_stop[2],
         "stop_lon_origin": transfer_stop[3],
         "stop_name_origin": transfer_stop[1],
@@ -403,8 +409,10 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         "stop_lon_dest": dest_stop[3]
     }
 
-    leg1_geom = get_direct_trip_geometry(cur, leg1_trip_details, transport_map[best_option["trip1"]], search_shapes=True)
-    leg2_geom = get_direct_trip_geometry(cur, leg2_trip_details, transport_map[best_option["trip2"]], search_shapes=True)
+    leg1_geom = get_direct_trip_geometry(cur, leg1_trip_details, transport_map[leg1[0]], search_shapes=True)
+    leg2_geom = get_direct_trip_geometry(cur, leg2_trip_details, transport_map[leg2[0]], search_shapes=True)
+
+    total_time = earliest[dest_stop_id] - current_sec
 
     conn.close()
 
@@ -414,10 +422,10 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             "origin": {"id": origin_stop[0], "name": origin_stop[1], "lat": origin_stop[2], "lon": origin_stop[3]},
             "transfer": {"id": transfer_stop[0], "name": transfer_stop[1], "lat": transfer_stop[2], "lon": transfer_stop[3]},
             "destination": {"id": dest_stop[0], "name": dest_stop[1], "lat": dest_stop[2], "lon": dest_stop[3]},
-            "leg1": {"trip_details": leg1_trip_details, "transport_details": transport_map[best_option["trip1"]], "trip_geometry": leg1_geom},
-            "leg2": {"trip_details": leg2_trip_details, "transport_details": transport_map[best_option["trip2"]], "trip_geometry": leg2_geom},
-            "total_time": best_option["total_time"],
-            "wait_time": best_option["wait_time"],
+            "leg1": {"trip_details": leg1_trip_details, "transport_details": transport_map[leg1[0]], "trip_geometry": leg1_geom},
+            "leg2": {"trip_details": leg2_trip_details, "transport_details": transport_map[leg2[0]], "trip_geometry": leg2_geom},
+            "total_time": total_time,
+            "wait_time": 0,
             "now_time": now_text
         }]
     }
