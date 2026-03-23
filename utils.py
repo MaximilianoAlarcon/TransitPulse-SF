@@ -162,11 +162,11 @@ def estimate_radius_and_limit(conn, coords):
     cur.close()
 
     if count > 30:
-        return 600*2,40*10000000
+        return 600*10,40*10000000
     elif count > 10:
-        return 1000*2,25*10000000
+        return 1000*10,25*10000000
     else:
-        return 1500*2,15*10000000
+        return 1500*10,15*10000000
 
 
 def haversine_distance(lat1, lon1, lat2, lon2):
