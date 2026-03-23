@@ -197,15 +197,13 @@ def autocomplete():
     if not query:
         return jsonify({"error": "Missing input"}), 400
 
-    url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{query}.json"
-
+    # Endpoint de Google Places Autocomplete
+    url = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
     params = {
-        "access_token": MAPBOX_API_KEY,
-        "autocomplete": "true",
-        "limit": 5,
-        "proximity": "-122.4194,37.7749",
-        "bbox": "-124.48,32.53,-114.13,42.01",
-        "country": "US"
+        "input": query,
+        "key": API_GEO_KEY,
+        "location": "37.7749,-122.4194",  # centro de SF
+        "radius": 80000,  # 80 km alrededor
     }
 
     response = requests.get(url, params=params)
@@ -213,20 +211,42 @@ def autocomplete():
 
     suggestions = []
 
-    for feature in data.get("features", []):
+    for prediction in data.get("predictions", []):
+        # Para autocompletado rápido devolvemos el place_id y el nombre
         suggestions.append({
-            "name": feature["place_name"],
-            "lat": feature["center"][1],
-            "lon": feature["center"][0],
-            "type": feature["place_type"][0],
-            "relevance": feature["relevance"]
+            "name": prediction["description"],
+            "place_id": prediction["place_id"]
         })
-
-    suggestions.sort(key=lambda x: x["relevance"], reverse=True)
 
     return jsonify(suggestions)
 
 
+@app.route("/place-details")
+def place_details():
+    place_id = request.args.get("place_id")
+    if not place_id:
+        return jsonify({"error": "Missing place_id"}), 400
+
+    url = "https://maps.googleapis.com/maps/api/place/details/json"
+    params = {
+        "place_id": place_id,
+        "key": API_GEO_KEY,
+        "fields": "geometry,name,types"
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+    result = data.get("result")
+
+    if not result or "geometry" not in result:
+        return jsonify({"error": "Place not found"}), 404
+
+    return jsonify({
+        "name": result.get("name"),
+        "lat": result["geometry"]["location"]["lat"],
+        "lon": result["geometry"]["location"]["lng"],
+        "type": result.get("types", ["unknown"])[0]
+    })
 
 
 

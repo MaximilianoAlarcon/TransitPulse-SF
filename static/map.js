@@ -459,16 +459,22 @@ chatSend.addEventListener("click", async () => {
 });
 
 // Enter key
+/*
 chatInput.addEventListener("keypress", e => { if (e.key === "Enter") chatSend.click(); });
+*/
 
 
-function onPlaceSelected(map, place) {
-    console.log("Destino:", place.lat, place.lon)
+async function onPlaceSelected(map, place) {
 
-    // 👉 Ejemplo: centrar mapa (Leaflet)
-    map.setView([place.lat, place.lon], 14)
-
-    selectedPlace = place
+    response = await fetch(`/place-details?place_id=${place.place_id}`);
+    if (response.ok) {
+        place.lat = response["lat"]
+        place.lon = response["lon"]
+        console.log("Destino:", place.lat, place.lon)
+        // 👉 Ejemplo: centrar mapa (Leaflet)
+        map.setView([place.lat, place.lon], 14)
+        selectedPlace = place
+    }
 }
 
 chatInput.addEventListener("input", () => {
