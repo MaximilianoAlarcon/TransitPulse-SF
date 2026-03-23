@@ -231,7 +231,7 @@ def sec_to_time(sec):
 MAX_WAIT_FOR_FIRST_BUS = 3600
 MAX_WAIT_FOR_SECOND_BUS = 3600
  
-def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800, search_radius_dest=1200, transfer_radius=1000, auto_estimate_radius=False):
+def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800, search_radius_dest=1200, transfer_radius=350, auto_estimate_radius=False):
 
     conn = psycopg2.connect(**DB_CONFIG)
     cur = conn.cursor()
@@ -279,7 +279,29 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     connections = cur.fetchall()
 
-    # --- 3. CSA ---
+    # --- 2b. footpaths: paradas cercanas para modelar caminata en el trasbordo ---
+    # Se calculan dinámicamente entre todas las paradas que aparecen en connections
+    stops_in_connections = set()
+    for fc, tc, _, _, _ in connections:
+        stops_in_connections.add(fc)
+        stops_in_connections.add(tc)
+
+    cur.execute("""
+        SELECT a.stop_id, b.stop_id,
+               CEIL(ST_Distance(a.geom::geography, b.geom::geography) / 1.2)::int AS walk_sec
+        FROM stops a
+        JOIN stops b ON a.stop_id != b.stop_id
+        WHERE a.stop_id = ANY(%s)
+          AND b.stop_id = ANY(%s)
+          AND ST_DWithin(a.geom::geography, b.geom::geography, %s)
+    """, (list(stops_in_connections), list(stops_in_connections), transfer_radius))
+
+    # índice de footpaths por parada origen para lookup rápido
+    footpaths_from = {}
+    for fp_from, fp_to, walk_sec in cur.fetchall():
+        footpaths_from.setdefault(fp_from, []).append((fp_to, walk_sec))
+
+    # --- 3. CSA con footpaths ---
     earliest = {}
     prev = {}
     trip_used = {}
@@ -313,9 +335,19 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
                 best_target = to_stop
                 break
 
+            # propagar caminata desde to_stop hacia paradas cercanas
+            for fp_to, walk_sec in footpaths_from.get(to_stop, []):
+                walk_arr = arr + walk_sec
+                if walk_arr > max_time:
+                    continue
+                if fp_to not in earliest or walk_arr < earliest[fp_to]:
+                    earliest[fp_to] = walk_arr
+                    trip_used[fp_to] = None   # reset: desde acá puede tomar cualquier trip
+                    prev[fp_to] = (to_stop, '__walk__', arr, walk_arr)
+
     if not best_target:
         conn.close()
-        return {"status": "Not found", "reason": "No trips with transfer in the next 3 hours"}
+        return {"status": "Not found", "reason": "No trips with transfer in the next hour"}
 
     # --- 4. reconstruir path ---
     path = []
@@ -328,20 +360,31 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     path.reverse()
 
-    # separar legs por trip_id
+    # separar legs por trip_id, ignorando pasos de caminata (__walk__)
+    # un __walk__ separa los dos legs de colectivo pero no es un leg en sí
     legs = []
-    current_leg = [path[0]]
-    current_trip = path[0][2]
+    current_leg = []
+    current_trip = None
 
-    for step in path[1:]:
-        if step[2] == current_trip:
-            current_leg.append(step)
+    for step in path:
+        trip_id = step[2]
+        if trip_id == '__walk__':
+            if current_leg:
+                legs.append((current_trip, current_leg))
+                current_leg = []
+                current_trip = None
         else:
-            legs.append((current_trip, current_leg))
-            current_leg = [step]
-            current_trip = step[2]
+            if current_trip is None:
+                current_trip = trip_id
+            if trip_id == current_trip:
+                current_leg.append(step)
+            else:
+                legs.append((current_trip, current_leg))
+                current_leg = [step]
+                current_trip = trip_id
 
-    legs.append((current_trip, current_leg))
+    if current_leg:
+        legs.append((current_trip, current_leg))
 
     if len(legs) < 2:
         conn.close()
@@ -360,14 +403,15 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     wait_for_first_bus = first_departure - current_sec
 
     # --- 6. stops: los 4 puntos del viaje con trasbordo ---
-    # Trip 1 Origin → donde sube al primer colectivo (from_stop del primer step del leg1)
-    # Trip 1 Dest   → donde baja del primer colectivo (to_stop del último step del leg1)
+    # Trip 1 Origin → donde sube al primer colectivo  (from_stop del primer step del leg1)
+    # Trip 1 Dest   → donde baja del primer colectivo (to_stop  del último step del leg1)
     # Trip 2 Origin → donde sube al segundo colectivo (from_stop del primer step del leg2)
-    # Trip 2 Dest   → donde baja del segundo colectivo (to_stop del último step del leg2)
+    # Trip 2 Dest   → best_target (parada dentro del radio destino)
+    # Con footpaths, trip1_dest != trip2_origin cuando hay caminata entre paradas
     trip1_origin_id = leg1[1][0][0]
     trip1_dest_id   = leg1[1][-1][1]
     trip2_origin_id = leg2[1][0][0]
-    trip2_dest_id   = leg2[1][-1][1]
+    trip2_dest_id   = best_target
 
     all_stop_ids = list({trip1_origin_id, trip1_dest_id, trip2_origin_id, trip2_dest_id})
     cur.execute("""
