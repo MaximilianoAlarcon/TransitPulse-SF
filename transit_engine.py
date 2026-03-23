@@ -279,7 +279,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             st2.departure_sec AS t2,
             st1.stop_sequence AS seq1,
             st2.stop_sequence AS seq2,
-            st2.arrival_time AS arrival_time_second_trip
+            st2.arrival_time AS arrival_time_second_trip,
+            st1.departure_sec AS leg1_departure_sec 
         FROM first_leg st1
         JOIN stop_times st2
           ON st2.departure_sec > st1.arrival_sec
@@ -299,6 +300,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             t.seq1,
             t.seq2,
             t.arrival_time_second_trip,
+            t.leg1_departure_sec,
             st3.arrival_sec AS dest_time,
             st3.arrival_time AS dest_arrival_time,
             st3.stop_id AS dest_stop,
@@ -312,7 +314,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     )
     SELECT *,
            (dest_time - %s) %% 86400 AS total_travel_time,
-           (t1 - %s) AS wait_for_first_bus
+           (leg1_departure_sec - %s) AS wait_for_first_bus
     FROM final_routes
     ORDER BY total_travel_time
     LIMIT 10;
@@ -335,7 +337,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     print("Rutas encontradas antes del filtrado:")
     print(df.head())
 
-    df = df[(df["total_travel_time"] > 0) & (df["wait_for_first_bus"] >= 0)]
+    df = df[(df["total_travel_time"] > 0) & (df["wait_for_first_bus"] >= 60)]
     df = df.drop_duplicates(subset=["leg2_stop", "dest_stop"], keep="first").head(1)
  
     if df.empty:
