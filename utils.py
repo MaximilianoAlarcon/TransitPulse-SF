@@ -3,6 +3,7 @@ import requests
 import os
 
 MAPBOX_API_KEY = os.environ.get("MAPBOX_API_KEY")
+API_GEO_KEY = os.environ.get("API_GEO_KEY")
 
 # Cache simple en memoria
 SHAPE_CACHE = {}
@@ -211,55 +212,53 @@ def should_use_transit(origin_coords, dest_coords):
 
 
 
-def geocode(place):
 
+def geocode(place):
+    """
+    Recibe un texto (dirección o lugar) y devuelve:
+    name, lat, lon, type
+    Usando Google Places API
+    """
     if not place:
         return {"error": "Missing input"}, 400
 
-    url = f"https://api.mapbox.com/geocoding/v5/mapbox.places/{place}.json"
-
-    # 🔹 intento 1: búsqueda restringida (SF)
-    params = {
-        "access_token": MAPBOX_API_KEY,
-        "limit": 1,
-        "proximity": "-122.4194,37.7749",
-        "bbox": "-124.48,32.53,-114.13,42.01",
-        "country": "US"
+    # 1️⃣ Autocomplete para obtener place_id
+    autocomplete_url = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
+    autocomplete_params = {
+        "input": place,
+        "key": API_GEO_KEY,
+        "location": "37.7749,-122.4194",  # centro SF
+        "radius": 80000  # 80 km, cubre SF + Bay Area
     }
 
-    response = requests.get(url, params=params)
-    data = response.json()
+    auto_resp = requests.get(autocomplete_url, params=autocomplete_params)
+    auto_data = auto_resp.json()
+    predictions = auto_data.get("predictions", [])
 
-    features = data.get("features", [])
-
-    # 🔥 fallback: si no hay resultados, ampliar búsqueda
-    if not features:
-        params.pop("bbox", None)  # quitar restricción fuerte
-
-        response = requests.get(url, params=params)
-        data = response.json()
-        features = data.get("features", [])
-
-    # 🔥 fallback 2: sin restricciones
-    if not features:
-        params = {
-            "access_token": MAPBOX_API_KEY,
-            "limit": 1
-        }
-
-        response = requests.get(url, params=params)
-        data = response.json()
-        features = data.get("features", [])
-
-    # ❌ si aun así no hay nada
-    if not features:
+    if not predictions:
         return {"error": "Place not found"}, 404
 
-    feature = features[0]
+    # Tomamos la primera predicción
+    place_id = predictions[0]["place_id"]
+
+    # 2️⃣ Place Details para obtener lat/lon y tipo
+    details_url = "https://maps.googleapis.com/maps/api/place/details/json"
+    details_params = {
+        "place_id": place_id,
+        "key": API_GEO_KEY,
+        "fields": "geometry,name,types"
+    }
+
+    details_resp = requests.get(details_url, params=details_params)
+    details_data = details_resp.json()
+    result = details_data.get("result")
+
+    if not result or "geometry" not in result:
+        return {"error": "Place not found"}, 404
 
     return {
-        "name": feature["place_name"],
-        "lat": feature["center"][1],
-        "lon": feature["center"][0],
-        "type": feature["place_type"][0]
+        "name": result.get("name"),
+        "lat": result["geometry"]["location"]["lat"],
+        "lon": result["geometry"]["location"]["lng"],
+        "type": result.get("types", ["unknown"])[0]
     }
