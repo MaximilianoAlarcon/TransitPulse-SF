@@ -292,8 +292,10 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         JOIN stop_times st2
           ON st1.trip_id = st2.trip_id
          AND st2.stop_sequence > st1.stop_sequence
+         AND st2.stop_sequence <= st1.stop_sequence + 10
         WHERE st1.stop_id IN (SELECT stop_id FROM origin)
           AND st1.departure_sec BETWEEN %s AND %s + {MAX_WAIT_FOR_FIRST_BUS}
+        LIMIT 500
     ),
 
     -- 🚀 BUSCAMOS SEGUNDO VIAJE DESDE EL PUNTO DE TRASBORDO
@@ -312,11 +314,13 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             fl.seq_transfer
         FROM first_leg fl
         JOIN stops s1 ON fl.transfer_stop = s1.stop_id
-        JOIN stops s2 ON TRUE
+        JOIN stops s2 
+          ON ST_DWithin(s1.geom::geography, s2.geom::geography, {transfer_radius})
         JOIN stop_times st2 ON st2.stop_id = s2.stop_id
         WHERE ST_DWithin(s1.geom::geography, s2.geom::geography, {transfer_radius})
           AND st2.departure_sec > fl.arrival_transfer
           AND st2.departure_sec < fl.arrival_transfer + {MAX_WAIT_FOR_SECOND_BUS}
+          AND st2.trip_id != fl.trip_id
     ),
 
     -- 🚀 LLEGADA FINAL
