@@ -417,7 +417,7 @@ chatSend.addEventListener("click", async () => {
                         )
                         if (data["details"][0]["leg2"]["trip_geometry"]["geometry_type"] == "shape"){
                             drawShapeRoute(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
-                        } else if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "line"){
+                        } else if (data["details"][0]["leg2"]["trip_geometry"]["geometry_type"] == "line"){
                             drawLine(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], defaultColor = transport_desc["color"])
                         }
 
