@@ -341,17 +341,16 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     for step in path:
         trip_id = step[2]
         if trip_id == '__walk__':
-            if current_leg:
-                legs.append((current_trip, current_leg))
-                current_leg = []
-                current_trip = None
+            continue  # ignorar caminatas
+        if current_trip is None:
+            current_trip = trip_id
+        if trip_id == current_trip:
+            current_leg.append(step)
         else:
-            if current_trip is None: current_trip = trip_id
-            if trip_id == current_trip: current_leg.append(step)
-            else:
-                legs.append((current_trip, current_leg))
-                current_leg = [step]
-                current_trip = trip_id
+            legs.append((current_trip, current_leg))
+            current_leg = [step]
+            current_trip = trip_id
+
     if current_leg:
         legs.append((current_trip, current_leg))
 
@@ -379,19 +378,19 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     first_departure = leg1[1][0][3]
     # Hora de llegada del primer tramo
     first_arrival   = leg1[1][-1][4]
-    duracion_leg1   = first_arrival - first_departure
+    duracion_leg1 = leg1[1][-1][4] - leg1[1][0][3]  # llegada real - salida rea
 
     # Hora de salida del segundo tramo
     second_departure = leg2[1][0][3]
     # Hora de llegada del segundo tramo
     second_arrival   = leg2[1][-1][4]
-    duracion_leg2    = second_arrival - second_departure
+    duracion_leg2 = leg2[1][-1][4] - leg2[1][0][3]
 
     # Tiempo de espera entre tramos
     wait_between_legs = max(0, second_departure - first_arrival)
 
     # Tiempo total
-    duracion_total = duracion_leg1 + wait_between_legs + duracion_leg2
+    duracion_total = duracion_leg1 + duracion_leg2 + leg2[1][0][3] - leg1[1][-1][4]
 
     print("Duración Leg 1:", duracion_leg1, "segundos")
     print("Duración Leg 2:", duracion_leg2, "segundos")
