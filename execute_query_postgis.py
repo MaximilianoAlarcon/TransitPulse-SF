@@ -68,30 +68,19 @@ def init_db(conn):
 
     indexes = [
         """
-        DROP TABLE IF EXISTS connections;
+        ALTER TABLE connections ADD COLUMN service_key TEXT;
         """,
         """
-        CREATE TABLE connections AS 
-        SELECT 
-            st1.stop_id AS from_stop, 
-            st2.stop_id AS to_stop, 
-            st1.departure_sec, 
-            st2.arrival_sec, 
-            st1.trip_id,
-            r.route_id,
-            r.route_short_name,
-            r.route_long_name
-        FROM stop_times st1 
-        JOIN stop_times st2 
-            ON st1.trip_id = st2.trip_id 
-            AND st2.stop_sequence = st1.stop_sequence + 1
-        JOIN trips t ON st1.trip_id = t.trip_id
-        JOIN routes r ON t.route_id = r.route_id AND t.operator_id = r.operator_id;
-        """,
-        """
-        CREATE INDEX idx_connections_departure ON connections(departure_sec);
-        CREATE INDEX idx_connections_from_stop ON connections(from_stop);
-        CREATE INDEX idx_connections_route_id  ON connections(route_id);
+        UPDATE connections c
+        SET service_key =
+            UPPER(TRIM(COALESCE(t.operator_id, ''))) || '|' ||
+            UPPER(TRIM(COALESCE(NULLIF(r.route_short_name, ''), r.route_id))) || '|' ||
+            COALESCE(r.route_type::text, '')
+        FROM trips t
+        JOIN routes r 
+        ON t.route_id = r.route_id 
+        AND t.operator_id = r.operator_id
+        WHERE c.trip_id = t.trip_id;
         """
     ]
 
