@@ -67,27 +67,16 @@ def init_db(conn):
     conn.commit()
 
     indexes = [
-        """CREATE TABLE connections AS
-        SELECT
-            st1.stop_id AS from_stop,
-            st2.stop_id AS to_stop,
-            st1.departure_sec,
-            st2.arrival_sec,
-            st1.trip_id
-        FROM stop_times st1
-        JOIN stop_times st2
-        ON st1.trip_id = st2.trip_id
-        AND st2.stop_sequence = st1.stop_sequence + 1;""",
-
-        """CREATE INDEX idx_connections_departure ON connections(departure_sec);""",
-
-        """CREATE INDEX idx_connections_from_stop ON connections(from_stop);"""
     ]
 
     for idx in indexes:
         print(f"Ejecutando: {idx}...")
         cur.execute(idx)
         print("OK")
+    
+    select(cur, "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'connections' ORDER BY ordinal_position")
+
+    select(cur, "SELECT * FROM connections LIMIT 5")
 
     print("Query ejecutada")
 
