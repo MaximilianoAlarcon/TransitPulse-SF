@@ -258,15 +258,13 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     current_sec = now_sf.hour * 3600 + now_sf.minute * 60 + now_sf.second
     del now_sf
 
-    # max_time dinámico según distancia al destino
-    # 30 km/h promedio en transporte + 1h de buffer para esperas y trasbordos
     straight_distance = haversine_distance(
         origin_coords[1], origin_coords[0],
         dest_coords[1], dest_coords[0]
     )
-    estimated_travel_sec = (straight_distance / 30000) * 3600  # 30 km/h
-    max_time = current_sec + int(estimated_travel_sec) + 3600   # + 1h buffer
-    max_time = min(max_time, current_sec + 10800)               # cap en 3h
+    estimated_travel_sec = (straight_distance / 30000) * 3600
+    max_time = current_sec + int(estimated_travel_sec) + 3600
+    max_time = min(max_time, current_sec + 10800)
     del straight_distance, estimated_travel_sec
 
     # --- 1. stops cercanos ---
@@ -303,15 +301,14 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     cur.execute("""
         SELECT from_stop, to_stop, departure_sec, arrival_sec, trip_id, route_id
         FROM connections
-        WHERE departure_sec >= %s AND departure_sec <= %s 
-        AND arrival_sec IS NOT NULL 
+        WHERE departure_sec >= %s AND departure_sec <= %s
+          AND arrival_sec IS NOT NULL
         ORDER BY departure_sec
     """, (current_sec, max_time))
 
     connections = cur.fetchall()
 
-    # --- 2b. footpaths: paradas cercanas para modelar caminata en el trasbordo ---
-    # Se calculan dinámicamente entre todas las paradas que aparecen en connections
+    # --- 2b. footpaths ---
     stops_in_connections = set()
     for fc, tc, _, _, _, _ in connections:
         stops_in_connections.add(fc)
@@ -328,121 +325,109 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     """, (list(stops_in_connections), list(stops_in_connections), transfer_radius))
     del stops_in_connections
 
-    # índice de footpaths por parada origen para lookup rápido
     footpaths_from = {}
     for fp_from, fp_to, walk_sec in cur.fetchall():
         footpaths_from.setdefault(fp_from, []).append((fp_to, walk_sec))
 
-    # --- 3. CSA con footpaths, máximo 1 trasbordo real ---
+    def norm_route(route_id):
+        if route_id is None:
+            return None
+        route_id = str(route_id)
+        if ":" in route_id:
+            return route_id.split(":", 1)[1]
+        return route_id
+
+    # --- 3. CSA con estado por (stop_id, transfers_used, last_route) ---
+    # earliest[(stop_id, transfers_used, last_route)] = earliest_arrival_sec
     earliest = {}
     prev = {}
-    state = {}   # stop_id -> {"route_id": ..., "transfers": ...}
 
     for s in origin_ids:
-        earliest[s] = current_sec
-        state[s] = {"route_id": None, "transfers": 0}
+        key = (s, 0, None)
+        earliest[key] = current_sec
+        prev[key] = None
     del origin_ids
 
-    best_target = None
+    best_target_key = None
 
     for from_stop, to_stop, dep, arr, trip, route_id in connections:
+        current_route = norm_route(route_id)
 
-        if from_stop not in earliest:
+        # buscar estados válidos de from_stop que puedan abordar esta conexión
+        candidate_states = []
+        for key, best_arrival in earliest.items():
+            stop_id, transfers_used, last_route = key
+
+            if stop_id != from_stop:
+                continue
+            if dep < best_arrival:
+                continue
+
+            if last_route is None or last_route == current_route:
+                new_transfers = transfers_used
+            else:
+                new_transfers = transfers_used + 1
+
+            if new_transfers > 1:
+                continue
+
+            candidate_states.append((key, new_transfers))
+
+        if not candidate_states:
             continue
 
-        if dep < earliest[from_stop]:
-            continue
+        for prev_key, new_transfers in candidate_states:
+            new_key = (to_stop, new_transfers, current_route)
 
-        prev_route = state[from_stop]["route_id"]
-        prev_transfers = state[from_stop]["transfers"]
+            if new_key not in earliest or arr < earliest[new_key]:
+                earliest[new_key] = arr
+                prev[new_key] = (prev_key, from_stop, to_stop, trip, route_id, dep, arr)
 
-        # Si viene desde origen o desde una caminata, subir a este vehículo no cuenta como trasbordo
-        if prev_route is None or prev_route == route_id:
-            new_transfers = prev_transfers
-        else:
-            new_transfers = prev_transfers + 1
+                if to_stop in dest_ids:
+                    if best_target_key is None or arr < earliest[best_target_key]:
+                        best_target_key = new_key
 
-        # Máximo 1 trasbordo real => 2 vehículos
-        if new_transfers > 1:
-            continue
+                # propagar caminata sin sumar trasbordo
+                for fp_to, walk_sec in footpaths_from.get(to_stop, []):
+                    walk_arr = arr + walk_sec
+                    if walk_arr > max_time:
+                        continue
 
-        should_relax = (
-            to_stop not in earliest
-            or arr < earliest[to_stop]
-            or (
-                arr == earliest[to_stop]
-                and (
-                    state[to_stop]["transfers"] > new_transfers
-                    or (
-                        state[to_stop]["transfers"] == new_transfers
-                        and state[to_stop]["route_id"] != route_id
-                    )
-                )
-            )
-        )
+                    walk_key = (fp_to, new_transfers, None)
 
-        if should_relax:
-            earliest[to_stop] = arr
-            state[to_stop] = {"route_id": route_id, "transfers": new_transfers}
-            prev[to_stop] = (from_stop, trip, route_id, dep, arr)
+                    if walk_key not in earliest or walk_arr < earliest[walk_key]:
+                        earliest[walk_key] = walk_arr
+                        prev[walk_key] = (new_key, to_stop, fp_to, '__walk__', None, arr, walk_arr)
 
-            if to_stop in dest_ids and new_transfers <= 1:
-                best_target = to_stop
-                break
-
-            # Propagar caminata: mantiene la cantidad de trasbordos,
-            # pero resetea route_id para permitir subir al siguiente vehículo
-            for fp_to, walk_sec in footpaths_from.get(to_stop, []):
-                walk_arr = arr + walk_sec
-                if walk_arr > max_time:
-                    continue
-
-                should_relax_walk = (
-                    fp_to not in earliest
-                    or walk_arr < earliest[fp_to]
-                    or (
-                        walk_arr == earliest[fp_to]
-                        and state[fp_to]["transfers"] > new_transfers
-                    )
-                )
-
-                if should_relax_walk:
-                    earliest[fp_to] = walk_arr
-                    state[fp_to] = {"route_id": None, "transfers": new_transfers}
-                    prev[fp_to] = (to_stop, '__walk__', None, arr, walk_arr)
-
-    del footpaths_from, dest_ids, max_time
+    del footpaths_from, connections, dest_ids, max_time
     gc.collect()
 
-    if not best_target:
+    if not best_target_key:
         conn.close()
         return {"status": "Not found", "reason": "No trips with transfer in the next hour"}
 
     # --- 4. reconstruir path ---
     path = []
-    cur_stop = best_target
-    print("best_target")
-    print(best_target)
+    cur_key = best_target_key
 
-    while cur_stop in prev:
-        p = prev[cur_stop]
-        path.append((p[0], cur_stop, p[1], p[2], p[3], p[4]))  # (from_stop, to_stop, trip_id, route_id, dep, arr)
-        cur_stop = p[0]
+    while prev.get(cur_key) is not None:
+        p = prev[cur_key]
+        prev_key, from_stop, to_stop, trip_id, route_id, dep, arr = p
+        path.append((from_stop, to_stop, trip_id, route_id, dep, arr))
+        cur_key = prev_key
 
     path.reverse()
-    del prev, earliest, state
+    del prev, earliest
+    gc.collect()
 
-    # separar legs por route_id, ignorando pasos de caminata (__walk__)
-    # un __walk__ separa los dos legs de colectivo pero no es un leg en si
-    # se compara por route_id (step[3]) para evitar falsos trasbordos
-    # cuando el mismo servicio usa trip_ids distintos (ej: SF:11955714_M11 vs 11955714_M21)
-    del connections
-
-    ride_blocks = []
-    current_block = []
-
+    print("best_target_key")
+    print(best_target_key)
     print("path")
     print(path)
+
+    # separar bloques de transporte usando __walk__
+    ride_blocks = []
+    current_block = []
 
     for step in path:
         trip_id = step[2]
@@ -460,8 +445,6 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     del path, current_block
     gc.collect()
 
-    # Debe haber exactamente 2 bloques de transporte:
-    # vehículo 1 -> caminata opcional -> vehículo 2
     if len(ride_blocks) != 2:
         conn.close()
         return {"status": "Not found", "reason": "Route exceeds 1 transfer"}
@@ -477,35 +460,27 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     print("leg2:", leg2)
 
     # --- 5. tiempos reales ---
-    first_leg_steps  = leg1[1]
-    second_leg_steps = leg2[1]
-
-    first_departure  = first_leg_steps[0][4]
-    first_arrival    = first_leg_steps[-1][5]
-    second_departure = second_leg_steps[0][4]
-    final_arrival    = second_leg_steps[-1][5]
-    del first_leg_steps, second_leg_steps
+    first_departure = leg1_steps[0][4]
+    first_arrival = leg1_steps[-1][5]
+    second_departure = leg2_steps[0][4]
+    final_arrival = leg2_steps[-1][5]
 
     wait_for_first_bus = first_departure - current_sec
-    transfer_wait      = second_departure - first_arrival
-    leg1_duration      = first_arrival - first_departure
-    leg2_duration      = final_arrival - second_departure
-    print("first_departure -> ",first_departure)
-    print("first_arrival -> ",first_arrival)
-    print("second_departure -> ",second_departure)
-    print("final_arrival -> ",final_arrival)
-    total_time         = wait_for_first_bus + leg1_duration + transfer_wait + leg2_duration
+    transfer_wait = second_departure - first_arrival
+    leg1_duration = first_arrival - first_departure
+    leg2_duration = final_arrival - second_departure
+    total_time = final_arrival - current_sec
 
-    # --- 6. stops: los 4 puntos del viaje con trasbordo ---
-    # Trip 1 Origin → donde sube al primer colectivo  (from_stop del primer step del leg1)
-    # Trip 1 Dest   → donde baja del primer colectivo (to_stop  del último step del leg1)
-    # Trip 2 Origin → donde sube al segundo colectivo (from_stop del primer step del leg2)
-    # Trip 2 Dest   → best_target (parada dentro del radio destino)
-    # Con footpaths, trip1_dest != trip2_origin cuando hay caminata entre paradas
+    print("first_departure -> ", first_departure)
+    print("first_arrival -> ", first_arrival)
+    print("second_departure -> ", second_departure)
+    print("final_arrival -> ", final_arrival)
+
+    # --- 6. stops ---
     trip1_origin_id = leg1[1][0][0]
-    trip1_dest_id   = leg1[1][-1][1]
+    trip1_dest_id = leg1[1][-1][1]
     trip2_origin_id = leg2[1][0][0]
-    trip2_dest_id   = best_target
+    trip2_dest_id = best_target_key[0]
 
     leg1_seq_dest = len(leg1[1])
     leg2_seq_dest = len(leg2[1])
@@ -521,16 +496,16 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     stops_map = {row[0]: row for row in cur.fetchall()}
 
     trip1_origin_stop = stops_map[trip1_origin_id]
-    trip1_dest_stop   = stops_map[trip1_dest_id]
+    trip1_dest_stop = stops_map[trip1_dest_id]
     trip2_origin_stop = stops_map[trip2_origin_id]
-    trip2_dest_stop   = stops_map[trip2_dest_id]
+    trip2_dest_stop = stops_map[trip2_dest_id]
     del stops_map, trip1_origin_id, trip1_dest_id, trip2_origin_id, trip2_dest_id
 
     # --- 7. transport ---
     trip_ids = [leg1[0], leg2[0]]
 
     cur.execute("""
-        SELECT 
+        SELECT
             t.trip_id,
             t.operator_id,
             t.route_id,
@@ -557,11 +532,18 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         for row in cur.fetchall()
     }
 
-    print(f"first_departure: {sec_to_time(first_departure)}, first_arrival: {sec_to_time(first_arrival)}, second_departure: {sec_to_time(second_departure)}, final_arrival: {sec_to_time(final_arrival)}")
-    print(f"leg1_duration: {leg1_duration}, leg2_duration: {leg2_duration}, wait_for_first_bus: {wait_for_first_bus}, transfer_wait: {transfer_wait}, total_time: {total_time}")
+    print(
+        f"first_departure: {sec_to_time(first_departure)}, "
+        f"first_arrival: {sec_to_time(first_arrival)}, "
+        f"second_departure: {sec_to_time(second_departure)}, "
+        f"final_arrival: {sec_to_time(final_arrival)}"
+    )
+    print(
+        f"leg1_duration: {leg1_duration}, leg2_duration: {leg2_duration}, "
+        f"wait_for_first_bus: {wait_for_first_bus}, transfer_wait: {transfer_wait}, total_time: {total_time}"
+    )
 
     # --- 8. legs ---
-    # leg1: Trip 1 Origin → Trip 1 Dest
     leg1_trip_details = {
         "trip_id": leg1[0],
         "operator_id_origin": transport_map[leg1[0]]["operator_id"],
@@ -576,15 +558,12 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         "stop_lon_origin": trip1_origin_stop[3],
         "stop_lat_dest": trip1_dest_stop[2],
         "stop_lon_dest": trip1_dest_stop[3],
-        "wait_for_first_bus":        wait_for_first_bus,
+        "wait_for_first_bus": wait_for_first_bus,
         "departure_time_first_trip": sec_to_time(first_departure),
-        "arrival_time_first_trip":   sec_to_time(first_arrival),
-        "travel_time":               leg1_duration,
+        "arrival_time_first_trip": sec_to_time(first_arrival),
+        "travel_time": leg1_duration,
     }
-    del leg1_seq_dest, first_departure, first_arrival, wait_for_first_bus, leg1_duration
 
-    # leg2: Trip 2 Origin → Trip 2 Dest
-    # Trip 2 Origin puede ser distinto a Trip 1 Dest (el pasajero camina entre paradas)
     leg2_trip_details = {
         "trip_id": leg2[0],
         "operator_id_origin": transport_map[leg2[0]]["operator_id"],
@@ -599,13 +578,11 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         "stop_lon_origin": trip2_origin_stop[3],
         "stop_lat_dest": trip2_dest_stop[2],
         "stop_lon_dest": trip2_dest_stop[3],
-        "transfer_wait":            transfer_wait,
+        "transfer_wait": transfer_wait,
         "arrival_time_second_trip": sec_to_time(second_departure),
-        "dest_arrival_time":        sec_to_time(final_arrival),
-        "travel_time":              leg2_duration,
+        "dest_arrival_time": sec_to_time(final_arrival),
+        "travel_time": leg2_duration,
     }
-
-    del leg2_seq_dest, second_departure, final_arrival, transfer_wait, leg2_duration
 
     leg1_geom = get_direct_trip_geometry(cur, leg1_trip_details, transport_map[leg1[0]], search_shapes=True)
     leg2_geom = get_direct_trip_geometry(cur, leg2_trip_details, transport_map[leg2[0]], search_shapes=True)
@@ -615,12 +592,40 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     return {
         "status": "Found",
         "details": [{
-            "origin":       {"id": trip1_origin_stop[0], "name": trip1_origin_stop[1], "lat": trip1_origin_stop[2], "lon": trip1_origin_stop[3]},
-            "trip1_dest":   {"id": trip1_dest_stop[0],   "name": trip1_dest_stop[1],   "lat": trip1_dest_stop[2],   "lon": trip1_dest_stop[3]},
-            "trip2_origin": {"id": trip2_origin_stop[0], "name": trip2_origin_stop[1], "lat": trip2_origin_stop[2], "lon": trip2_origin_stop[3]},
-            "destination":  {"id": trip2_dest_stop[0],   "name": trip2_dest_stop[1],   "lat": trip2_dest_stop[2],   "lon": trip2_dest_stop[3]},
-            "leg1": {"trip_details": leg1_trip_details, "transport_details": transport_map[leg1[0]], "trip_geometry": leg1_geom},
-            "leg2": {"trip_details": leg2_trip_details, "transport_details": transport_map[leg2[0]], "trip_geometry": leg2_geom},
+            "origin": {
+                "id": trip1_origin_stop[0],
+                "name": trip1_origin_stop[1],
+                "lat": trip1_origin_stop[2],
+                "lon": trip1_origin_stop[3]
+            },
+            "trip1_dest": {
+                "id": trip1_dest_stop[0],
+                "name": trip1_dest_stop[1],
+                "lat": trip1_dest_stop[2],
+                "lon": trip1_dest_stop[3]
+            },
+            "trip2_origin": {
+                "id": trip2_origin_stop[0],
+                "name": trip2_origin_stop[1],
+                "lat": trip2_origin_stop[2],
+                "lon": trip2_origin_stop[3]
+            },
+            "destination": {
+                "id": trip2_dest_stop[0],
+                "name": trip2_dest_stop[1],
+                "lat": trip2_dest_stop[2],
+                "lon": trip2_dest_stop[3]
+            },
+            "leg1": {
+                "trip_details": leg1_trip_details,
+                "transport_details": transport_map[leg1[0]],
+                "trip_geometry": leg1_geom
+            },
+            "leg2": {
+                "trip_details": leg2_trip_details,
+                "transport_details": transport_map[leg2[0]],
+                "trip_geometry": leg2_geom
+            },
             "total_time": total_time,
             "wait_time": 0,
             "now_time": now_text
