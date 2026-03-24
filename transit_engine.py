@@ -440,6 +440,9 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     leg1, leg2 = legs[0], legs[1]
     del legs
 
+    print("leg1:", leg1)
+    print("leg2:", leg2)
+
     # --- 5. tiempos reales ---
     first_leg_steps  = leg1[1]
     second_leg_steps = leg2[1]
@@ -454,6 +457,10 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     transfer_wait      = second_departure - first_arrival
     leg1_duration      = first_arrival - first_departure
     leg2_duration      = final_arrival - second_departure
+    print("first_departure -> ",first_departure)
+    print("first_arrival -> ",first_arrival)
+    print("second_departure -> ",second_departure)
+    print("final_arrival -> ",final_arrival)
     total_time         = wait_for_first_bus + leg1_duration + transfer_wait + leg2_duration
 
     # --- 6. stops: los 4 puntos del viaje con trasbordo ---
