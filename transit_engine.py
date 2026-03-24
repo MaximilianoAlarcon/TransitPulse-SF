@@ -375,6 +375,22 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         for step in leg_steps:
             print(f"    from_stop={step[0]}, to_stop={step[1]}, dep={step[2]}, arr={step[3]}, arr_real={step[4]}")
 
+    legs_info = []
+    for leg_key, leg_steps in legs:
+        origin_stop_id = leg_steps[0][0]
+        dest_stop_id = leg_steps[-1][1]
+        departure = leg_steps[0][3]
+        arrival = leg_steps[-1][4]
+        duration = arrival - departure
+        legs_info.append({
+            "trip_key": leg_key,
+            "origin_stop_id": origin_stop_id,
+            "dest_stop_id": dest_stop_id,
+            "departure": departure,
+            "arrival": arrival,
+            "duration": duration
+        })
+
     leg1, leg2 = legs[0], legs[1]
 
     # --- Stops info ---
@@ -400,7 +416,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     wait_between_legs = max(0, second_departure - first_arrival)
 
     # Tiempo total
-    duracion_total = duracion_leg1 + duracion_leg2 + (leg2[1][-1][4] - leg2[1][0][3])
+    duracion_total = sum(leg['duration'] for leg in legs_info) + sum(max(0, legs_info[i+1]['departure'] - legs_info[i]['arrival']) for i in range(len(legs_info)-1))
 
     print("Duración Leg 1:", duracion_leg1, "segundos")
     print("Duración Leg 2:", duracion_leg2, "segundos")
@@ -420,7 +436,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     gc.collect()
 
     # --- Transport info ---
-    trip_ids = [leg1[0][1], leg2[0][1]]  # extrae solo el trip_id de la tupla
+    trip_ids = [leg[0][1] for leg in legs if leg[0][1] != '__walk__']
     cur.execute(
         "SELECT t.trip_id, t.operator_id, t.route_id, r.route_type, r.route_color, "
         "r.route_short_name, r.route_long_name FROM trips t "
@@ -440,14 +456,17 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     }
     gc.collect()
 
+    leg1_trip_id = leg1[0][1]  # extrae 'SF:11977859_M21'
+    leg2_trip_id = leg2[0][1]  # extrae 'SF:11978509_M11'
+
     # --- Legs geometry ---
     leg1_trip_details = {
-        "trip_id": leg1[0],
-        "operator_id_origin": transport_map[leg1[0]]["operator_id"],
-        "route_type": transport_map[leg1[0]]["route_type"],
-        "route_color": transport_map[leg1[0]]["route_color"],
-        "route_short_name": transport_map[leg1[0]]["route_short_name"],
-        "route_long_name": transport_map[leg1[0]]["route_long_name"],
+        "trip_id": leg1_trip_id,
+        "operator_id_origin": transport_map[leg1_trip_id]["operator_id"],
+        "route_type": transport_map[leg1_trip_id]["route_type"],
+        "route_color": transport_map[leg1_trip_id]["route_color"],
+        "route_short_name": transport_map[leg1_trip_id]["route_short_name"],
+        "route_long_name": transport_map[leg1_trip_id]["route_long_name"],
         "stop_sequence_origin": 0,
         "stop_sequence_dest": len(leg1[1]),
         "stop_name_origin": trip1_origin_stop[1],
@@ -458,12 +477,12 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     }
 
     leg2_trip_details = {
-        "trip_id": leg2[0],
-        "operator_id_origin": transport_map[leg2[0]]["operator_id"],
-        "route_type": transport_map[leg2[0]]["route_type"],
-        "route_color": transport_map[leg2[0]]["route_color"],
-        "route_short_name": transport_map[leg2[0]]["route_short_name"],
-        "route_long_name": transport_map[leg2[0]]["route_long_name"],
+        "trip_id": leg2_trip_id,
+        "operator_id_origin": transport_map[leg2_trip_id]["operator_id"],
+        "route_type": transport_map[leg2_trip_id]["route_type"],
+        "route_color": transport_map[leg2_trip_id]["route_color"],
+        "route_short_name": transport_map[leg2_trip_id]["route_short_name"],
+        "route_long_name": transport_map[leg2_trip_id]["route_long_name"],
         "stop_sequence_origin": 0,
         "stop_sequence_dest": len(leg2[1]),
         "stop_name_origin": trip2_origin_stop[1],
