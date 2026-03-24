@@ -301,7 +301,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     # --- 2. connections ---
     cur.execute("""
-        SELECT from_stop, to_stop, departure_sec, arrival_sec, trip_id
+        SELECT from_stop, to_stop, departure_sec, arrival_sec, trip_id, route_id
         FROM connections
         WHERE departure_sec >= %s AND departure_sec <= %s 
         AND arrival_sec IS NOT NULL 
@@ -313,7 +313,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     # --- 2b. footpaths: paradas cercanas para modelar caminata en el trasbordo ---
     # Se calculan dinámicamente entre todas las paradas que aparecen en connections
     stops_in_connections = set()
-    for fc, tc, _, _, _ in connections:
+    for fc, tc, _, _, _, _ in connections:
         stops_in_connections.add(fc)
         stops_in_connections.add(tc)
 
@@ -345,7 +345,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     best_target = None
 
-    for from_stop, to_stop, dep, arr, trip in connections:
+    for from_stop, to_stop, dep, arr, trip, route_id in connections:
 
         if from_stop not in earliest:
             continue
@@ -353,15 +353,15 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         if dep < earliest[from_stop]:
             continue
 
-        prev_trip = trip_used[from_stop]
-        transfers = 0 if prev_trip is None else (1 if prev_trip != trip else 0)
+        prev_route = trip_used[from_stop]
+        transfers = 0 if prev_route is None else (1 if prev_route != route_id else 0)
 
         if transfers > 1:
             continue
 
         if to_stop not in earliest or arr < earliest[to_stop]:
             earliest[to_stop] = arr
-            trip_used[to_stop] = trip
+            trip_used[to_stop] = route_id
             prev[to_stop] = (from_stop, trip, dep, arr)
 
             #print(f"dest_ids count: {len(dest_ids)}")
@@ -404,11 +404,20 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     path.reverse()
     del prev, earliest, trip_used
 
-    # separar legs por trip_id, ignorando pasos de caminata (__walk__)
+    # separar legs por route_id, ignorando pasos de caminata (__walk__)
     # un __walk__ separa los dos legs de colectivo pero no es un leg en sí
+    # se compara por route_id (no trip_id) para evitar falsos trasbordos
+    # cuando el mismo servicio usa trip_ids distintos (ej: SF:11955714_M11 vs 11955714_M21)
     legs = []
     current_leg = []
     current_trip = None
+    current_route = None
+
+    # preconstruir mapa trip_id -> route_id desde connections ya fetchadas
+    trip_to_route = {}
+    for from_stop, to_stop, dep, arr, trip, route_id in connections:
+        if trip not in trip_to_route:
+            trip_to_route[trip] = route_id
 
     for step in path:
         trip_id = step[2]
@@ -417,20 +426,24 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
                 legs.append((current_trip, current_leg))
                 current_leg = []
                 current_trip = None
+                current_route = None
         else:
+            step_route = trip_to_route.get(trip_id)
             if current_trip is None:
                 current_trip = trip_id
-            if trip_id == current_trip:
+                current_route = step_route
+            if step_route == current_route:
                 current_leg.append(step)
             else:
                 legs.append((current_trip, current_leg))
                 current_leg = [step]
                 current_trip = trip_id
+                current_route = step_route
 
     if current_leg:
         legs.append((current_trip, current_leg))
 
-    del path, current_leg, current_trip
+    del path, current_leg, current_trip, current_route, trip_to_route
     gc.collect()
 
     if len(legs) < 2:
