@@ -360,6 +360,11 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         del connections, earliest, trip_used, prev, footpaths_from, path, legs
         gc.collect()
         return {"status": "Not found", "reason": "No transfer route found"}
+    
+    for i, (trip_id, leg_steps) in enumerate(legs):
+        print(f"Leg {i+1}: trip_id={trip_id}")
+        for step in leg_steps:
+            print(f"    from_stop={step[0]}, to_stop={step[1]}, dep={step[2]}, arr={step[3]}, arr_real={step[4]}")
 
     leg1, leg2 = legs[0], legs[1]
 
