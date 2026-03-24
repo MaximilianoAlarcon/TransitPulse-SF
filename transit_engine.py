@@ -518,8 +518,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             "trip1_dest": {"id": trip1_dest_stop[0], "name": trip1_dest_stop[1], "lat": trip1_dest_stop[2], "lon": trip1_dest_stop[3]},
             "trip2_origin": {"id": trip2_origin_stop[0], "name": trip2_origin_stop[1], "lat": trip2_origin_stop[2], "lon": trip2_origin_stop[3]},
             "destination": {"id": trip2_dest_stop[0], "name": trip2_dest_stop[1], "lat": trip2_dest_stop[2], "lon": trip2_dest_stop[3]},
-            "leg1": {"trip_details": leg1_trip_details, "transport_details": transport_map[leg1[0]], "trip_geometry": leg1_geom},
-            "leg2": {"trip_details": leg2_trip_details, "transport_details": transport_map[leg2[0]], "trip_geometry": leg2_geom},
+            "leg1": {"trip_details": leg1_trip_details, "transport_details": transport_map[leg1_trip_id], "trip_geometry": leg1_geom},
+            "leg2": {"trip_details": leg2_trip_details, "transport_details": transport_map[leg2_trip_id], "trip_geometry": leg2_geom},
             "total_time": duracion_total,
             "wait_time": max(0, second_departure - leg1[1][-1][4]),
             "now_time": now_text
