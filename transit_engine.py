@@ -307,7 +307,6 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         AND arrival_sec IS NOT NULL 
         ORDER BY departure_sec
     """, (current_sec, max_time))
-    del max_time
 
     connections = cur.fetchall()
 
@@ -386,7 +385,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         #print(f"best_target al salir del loop: {best_target}")
         #print(f"earliest keys count: {len(earliest)}")
 
-    del connections, footpaths_from, dest_ids
+    del connections, footpaths_from, dest_ids, max_time
     gc.collect()
 
     if not best_target:
