@@ -299,7 +299,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     # --- 2. connections ---
     cur.execute("""
-        SELECT from_stop, to_stop, departure_sec, arrival_sec, trip_id, route_id
+        SELECT from_stop, to_stop, departure_sec, arrival_sec, trip_id, service_key
         FROM connections
         WHERE departure_sec >= %s AND departure_sec <= %s
           AND arrival_sec IS NOT NULL
@@ -329,41 +329,34 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     for fp_from, fp_to, walk_sec in cur.fetchall():
         footpaths_from.setdefault(fp_from, []).append((fp_to, walk_sec))
 
-    def norm_route(route_id):
-        if route_id is None:
-            return None
-        route_id = str(route_id)
-        if ":" in route_id:
-            return route_id.split(":", 1)[1]
-        return route_id
-
-    # --- 3. CSA con estado por (stop_id, transfers_used, last_route) ---
-    # earliest[(stop_id, transfers_used, last_route)] = earliest_arrival_sec
+    # --- 3. CSA con estado por (stop_id, transfers_used, last_service_key) ---
     earliest = {}
     prev = {}
+    states_by_stop = {}
 
     for s in origin_ids:
         key = (s, 0, None)
         earliest[key] = current_sec
         prev[key] = None
+        states_by_stop.setdefault(s, set()).add(key)
     del origin_ids
 
     best_target_key = None
 
-    for from_stop, to_stop, dep, arr, trip, route_id in connections:
-        current_route = norm_route(route_id)
+    for from_stop, to_stop, dep, arr, trip, service_key in connections:
 
-        # buscar estados válidos de from_stop que puedan abordar esta conexión
-        candidate_states = []
-        for key, best_arrival in earliest.items():
-            stop_id, transfers_used, last_route = key
+        from_states = states_by_stop.get(from_stop)
+        if not from_states:
+            continue
 
-            if stop_id != from_stop:
-                continue
-            if dep < best_arrival:
+        for prev_key in tuple(from_states):
+            best_arrival = earliest.get(prev_key)
+            if best_arrival is None or dep < best_arrival:
                 continue
 
-            if last_route is None or last_route == current_route:
+            _, transfers_used, last_service_key = prev_key
+
+            if last_service_key is None or last_service_key == service_key:
                 new_transfers = transfers_used
             else:
                 new_transfers = transfers_used + 1
@@ -371,17 +364,12 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             if new_transfers > 1:
                 continue
 
-            candidate_states.append((key, new_transfers))
-
-        if not candidate_states:
-            continue
-
-        for prev_key, new_transfers in candidate_states:
-            new_key = (to_stop, new_transfers, current_route)
+            new_key = (to_stop, new_transfers, service_key)
 
             if new_key not in earliest or arr < earliest[new_key]:
                 earliest[new_key] = arr
-                prev[new_key] = (prev_key, from_stop, to_stop, trip, route_id, dep, arr)
+                prev[new_key] = (prev_key, from_stop, to_stop, trip, service_key, dep, arr)
+                states_by_stop.setdefault(to_stop, set()).add(new_key)
 
                 if to_stop in dest_ids:
                     if best_target_key is None or arr < earliest[best_target_key]:
@@ -398,8 +386,9 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
                     if walk_key not in earliest or walk_arr < earliest[walk_key]:
                         earliest[walk_key] = walk_arr
                         prev[walk_key] = (new_key, to_stop, fp_to, '__walk__', None, arr, walk_arr)
+                        states_by_stop.setdefault(fp_to, set()).add(walk_key)
 
-    del footpaths_from, connections, dest_ids, max_time
+    del footpaths_from, connections, dest_ids, max_time, states_by_stop
     gc.collect()
 
     if not best_target_key:
@@ -412,8 +401,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     while prev.get(cur_key) is not None:
         p = prev[cur_key]
-        prev_key, from_stop, to_stop, trip_id, route_id, dep, arr = p
-        path.append((from_stop, to_stop, trip_id, route_id, dep, arr))
+        prev_key, from_stop, to_stop, trip_id, service_key, dep, arr = p
+        path.append((from_stop, to_stop, trip_id, service_key, dep, arr))
         cur_key = prev_key
 
     path.reverse()
