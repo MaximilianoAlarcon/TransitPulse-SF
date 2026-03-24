@@ -17,6 +17,7 @@ from utils import (
     haversine_distance
 )
 import gc  # para forzar liberación de memoria
+from collections import defaultdict
 
 # --- Config ---
 API_KEY = os.environ.get("API_511_KEY")
@@ -400,20 +401,30 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     trip2_dest_id = best_target
     all_stop_ids = list({trip1_origin_id, trip1_dest_id, trip2_origin_id, trip2_dest_id})
     
-    # Hora de salida del primer tramo
-    first_departure = leg1[1][0][3]
-    # Hora de llegada del primer tramo
-    first_arrival   = leg1[1][-1][4]
-    duracion_leg1 = leg1[1][-1][4] - leg1[1][0][3]  # llegada real - salida rea
+    # --- Agrupar legs por trip_key ---
+    
+    trips = defaultdict(list)
+    for info in legs_info:
+        trips[info["trip_key"]].append(info)
 
-    # Hora de salida del segundo tramo
-    second_departure = leg2[1][0][3]
-    # Hora de llegada del segundo tramo
-    second_arrival   = leg2[1][-1][4]
-    duracion_leg2 = leg2[1][-1][4] - leg2[1][0][3]
+    # --- Ordenar trips según la salida de la primer leg ---
+    sorted_trip_keys = sorted(trips.keys(), key=lambda k: trips[k][0]["departure"])
 
-    # Tiempo de espera entre tramos
-    wait_between_legs = max(0, second_departure - first_arrival)
+    # --- Calcular duración de los dos primeros trips ---
+    trip_durations = []
+    for trip_key in sorted_trip_keys[:2]:  # solo primer y segundo trip
+        trip_legs = sorted(trips[trip_key], key=lambda x: x["departure"])
+        duration = sum(leg["duration"] for leg in trip_legs)
+        wait_internal = sum(
+            max(0, trip_legs[i+1]["departure"] - trip_legs[i]["arrival"])
+            for i in range(len(trip_legs)-1)
+        )
+        trip_durations.append(duration + wait_internal)
+
+    # trip_durations[0] -> duración del primer trip
+    # trip_durations[1] -> duración del segundo trip
+    duracion_leg1 = trip_durations[0]
+    duracion_leg2 = trip_durations[1]
 
     # Tiempo total
     duracion_total = sum(leg['duration'] for leg in legs_info) + sum(max(0, legs_info[i+1]['departure'] - legs_info[i]['arrival']) for i in range(len(legs_info)-1))
