@@ -333,83 +333,83 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     for fp_from, fp_to, walk_sec in cur.fetchall():
         footpaths_from.setdefault(fp_from, []).append((fp_to, walk_sec))
 
-# --- 3. CSA con footpaths, máximo 1 trasbordo real ---
-earliest = {}
-prev = {}
-state = {}   # stop_id -> {"route_id": ..., "transfers": ...}
+    # --- 3. CSA con footpaths, máximo 1 trasbordo real ---
+    earliest = {}
+    prev = {}
+    state = {}   # stop_id -> {"route_id": ..., "transfers": ...}
 
-for s in origin_ids:
-    earliest[s] = current_sec
-    state[s] = {"route_id": None, "transfers": 0}
-del origin_ids
+    for s in origin_ids:
+        earliest[s] = current_sec
+        state[s] = {"route_id": None, "transfers": 0}
+    del origin_ids
 
-best_target = None
+    best_target = None
 
-for from_stop, to_stop, dep, arr, trip, route_id in connections:
+    for from_stop, to_stop, dep, arr, trip, route_id in connections:
 
-    if from_stop not in earliest:
-        continue
+        if from_stop not in earliest:
+            continue
 
-    if dep < earliest[from_stop]:
-        continue
+        if dep < earliest[from_stop]:
+            continue
 
-    prev_route = state[from_stop]["route_id"]
-    prev_transfers = state[from_stop]["transfers"]
+        prev_route = state[from_stop]["route_id"]
+        prev_transfers = state[from_stop]["transfers"]
 
-    # Si viene desde origen o desde una caminata, subir a este vehículo no cuenta como trasbordo
-    if prev_route is None or prev_route == route_id:
-        new_transfers = prev_transfers
-    else:
-        new_transfers = prev_transfers + 1
+        # Si viene desde origen o desde una caminata, subir a este vehículo no cuenta como trasbordo
+        if prev_route is None or prev_route == route_id:
+            new_transfers = prev_transfers
+        else:
+            new_transfers = prev_transfers + 1
 
-    # Máximo 1 trasbordo real => 2 vehículos
-    if new_transfers > 1:
-        continue
+        # Máximo 1 trasbordo real => 2 vehículos
+        if new_transfers > 1:
+            continue
 
-    should_relax = (
-        to_stop not in earliest
-        or arr < earliest[to_stop]
-        or (
-            arr == earliest[to_stop]
-            and (
-                state[to_stop]["transfers"] > new_transfers
-                or (
-                    state[to_stop]["transfers"] == new_transfers
-                    and state[to_stop]["route_id"] != route_id
+        should_relax = (
+            to_stop not in earliest
+            or arr < earliest[to_stop]
+            or (
+                arr == earliest[to_stop]
+                and (
+                    state[to_stop]["transfers"] > new_transfers
+                    or (
+                        state[to_stop]["transfers"] == new_transfers
+                        and state[to_stop]["route_id"] != route_id
+                    )
                 )
             )
         )
-    )
 
-    if should_relax:
-        earliest[to_stop] = arr
-        state[to_stop] = {"route_id": route_id, "transfers": new_transfers}
-        prev[to_stop] = (from_stop, trip, route_id, dep, arr)
+        if should_relax:
+            earliest[to_stop] = arr
+            state[to_stop] = {"route_id": route_id, "transfers": new_transfers}
+            prev[to_stop] = (from_stop, trip, route_id, dep, arr)
 
-        if to_stop in dest_ids and new_transfers <= 1:
-            best_target = to_stop
-            break
+            if to_stop in dest_ids and new_transfers <= 1:
+                best_target = to_stop
+                break
 
-        # Propagar caminata: mantiene la cantidad de trasbordos,
-        # pero resetea route_id para permitir subir al siguiente vehículo
-        for fp_to, walk_sec in footpaths_from.get(to_stop, []):
-            walk_arr = arr + walk_sec
-            if walk_arr > max_time:
-                continue
+            # Propagar caminata: mantiene la cantidad de trasbordos,
+            # pero resetea route_id para permitir subir al siguiente vehículo
+            for fp_to, walk_sec in footpaths_from.get(to_stop, []):
+                walk_arr = arr + walk_sec
+                if walk_arr > max_time:
+                    continue
 
-            should_relax_walk = (
-                fp_to not in earliest
-                or walk_arr < earliest[fp_to]
-                or (
-                    walk_arr == earliest[fp_to]
-                    and state[fp_to]["transfers"] > new_transfers
+                should_relax_walk = (
+                    fp_to not in earliest
+                    or walk_arr < earliest[fp_to]
+                    or (
+                        walk_arr == earliest[fp_to]
+                        and state[fp_to]["transfers"] > new_transfers
+                    )
                 )
-            )
 
-            if should_relax_walk:
-                earliest[fp_to] = walk_arr
-                state[fp_to] = {"route_id": None, "transfers": new_transfers}
-                prev[fp_to] = (to_stop, '__walk__', None, arr, walk_arr)
+                if should_relax_walk:
+                    earliest[fp_to] = walk_arr
+                    state[fp_to] = {"route_id": None, "transfers": new_transfers}
+                    prev[fp_to] = (to_stop, '__walk__', None, arr, walk_arr)
 
     del footpaths_from, dest_ids, max_time
     gc.collect()
