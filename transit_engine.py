@@ -369,15 +369,24 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     trip2_origin_id = leg2[1][0][0]
     trip2_dest_id = best_target
     all_stop_ids = list({trip1_origin_id, trip1_dest_id, trip2_origin_id, trip2_dest_id})
-
-    # --- Duraciones de cada tramo ---
+    
+    # Hora de salida del primer tramo
     first_departure = leg1[1][0][3]
-    duracion_leg1 = leg1[1][-1][4] - first_departure
-    second_departure = leg2[1][0][3]
-    duracion_leg2 = leg2[1][-1][4] - second_departure
+    # Hora de llegada del primer tramo
+    first_arrival   = leg1[1][-1][4]
+    duracion_leg1   = first_arrival - first_departure
 
-    # Duración total incluyendo la espera entre buses
-    duracion_total = duracion_leg1 + duracion_leg2 + (second_departure - leg1[1][-1][4])
+    # Hora de salida del segundo tramo
+    second_departure = leg2[1][0][3]
+    # Hora de llegada del segundo tramo
+    second_arrival   = leg2[1][-1][4]
+    duracion_leg2    = second_arrival - second_departure
+
+    # Tiempo de espera entre tramos
+    wait_between_legs = max(0, second_departure - first_arrival)
+
+    # Tiempo total
+    duracion_total = duracion_leg1 + wait_between_legs + duracion_leg2
 
     print("Duración Leg 1:", duracion_leg1, "segundos")
     print("Duración Leg 2:", duracion_leg2, "segundos")
