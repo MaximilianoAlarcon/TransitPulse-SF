@@ -550,7 +550,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         "wait_for_first_bus": wait_for_first_bus,
         "departure_time_first_trip": sec_to_time(first_departure),
         "arrival_time_first_trip": sec_to_time(first_arrival),
-        "travel_time": leg1_duration,
+        "duration_sec": leg1_duration,
     }
 
     leg2_trip_details = {
@@ -570,7 +570,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         "transfer_wait": transfer_wait,
         "arrival_time_second_trip": sec_to_time(second_departure),
         "dest_arrival_time": sec_to_time(final_arrival),
-        "travel_time": leg2_duration,
+        "duration_sec": leg2_duration,
     }
 
     leg1_geom = get_direct_trip_geometry(cur, leg1_trip_details, transport_map[leg1[0]], search_shapes=True)
