@@ -370,6 +370,19 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     trip2_dest_id = best_target
     all_stop_ids = list({trip1_origin_id, trip1_dest_id, trip2_origin_id, trip2_dest_id})
 
+    # --- Duraciones de cada tramo ---
+    first_departure = leg1[1][0][3]
+    duracion_leg1 = leg1[1][-1][4] - first_departure
+    second_departure = leg2[1][0][3]
+    duracion_leg2 = leg2[1][-1][4] - second_departure
+
+    # Duración total incluyendo la espera entre buses
+    duracion_total = duracion_leg1 + duracion_leg2 + (second_departure - leg1[1][-1][4])
+
+    print("Duración Leg 1:", duracion_leg1, "segundos")
+    print("Duración Leg 2:", duracion_leg2, "segundos")
+    print("Duración Total:", duracion_total, "segundos")
+
     cur.execute(
         "SELECT stop_id, stop_name, stop_lat, stop_lon FROM stops WHERE stop_id = ANY(%s)",
         (all_stop_ids,)
@@ -446,7 +459,11 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     leg1_trip_details["wait_for_first_bus"] = first_departure - current_sec
     leg2_trip_details["arrival_time_second_trip"] = sec_to_time(second_departure)
-    leg2_trip_details["dest_arrival_time"] = sec_to_time(leg2[1][-1][4])
+    leg2_trip_details["dest_arrival_time"] = sec_to_time(current_sec + total_time)
+
+    # Guardar las duraciones en los detalles de cada leg
+    leg1_trip_details["duration_sec"] = duracion_leg1
+    leg2_trip_details["duration_sec"] = duracion_leg2
 
     conn.close()
     del connections, earliest, trip_used, prev, footpaths_from, path, legs
@@ -461,8 +478,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
             "destination": {"id": trip2_dest_stop[0], "name": trip2_dest_stop[1], "lat": trip2_dest_stop[2], "lon": trip2_dest_stop[3]},
             "leg1": {"trip_details": leg1_trip_details, "transport_details": transport_map[leg1[0]], "trip_geometry": leg1_geom},
             "leg2": {"trip_details": leg2_trip_details, "transport_details": transport_map[leg2[0]], "trip_geometry": leg2_geom},
-            "total_time": total_time,
-            "wait_time": 0,
+            "total_time": duracion_total,
+            "wait_time": max(0, second_departure - leg1[1][-1][4]),
             "now_time": now_text
         }]
     }
