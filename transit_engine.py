@@ -48,6 +48,10 @@ def sec_to_time(sec):
     m = int((sec % 3600) // 60)
     return f"{h:02d}:{m:02d}"
 
+def normalize_trip_id(trip_id):
+    # quitar prefijos como SF:, 3D:, BA: si son irrelevantes
+    return trip_id.split(":")[-1]
+
 # -------------------------------
 # Función: Find direct trip
 # -------------------------------
@@ -339,9 +343,9 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
 
     legs, current_leg, current_trip = [], [], None
     for step in path:
-        trip_id = step[2]
+        trip_id = normalize_trip_id(step[2])
         if trip_id == '__walk__':
-            continue  # ignorar caminatas
+            continue
         if current_trip is None:
             current_trip = trip_id
         if trip_id == current_trip:
@@ -390,7 +394,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     wait_between_legs = max(0, second_departure - first_arrival)
 
     # Tiempo total
-    duracion_total = duracion_leg1 + duracion_leg2 + leg2[1][0][3] - leg1[1][-1][4]
+    duracion_total = duracion_leg1 + duracion_leg2 + (leg2[1][-1][4] - leg2[1][0][3])
 
     print("Duración Leg 1:", duracion_leg1, "segundos")
     print("Duración Leg 2:", duracion_leg2, "segundos")
