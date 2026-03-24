@@ -492,8 +492,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         "stop_lon_dest": trip2_dest_stop[3],
     }
 
-    leg1_geom = get_direct_trip_geometry(cur, leg1_trip_details, transport_map[leg1[0]], search_shapes=True)
-    leg2_geom = get_direct_trip_geometry(cur, leg2_trip_details, transport_map[leg2[0]], search_shapes=True)
+    leg1_geom = get_direct_trip_geometry(cur, leg1_trip_details, transport_map[leg1_trip_id], search_shapes=True)
+    leg2_geom = get_direct_trip_geometry(cur, leg2_trip_details, transport_map[leg2_trip_id], search_shapes=True)
 
     first_departure = leg1[1][0][3]
     second_departure = leg2[1][0][3]
