@@ -362,7 +362,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         if to_stop not in earliest or arr < earliest[to_stop]:
             earliest[to_stop] = arr
             trip_used[to_stop] = route_id
-            prev[to_stop] = (from_stop, trip, dep, arr)
+            prev[to_stop] = (from_stop, trip, route_id, dep, arr)
 
             #print(f"dest_ids count: {len(dest_ids)}")
 
@@ -395,60 +395,57 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     # --- 4. reconstruir path ---
     path = []
     cur_stop = best_target
+    print("best_target")
+    print(best_target)
 
     while cur_stop in prev:
         p = prev[cur_stop]
-        path.append((p[0], cur_stop, p[1], p[2], p[3]))  # (from_stop, to_stop, trip_id, dep, arr)
+        path.append((p[0], cur_stop, p[1], p[2], p[3], p[4]))  # (from_stop, to_stop, trip_id, route_id, dep, arr)
         cur_stop = p[0]
 
     path.reverse()
     del prev, earliest, trip_used
 
     # separar legs por route_id, ignorando pasos de caminata (__walk__)
-    # un __walk__ separa los dos legs de colectivo pero no es un leg en sí
-    # se compara por route_id (no trip_id) para evitar falsos trasbordos
+    # un __walk__ separa los dos legs de colectivo pero no es un leg en si
+    # se compara por route_id (step[3]) para evitar falsos trasbordos
     # cuando el mismo servicio usa trip_ids distintos (ej: SF:11955714_M11 vs 11955714_M21)
+    del connections
+
     legs = []
     current_leg = []
     current_trip = None
     current_route = None
 
-    # preconstruir mapa trip_id -> route_id desde connections ya fetchadas
-    trip_to_route = {}
-    for from_stop, to_stop, dep, arr, trip, route_id in connections:
-        if trip not in trip_to_route:
-            trip_to_route[trip] = route_id
-    
-    del connections
-
     print("path")
     print(path)
 
     for step in path:
-        trip_id = step[2]
+        trip_id  = step[2]
+        route_id = step[3]
         if trip_id == '__walk__':
             if current_leg:
                 legs.append((current_trip, current_leg))
-                current_leg = []
-                current_trip = None
+                current_leg   = []
+                current_trip  = None
                 current_route = None
         else:
-            step_route = trip_to_route.get(trip_id)
             if current_trip is None:
-                current_trip = trip_id
-                current_route = step_route
-            if step_route == current_route:
+                current_trip  = trip_id
+                current_route = route_id
+                current_leg.append(step)
+            elif route_id == current_route:
                 current_leg.append(step)
             else:
                 legs.append((current_trip, current_leg))
-                current_leg = [step]
-                current_trip = trip_id
-                current_route = step_route
+                current_leg   = [step]
+                current_trip  = trip_id
+                current_route = route_id
 
     if current_leg:
         legs.append((current_trip, current_leg))
 
-    del path, current_leg, current_trip, current_route, trip_to_route
+    del path, current_leg, current_trip, current_route
     gc.collect()
 
     if len(legs) < 2:
@@ -465,10 +462,10 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     first_leg_steps  = leg1[1]
     second_leg_steps = leg2[1]
 
-    first_departure  = first_leg_steps[0][3]
-    first_arrival    = first_leg_steps[-1][4]
-    second_departure = second_leg_steps[0][3]
-    final_arrival    = second_leg_steps[-1][4]
+    first_departure  = first_leg_steps[0][4]
+    first_arrival    = first_leg_steps[-1][5]
+    second_departure = second_leg_steps[0][4]
+    final_arrival    = second_leg_steps[-1][5]
     del first_leg_steps, second_leg_steps
 
     wait_for_first_bus = first_departure - current_sec
