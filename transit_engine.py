@@ -381,7 +381,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
                 if fp_to not in earliest or walk_arr < earliest[fp_to]:
                     earliest[fp_to] = walk_arr
                     trip_used[fp_to] = None   # reset: desde acá puede tomar cualquier trip
-                    prev[fp_to] = (to_stop, '__walk__', arr, walk_arr)
+                    prev[fp_to] = (to_stop, '__walk__', None, arr, walk_arr)
         #print(f"best_target al salir del loop: {best_target}")
         #print(f"earliest keys count: {len(earliest)}")
 
