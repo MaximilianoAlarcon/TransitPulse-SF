@@ -421,6 +421,9 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     
     del connections
 
+    print("path")
+    print(path)
+
     for step in path:
         trip_id = step[2]
         if trip_id == '__walk__':
