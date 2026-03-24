@@ -385,7 +385,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         #print(f"best_target al salir del loop: {best_target}")
         #print(f"earliest keys count: {len(earliest)}")
 
-    del connections, footpaths_from, dest_ids, max_time
+    del footpaths_from, dest_ids, max_time
     gc.collect()
 
     if not best_target:
@@ -418,6 +418,8 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     for from_stop, to_stop, dep, arr, trip, route_id in connections:
         if trip not in trip_to_route:
             trip_to_route[trip] = route_id
+    
+    del connections
 
     for step in path:
         trip_id = step[2]
