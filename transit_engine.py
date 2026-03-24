@@ -341,22 +341,28 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
         cur_stop = p[0]
     path.reverse()
 
-    legs, current_leg, current_trip = [], [], None
+    legs, current_leg, current_trip_key = [], [], None
+
     for step in path:
-        trip_id = normalize_trip_id(step[2])
-        if trip_id == '__walk__':
-            continue
-        if current_trip is None:
-            current_trip = trip_id
-        if trip_id == current_trip:
+        step_operator_id = step[2].split(":")[0] if ":" in step[2] else step[2]  # operador
+        step_trip_id = step[2]  # trip_id tal cual
+        trip_key = (step_operator_id, step_trip_id)
+
+        if step_trip_id == '__walk__':
+            continue  # ignorar pasos de caminata para legs
+
+        if current_trip_key is None:
+            current_trip_key = trip_key
+
+        if trip_key == current_trip_key:
             current_leg.append(step)
         else:
-            legs.append((current_trip, current_leg))
+            legs.append((current_trip_key, current_leg))
             current_leg = [step]
-            current_trip = trip_id
+            current_trip_key = trip_key
 
     if current_leg:
-        legs.append((current_trip, current_leg))
+        legs.append((current_trip_key, current_leg))
 
     if len(legs) < 2:
         conn.close()
@@ -414,7 +420,7 @@ def find_trip_with_transfer(origin_coords, dest_coords, search_radius_origin=800
     gc.collect()
 
     # --- Transport info ---
-    trip_ids = [leg1[0], leg2[0]]
+    trip_ids = [leg1[0][1], leg2[0][1]]  # extrae solo el trip_id de la tupla
     cur.execute(
         "SELECT t.trip_id, t.operator_id, t.route_id, r.route_type, r.route_color, "
         "r.route_short_name, r.route_long_name FROM trips t "
