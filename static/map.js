@@ -384,10 +384,9 @@ chatSend.addEventListener("click", async () => {
             <p>Error: <b>${data.error}</b></p>
             `;
         } else if (data["status"] == "Found") {
-            itineraries = trip_details["itineraries"]
             option = 1
             text_result = ''
-            itineraries.forEach(itinerary => {
+            data["itineraries"].forEach(itinerary => {
                 text_result += `
                     <p><b>Option ${option}</b></p>
                     <p>Duration: ${formatDuration(itinerary.duration)}</p>
