@@ -8,6 +8,7 @@ from transit_engine import find_direct_trip,find_trip_with_transfer
 import psycopg2
 import numpy as np
 from utils import geocode
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 
