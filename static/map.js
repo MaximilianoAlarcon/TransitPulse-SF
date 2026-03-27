@@ -367,7 +367,7 @@ chatSend.addEventListener("click", async () => {
         lon = selectedPlace.lon
     } 
     document.getElementById("chat-result").innerHTML = `
-    <p>Searching direct trip...</p>
+    <p>Searching paths...</p>
     <div class="spinner"></div>`;
     try {
         //Search direct trip
@@ -383,37 +383,34 @@ chatSend.addEventListener("click", async () => {
             document.getElementById("chat-result").innerHTML = `
             <p>Error: <b>${data.error}</b></p>
             `;
-        } elif (data["status"] == "Found"){
-                trip_details = data["details"]
-                itineraries = trip_details["itineraries"]
-
-                option = 1
-                text_result = ''
-                itineraries.forEach(itinerary => {
-                    text_result += `
+        } else if (data["status"] == "Found") {
+            itineraries = trip_details["itineraries"]
+            option = 1
+            text_result = ''
+            itineraries.forEach(itinerary => {
+                text_result += `
                     <p><b>Option ${option}</b></p>
                     <p>Duration: ${formatDuration(itinerary.duration)}</p>
                     <p>Start time: ${otpMsToSfHour(itinerary.startTime)}</p>
                     <p>End time: ${otpMsToSfHour(itinerary.endTime)}</p>
                     <p>Path</p>
-                    `
-                    itinerary.legs.forEach(leg => {
-                        if (leg.mode == "WALK"){
-                            text_result += `
+                `
+                itinerary.legs.forEach(leg => {
+                    if (leg.mode == "WALK"){
+                        text_result += `
                             <p>Walk from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
-                            `
-                            drawLegGeometry(map, leg);
-                        } else {
-                            text_result += `
+                        `
+                        drawLegGeometry(map, leg);
+                    } else {
+                        text_result += `
                             <p>Take <b>${leg.route.longName} : ${leg.route.shortName}</b> from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                             `
-                            drawLegGeometry(map, leg);
-                        }
-                    });
-                    option += 1
+                        drawLegGeometry(map, leg);
+                    }
                 });
-
-                document.getElementById("chat-result").innerHTML = text_result
+                option += 1
+            });
+            document.getElementById("chat-result").innerHTML = text_result
         } 
         
     } catch (error) {
