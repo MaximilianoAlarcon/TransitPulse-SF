@@ -124,7 +124,7 @@ def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: 
       $date: String!,
       $time: String!,
       $arriveBy: Boolean!,
-      $searchWindow: Int!,
+      $searchWindow: Long!,
       $numItineraries: Int!,
       $maxTransfers: Int!
     ) {
