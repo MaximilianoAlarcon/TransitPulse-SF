@@ -281,6 +281,72 @@ function dragHandler(e) {
     map.invalidateSize();
 }
 
+function otpMsToSfHour(ms) {
+    const date = new Date(ms);
+
+    return date.toLocaleTimeString("en-US", {
+        timeZone: "America/Los_Angeles",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+    });
+}
+
+function decodePolyline(encoded) {
+    let index = 0;
+    const coordinates = [];
+    let lat = 0;
+    let lng = 0;
+
+    while (index < encoded.length) {
+        let result = 0;
+        let shift = 0;
+        let byte;
+
+        do {
+            byte = encoded.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        const deltaLat = (result & 1) ? ~(result >> 1) : (result >> 1);
+        lat += deltaLat;
+
+        result = 0;
+        shift = 0;
+
+        do {
+            byte = encoded.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        const deltaLng = (result & 1) ? ~(result >> 1) : (result >> 1);
+        lng += deltaLng;
+
+        coordinates.push([lat / 1e5, lng / 1e5]);
+    }
+
+    return coordinates;
+}
+
+
+function drawLegGeometry(map, leg, options = {}) {
+    if (!leg?.legGeometry?.points) {
+        return null;
+    }
+
+    const latLngs = decodePolyline(leg.legGeometry.points);
+
+    const polyline = L.polyline(latLngs, {
+        weight: options.weight ?? 5,
+        opacity: options.opacity ?? 0.9,
+        color: options.color ?? "#2563eb"
+    }).addTo(map);
+
+    return polyline;
+}
+
 // --- Chat ---
 const chatSend = document.getElementById("chat-send");
 const chatInput = document.getElementById("chat-input");
@@ -317,138 +383,38 @@ chatSend.addEventListener("click", async () => {
             document.getElementById("chat-result").innerHTML = `
             <p>Error: <b>${data.error}</b></p>
             `;
-        } else {
-            if (data["status"] == "Found"){
+        } elif (data["status"] == "Found"){
                 trip_details = data["details"]
-                transport_desc = getRouteInfo(trip_details.route_type)
-                document.getElementById("chat-result").innerHTML = `
-                <p>If you want to go to: ${address}</p>
-                <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name} - ${trip_details.route_short_name}</b></p>
-                <p>The next transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_time)}</p>
-                <p>Your trip will last approximately ${formatDuration(trip_details.total_time - trip_details.wait_time)}</p>
-                `;
-                map.setView([trip_details.stop_lat_origin, trip_details.stop_lon_origin], 15);
-                
-                markRouteStops(
-                    map, 
-                    trip_details.stop_lat_origin, 
-                    trip_details.stop_lon_origin, 
-                    trip_details.stop_lat_dest, 
-                    trip_details.stop_lon_dest,
-                    transport_desc["color"],
-                    transport_desc["color"],
-                    labelorigin="Origin stop",labeldest="Dest stop"
-                )
-                if (trip_details["trip_geometry"]["geometry_type"] == "shape"){
-                    drawShapeRoute(map, trip_details["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
-                } else if (trip_details["trip_geometry"]["geometry_type"] == "line"){
-                    drawLine(map, trip_details["trip_geometry"]["coordinates"], defaultColor = transport_desc["color"])
-                }
-                markDest(data["dest_coords"][1], data["dest_coords"][0])
-            } else if(data["status"] == "Canceled") {
-                document.getElementById("chat-result").innerHTML = `
-                <p>${data.reason}</p>
-                `;
-                chatSend.disabled = false;
-                chatInput.disabled = false;
-                suggestionsBox.style.display = "block";
-                drawWalkingRoute(map,data["origin_coords"][1],data["origin_coords"][0],data["dest_coords"][1],data["dest_coords"][0])
-                markDest(data["dest_coords"][1], data["dest_coords"][0])
-            } else {
-                //Search transfer trip
-                document.getElementById("chat-result").innerHTML = `
-                <p>Searching transfer trip...</p>
-                <div class="spinner"></div>`;
-                address = document.getElementById("chat-input").value.trim();
-                response = await fetch(`/transfer-trip?address=${encodeURIComponent(address)}&lat=${lat}&lon=${lon}`);
-                if (!response.ok) {
-                    errData = await response.json();
-                    document.getElementById("chat-result").innerText = errData.error || "Unknown error";
-                    return;
-                }
-                data = await response.json();
-                if ("error" in data){
-                    document.getElementById("chat-result").innerHTML = `
-                    <p>Error: <b>${data.error}</b></p>
-                    `;
-                } else {
-                    if (data["status"] == "Found"){
-                        //trips = data["details"][0]
-                        console.log(data["details"][0])
+                itineraries = trip_details["itineraries"]
 
-                        text_response = ``
-
-                        //Leg 1
-                        trip_details = data["details"][0]["leg1"]["trip_details"]
-                        transport_desc = getRouteInfo(trip_details.route_type)
-                        markRouteStops(
-                            map, 
-                            trip_details.stop_lat_origin, 
-                            trip_details.stop_lon_origin, 
-                            trip_details.stop_lat_dest, 
-                            trip_details.stop_lon_dest,
-                            transport_desc["color"],
-                            transport_desc["color"],
-                            labelorigin="Trip 1: Origin stop",labeldest="Trip 1: Dest stop"
-                        )
-                        if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "shape"){
-                            drawShapeRoute(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
-                        } else if (data["details"][0]["leg1"]["trip_geometry"]["geometry_type"] == "line"){
-                            drawLine(map, data["details"][0]["leg1"]["trip_geometry"]["coordinates"], defaultColor = transport_desc["color"])
+                option = 1
+                text_result = ''
+                itineraries.forEach(itinerary => {
+                    text_result += `
+                    <p><b>Option ${option}</b></p>
+                    <p>Duration: ${formatDuration(itinerary.duration)}</p>
+                    <p>Start time: ${otpMsToSfHour(itinerary.startTime)}</p>
+                    <p>End time: ${otpMsToSfHour(itinerary.endTime)}</p>
+                    <p>Path</p>
+                    `
+                    itinerary.legs.forEach(leg => {
+                        if (leg.mode == "WALK"){
+                            text_result += `
+                            <p>Walk from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
+                            `
+                            drawLegGeometry(map, leg);
+                        } else {
+                            text_result += `
+                            <p>Take <b>${leg.route.longName} : ${leg.route.shortName}</b> from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
+                            `
+                            drawLegGeometry(map, leg);
                         }
+                    });
+                    option += 1
+                });
 
-                        text_response += `
-                        <p>If you want to go to: ${address}</p>
-                        <p></p>
-                        <p>Now, it's ${data["details"][0]["now_time"]} hs</p>
-                        <p>You should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name} - ${trip_details.route_short_name}</b></p>
-                        <p>The first transport will arrive at "${trip_details.stop_name_origin}" stop in ${formatDuration(trip_details.wait_for_first_bus)}</p>
-                        <p>Your first trip will last approximately ${formatDuration(trip_details.duration_sec)}</p>
-                        `
-                        //Leg 2
-                        trip_details = data["details"][0]["leg2"]["trip_details"]
-                        transport_desc = getRouteInfo(trip_details.route_type)
-                        markRouteStops(
-                            map, 
-                            trip_details.stop_lat_origin, 
-                            trip_details.stop_lon_origin, 
-                            trip_details.stop_lat_dest, 
-                            trip_details.stop_lon_dest,
-                            transport_desc["color"],
-                            transport_desc["color"],
-                            labelorigin="Trip 2: Origin stop",labeldest="Trip 2: Dest stop"
-                        )
-                        if (data["details"][0]["leg2"]["trip_geometry"]["geometry_type"] == "shape"){
-                            drawShapeRoute(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], options = {}, defaultColor = transport_desc["color"])
-                        } else if (data["details"][0]["leg2"]["trip_geometry"]["geometry_type"] == "line"){
-                            drawLine(map, data["details"][0]["leg2"]["trip_geometry"]["coordinates"], defaultColor = transport_desc["color"])
-                        }
-
-                        markDest(data["dest_coords"][1], data["dest_coords"][0])
-
-                        text_response += `
-                        <p>Then you should take the ${transport_desc["key"]} ${transport_desc["icon"]}: <b>${trip_details.route_long_name} - ${trip_details.route_short_name}</b></p>
-                        <p>The second transport will arrive at "${trip_details.stop_name_origin}" stop at ${trip_details.arrival_time_second_trip} hs</p>
-                        <p>Your second trip will last approximately ${formatDuration(trip_details.duration_sec)}</p>
-                        <p></p>
-                        <p>Your trip wil last approximately ${formatDuration(data["details"][0]["total_time"])}</p>
-                        <p>You will arrive to your destination at ${trip_details.dest_arrival_time} hs</p>
-                        `
-                        document.getElementById("chat-result").innerHTML = text_response;
-
-                    } else {
-                        document.getElementById("chat-result").innerHTML = `
-                        <p>${data.reason}</p>
-                        `;
-                        chatSend.disabled = false;
-                        chatInput.disabled = false;
-                        suggestionsBox.style.display = "block";
-                        markRouteStops(map, data["origin_coords"][1], data["origin_coords"][0], data["dest_coords"][1], data["dest_coords"][0],
-                            labelorigin="Origin",labeldest="Dest")                        
-                    }
-                }
-            }
-        }
+                document.getElementById("chat-result").innerHTML = text_result
+        } 
         
     } catch (error) {
         document.getElementById("chat-result").innerText = "Internal Error";

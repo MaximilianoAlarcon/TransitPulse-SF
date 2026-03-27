@@ -218,9 +218,18 @@ def direct_trip():
     print(search_status)
     print(search)
 
-    return {
-        "error":"We are integrating OTP, please wait a moment..."
-    }
+    if search_status == 200 and "data" in search and search["data"]["plan"]["itineraries"]:
+        return jsonify(sanitize({
+            "status": "Found",
+            "itineraries": search["data"]["plan"]["itineraries"],
+            "origin_coords":origin_coords,
+            "dest_coords":dest_coords
+        }))
+    else:
+        return {
+            "status": "Not found",
+            "reason":"We couldn't find a route. This app only works in San Francisco, California"
+        }
     
     #search = find_direct_trip(origin_coords,dest_coords)
     #if search["status"] == "Found":
