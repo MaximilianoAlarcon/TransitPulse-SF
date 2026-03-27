@@ -40,6 +40,17 @@ function formatDuration(seconds) {
     return `${minutes} min`
 }
 
+function showToast(message, duration = 3000) {
+    const toast = document.getElementById("toast");
+
+    toast.textContent = message;
+    toast.style.opacity = "1";
+
+    setTimeout(() => {
+        toast.style.opacity = "0";
+    }, duration);
+}
+
 function getRouteInfo(routeType) {
     const map = {
         0: {
@@ -342,7 +353,7 @@ function drawLegGeometry(map, leg, options = {}) {
         weight: options.weight ?? 5,
         opacity: options.opacity ?? 0.9,
         color: options.color ?? "#2563eb"
-    }).addTo(map);
+    }).addTo(routesLayer);
 
     return polyline;
 }
@@ -358,7 +369,11 @@ chatSend.addEventListener("click", async () => {
     suggestionsBox.style.display = "none";
     suggestionsBox.innerHTML = ""
     let address = document.getElementById("chat-input").value.trim();
-    if (!address) return alert("Enter your destination");
+    let transport_type = document.getElementById("transport-type").value
+    if (!address) return showToast("Enter your destination");
+    if (!transport_type) {
+        transport_type = "public-transport"
+    }
     clearRoutes()
     lat = null
     lon = null
@@ -371,7 +386,7 @@ chatSend.addEventListener("click", async () => {
     <div class="spinner"></div>`;
     try {
         //Search direct trip
-        let response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}&lat=${lat}&lon=${lon}`);
+        let response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}&lat=${lat}&lon=${lon}&transport_type=${transport_type}`);
         if (!response.ok) {
             let errData = await response.json();
             document.getElementById("chat-result").innerText = errData.error || "Unknown error";
@@ -400,10 +415,15 @@ chatSend.addEventListener("click", async () => {
                             <p>Walk from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                         `
                         drawLegGeometry(map, leg);
+                    } else if (leg.mode == "CAR"){
+                        text_result += `
+                            <p>Drive from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
+                        ` 
+                        drawLegGeometry(map, leg);
                     } else {
                         text_result += `
                             <p>Take <b>${leg.route.longName} : ${leg.route.shortName}</b> from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
-                            `
+                        `
                         drawLegGeometry(map, leg);
                     }
                 });

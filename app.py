@@ -114,7 +114,7 @@ def stops():
 
 import requests
 
-def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: float,date: str,time: str,arrive_by: bool = False,search_window: int = 3600,num_itineraries: int = 5,max_transfers: int = 3):
+def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: float,date: str,time: str,arrive_by: bool = False,transport_modes: str,search_window: int = 3600,num_itineraries: int = 5,max_transfers: int = 3):
     query = """
     query PlanTrip(
       $fromLat: Float!,
@@ -137,7 +137,7 @@ def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: 
         searchWindow: $searchWindow
         numItineraries: $numItineraries
         maxTransfers: $maxTransfers
-        transportModes: [{ mode: WALK }, { mode: TRANSIT }]
+        transportModes: [__MODES__]
       ) {
         nextPageCursor
         previousPageCursor
@@ -173,6 +173,8 @@ def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: 
         "maxTransfers": max_transfers
     }
 
+    query = query.replace("__MODES__", transport_modes)
+
     response = requests.post(
         otp_url,
         json={"query": query, "variables": variables},
@@ -190,6 +192,7 @@ def direct_trip():
     address = request.args.get("address")
     lat = request.args.get("lat")
     lon = request.args.get("lon")
+    transport_type = request.args.get("transport_type", "public-transport")
     try:
         lat = float(lat) if lat is not None else None
         lon = float(lon) if lon is not None else None
@@ -210,10 +213,19 @@ def direct_trip():
 
     origin_coords = my_location
     dest_coords = (lon,lat)
-
     date_now, hour_now = get_sf_date_time()
+    TRANSPORT_MAP = {
+        "public-transport": "{ mode: WALK }, { mode: TRANSIT }",
+        "car": "{ mode: CAR }",
+        "walk": "{ mode: WALK }"
+    }
 
-    search,search_status = otp_plan(OTP_URL,origin_coords[1],origin_coords[0],dest_coords[1],dest_coords[0],date_now,hour_now,arrive_by=False)
+    transport_modes = TRANSPORT_MAP.get(
+        transport_type.lower(),
+        "{ mode: WALK }, { mode: TRANSIT }"
+    )
+    
+    search,search_status = otp_plan(OTP_URL,origin_coords[1],origin_coords[0],dest_coords[1],dest_coords[0],date_now,hour_now,arrive_by=False,transport_modes=transport_modes)
 
     if search_status == 200 and "data" in search and search["data"]["plan"]["itineraries"]:
         return jsonify(sanitize({

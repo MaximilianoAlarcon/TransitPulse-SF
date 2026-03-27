@@ -30,6 +30,12 @@
             </div>
 
             <button id="chat-send" class="btn btn-primary w-100">Search</button>
+            <select id="transport-type" class="form-select" aria-label="Default select example">
+                <option selected>Type of transport</option>
+                <option value="public-transport">Public Transport</option>
+                <option value="Car">Car</option>
+                <option value="Walk">Walk</option>
+            </select>
         </div>
 
         <!-- 📊 RESULTADOS (ocupa todo el resto) -->
@@ -39,6 +45,19 @@
     <!-- Map -->
     <div id="map" class="flex-fill"></div>
 </div>
+<div id="toast" style="
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+"></div>
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
