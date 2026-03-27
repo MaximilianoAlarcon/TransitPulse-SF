@@ -386,7 +386,7 @@ chatSend.addEventListener("click", async () => {
     <div class="spinner"></div>`;
     try {
         //Search direct trip
-        let response = await fetch(`/direct-trip?address=${encodeURIComponent(address)}&lat=${lat}&lon=${lon}&transport_type=${transport_type}`);
+        let response = await fetch(`/search-trip?address=${encodeURIComponent(address)}&lat=${lat}&lon=${lon}&transport_type=${transport_type}`);
         if (!response.ok) {
             let errData = await response.json();
             document.getElementById("chat-result").innerText = errData.error || "Unknown error";
