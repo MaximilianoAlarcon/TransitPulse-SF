@@ -8,12 +8,15 @@ from transit_engine import find_direct_trip,find_trip_with_transfer
 import psycopg2
 import numpy as np
 from utils import geocode
+from zoneinfo import ZoneInfo
+
 
 app = Flask(__name__)
 
 API_KEY = os.environ.get("API_511_KEY")
 API_GEO_KEY = os.environ.get("API_GEO_KEY")
 MAPBOX_API_KEY = os.environ.get("MAPBOX_API_KEY")
+OTP_URL = os.environ.get("OTP_URL")
 
 # Configuración DB
 DB_CONFIG = {
@@ -72,6 +75,14 @@ def get_closest_stop(lat, lon):
     conn.close()
     return stop
 
+def get_sf_date_time():
+    now_sf = datetime.now(ZoneInfo("America/Los_Angeles"))
+    
+    fecha = now_sf.strftime("%Y-%m-%d")
+    hora = now_sf.strftime("%H:%M")
+    
+    return fecha, hora
+
 
 @app.route("/stops")
 def stops():
@@ -98,6 +109,77 @@ def stops():
     ]
 
     return jsonify(result)
+
+
+import requests
+
+def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: float,date: str,time: str,arrive_by: bool = False,search_window: int = 3600,num_itineraries: int = 5,max_transfers: int = 3):
+    query = """
+    query PlanTrip(
+      $fromLat: Float!,
+      $fromLon: Float!,
+      $toLat: Float!,
+      $toLon: Float!,
+      $date: String!,
+      $time: String!,
+      $arriveBy: Boolean!,
+      $searchWindow: Int!,
+      $numItineraries: Int!,
+      $maxTransfers: Int!
+    ) {
+      plan(
+        from: { lat: $fromLat, lon: $fromLon }
+        to: { lat: $toLat, lon: $toLon }
+        date: $date
+        time: $time
+        arriveBy: $arriveBy
+        searchWindow: $searchWindow
+        numItineraries: $numItineraries
+        maxTransfers: $maxTransfers
+        transportModes: [{ mode: WALK }, { mode: TRANSIT }]
+      ) {
+        nextPageCursor
+        previousPageCursor
+        itineraries {
+          duration
+          startTime
+          endTime
+          generalizedCost
+          legs {
+            mode
+            startTime
+            endTime
+            from { name lat lon }
+            to { name lat lon }
+            route { gtfsId shortName longName textColor }
+            legGeometry { points }
+          }
+        }
+      }
+    }
+    """
+
+    variables = {
+        "fromLat": from_lat,
+        "fromLon": from_lon,
+        "toLat": to_lat,
+        "toLon": to_lon,
+        "date": date,
+        "time": time,
+        "arriveBy": arrive_by,
+        "searchWindow": search_window,
+        "numItineraries": num_itineraries,
+        "maxTransfers": max_transfers
+    }
+
+    response = requests.post(
+        otp_url,
+        json={"query": query, "variables": variables},
+        timeout=30
+    )
+
+    response.raise_for_status()
+    return response.json(), response.status_code
 
 
 @app.route("/direct-trip")
@@ -128,26 +210,41 @@ def direct_trip():
     origin_coords = my_location
     dest_coords = (lon,lat)
 
-    search = find_direct_trip(origin_coords,dest_coords)
-    if search["status"] == "Found":
-        return jsonify(sanitize({
-            "status": "Found",
-            "details": search["details"],
-            "origin_coords":origin_coords,
-            "dest_coords":dest_coords
-        }))
-    else:
-        return jsonify(sanitize({
-            "status": search["status"],
-            "reason": search["reason"],
-            "origin_coords":origin_coords,
-            "dest_coords":dest_coords
-        }))
+    date_now, hour_now = get_sf_date_time()
+
+    search,search_status = otp_plan(OTP_URL,origin_coords[1],origin_coords[0],dest_coords[1],dest_coords[0],date_now,hour_now,arrive_by=False)
+
+    print(search_status)
+    print(search)
+
+    return {
+        "error":"We are integrating OTP, please wait a moment..."
+    }
+    
+    #search = find_direct_trip(origin_coords,dest_coords)
+    #if search["status"] == "Found":
+    #    return jsonify(sanitize({
+    #        "status": "Found",
+    #        "details": search["details"],
+    #       "origin_coords":origin_coords,
+    #        "dest_coords":dest_coords
+    #    }))
+    #else:
+    #    return jsonify(sanitize({
+    #        "status": search["status"],
+    #        "reason": search["reason"],
+    #        "origin_coords":origin_coords,
+    #        "dest_coords":dest_coords
+    #    }))
 
 
 @app.route("/transfer-trip")
 def transfer_trip():
     my_location = (-122.4120372,37.7803603)
+
+    return {
+        "error":"We are integrating OTP, please wait a moment..."
+    }
 
     address = request.args.get("address")
     lat = request.args.get("lat")
