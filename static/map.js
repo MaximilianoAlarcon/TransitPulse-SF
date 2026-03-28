@@ -53,53 +53,65 @@ function showToast(message, duration = 3000) {
 
 function getRouteInfo(routeType) {
     const map = {
-        0: {
-            label: "Tranvía",
+        WALK: {
+            key: "walk",
+            color: "#7f8c8d",
+            icon: "🚶"
+        },
+        BICYCLE: {
+            key: "bicycle",
+            color: "#27ae60",
+            icon: "🚴"
+        },
+        CAR: {
+            key: "car",
+            color: "#2c3e50",
+            icon: "🚗"
+        },
+        BUS: {
+            key: "bus",
+            color: "#2980b9",
+            icon: "🚌"
+        },
+        TRAM: {
             key: "tram",
             color: "#f39c12",
             icon: "🚋"
         },
-        1: {
-            label: "Metro",
-            key: "metro",
-            color: "#e74c3c",
+        SUBWAY: {
+            key: "subway",
+            color: "#8e44ad",
             icon: "🚇"
         },
-        2: {
-            label: "Tren",
-            key: "train",
-            color: "#3498db",
+        RAIL: {
+            key: "rail",
+            color: "#c0392b",
             icon: "🚆"
         },
-        3: {
-            label: "Bus",
-            key: "bus",
-            color: "#27ae60",
-            icon: "🚌"
-        },
-        4: {
-            label: "Ferry",
+        FERRY: {
             key: "ferry",
-            color: "#00BFFF",
+            color: "#16a085",
             icon: "⛴️"
         },
-        5: {
-            label: "Cable Car",
-            key: "cable",
-            color: "#8e44ad",
+        CABLE_CAR: {
+            key: "cable_car",
+            color: "#d35400",
             icon: "🚠"
         },
-        6: {
-            label: "Góndola",
+        GONDOLA: {
             key: "gondola",
-            color: "#16a085",
+            color: "#9b59b6",
             icon: "🚡"
         },
-        7: {
-            label: "Funicular",
+        FUNICULAR: {
             key: "funicular",
-            color: "#2c3e50",
+            color: "#34495e",
             icon: "🚞"
+        },
+        SCOOTER: {
+            key: "scooter",
+            color: "#1abc9c",
+            icon: "🛴"
         }
     };
 
@@ -111,24 +123,17 @@ function getRouteInfo(routeType) {
     };
 }
 
-async function getWalkingRoute(lat1, lon1, lat2, lon2) {
-    const url = `https://router.project-osrm.org/route/v1/foot/${lon1},${lat1};${lon2},${lat2}?overview=full&geometries=geojson`;
 
-    const response = await fetch(url);
-    const data = await response.json();
+async function drawWalkingRoute(leg,defaultColor) {
 
-    // convertir [lon, lat] → [lat, lon] (Leaflet lo necesita así)
-    const coords = data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
+    if (!leg?.legGeometry?.points) {
+        return null;
+    }
 
-    return coords;
-}
+    const latLngs = decodePolyline(leg.legGeometry.points);
 
-async function drawWalkingRoute(map, lat1, lon1, lat2, lon2) {
-
-    const coords = await getWalkingRoute(lat1, lon1, lat2, lon2);
-
-    L.polyline(coords, {
-        color: "#00BFFF",
+    L.polyline(latLngs, {
+        color: defaultColor,
         weight: 4,
         dashArray: "5,10"
     }).addTo(routesLayer);
@@ -385,7 +390,7 @@ chatSend.addEventListener("click", async () => {
     <p>Searching paths...</p>
     <div class="spinner"></div>`;
     try {
-        //Search direct trip
+        //Search trip
         let response = await fetch(`/search-trip?address=${encodeURIComponent(address)}&lat=${lat}&lon=${lon}&transport_type=${transport_type}`);
         if (!response.ok) {
             let errData = await response.json();
@@ -410,25 +415,27 @@ chatSend.addEventListener("click", async () => {
                     <p>Path</p>
                 `
                 itinerary.legs.forEach(leg => {
+                    styles = getRouteInfo(leg.mode)
                     if (leg.mode == "WALK"){
                         text_result += `
                             <p>Walk from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                         `
-                        drawLegGeometry(map, leg);
+                        drawWalkingRoute(leg,styles["color"])
                     } else if (leg.mode == "CAR"){
                         text_result += `
                             <p>Drive from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                         ` 
-                        drawLegGeometry(map, leg);
+                        drawLegGeometry(map, leg, options={"color":styles["color"]});
                     } else {
                         text_result += `
                             <p>Take <b>${leg.route.longName} : ${leg.route.shortName}</b> from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                         `
-                        drawLegGeometry(map, leg);
+                        drawLegGeometry(map, leg, options={"color":styles["color"]});
                     }
                 });
                 option += 1
             });
+            markDest(lat,lon)
             document.getElementById("chat-result").innerHTML = text_result
         } 
         
