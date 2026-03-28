@@ -173,6 +173,7 @@ def direct_trip():
 
     search,search_status = otp_plan(OTP_URL,origin_coords[1],origin_coords[0],dest_coords[1],dest_coords[0],date_now,hour_now,arrive_by=False,transport_modes=transport_modes)
 
+    print(search_status)
     if search_status == 200 and "data" in search and search["data"]["plan"]["itineraries"]:
         print(search)
         return jsonify(sanitize({
