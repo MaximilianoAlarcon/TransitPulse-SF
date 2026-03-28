@@ -10,11 +10,11 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'© OpenStreetMap'
 }).addTo(map);
 
-function showAlert(message) {
+function showAlert(message, type = "danger") {
     const container = document.getElementById("alert-container");
 
     const alert = document.createElement("div");
-    alert.className = "alert alert-danger shadow text-center d-inline-block fade show mb-0";
+    alert.className = `alert alert-${type} shadow text-center d-inline-block fade show mb-0`;
     alert.setAttribute("role", "alert");
     alert.textContent = message;
 
@@ -25,15 +25,16 @@ function showAlert(message) {
         alert.classList.remove("show");
         setTimeout(() => alert.remove(), 200);
     }, 3000);
-
 }
 
 // Rotacion de mapa
 
 let followHeading = false;
 let lastBearing = 0;
-let watchId = null;
+let geoWatchId = null;
 let lastPosition = null;
+let currentSpeed = 0;
+let isProgrammaticMove = false;
 
 // Umbrales para evitar temblores
 const MIN_SPEED_TO_ROTATE = 1.0;   // m/s aprox
@@ -85,6 +86,20 @@ function computeBearing(lat1, lon1, lat2, lon2) {
   return normalizeBearing(toDeg(Math.atan2(y, x)));
 }
 
+function recenterMap(latlng, zoom = null) {
+  isProgrammaticMove = true;
+
+  if (zoom !== null) {
+    map.setView(latlng, zoom, { animate: true });
+  } else {
+    map.panTo(latlng, { animate: true });
+  }
+
+  setTimeout(() => {
+    isProgrammaticMove = false;
+  }, 300);
+}
+
 // --- Permiso de orientación (iPhone/Safari) ---
 async function requestOrientationPermissionIfNeeded() {
   if (
@@ -100,27 +115,8 @@ async function requestOrientationPermissionIfNeeded() {
 // --- Botón de navegación ---
 const btnCompass = document.getElementById("btn-compass");
 
-btnCompass.addEventListener("click", async () => {
-  const granted = await requestOrientationPermissionIfNeeded();
-
-  if (!granted) {
-    alert("Orientation permission was not granted.");
-    return;
-  }
-
-  followHeading = !followHeading;
-  btnCompass.classList.toggle("active", followHeading);
-
-  if (!followHeading) {
-    resetRotation();
-  } else if (window.userMarker) {
-    map.setView(window.userMarker.getLatLng(), Math.max(map.getZoom(), 16));
-  }
-});
 
 // --- Brújula del dispositivo ---
-// Se usa solo si el usuario NO se está moviendo rápido.
-// Si se mueve, dejamos que mande el GPS.
 window.addEventListener("deviceorientation", (event) => {
   if (!followHeading) return;
   if (currentSpeed > 1) return;
@@ -136,23 +132,18 @@ window.addEventListener("deviceorientation", (event) => {
 function startUserTracking() {
   if (!navigator.geolocation) {
     console.warn("Geolocation is not supported in this browser.");
-    showAlert("Geolocation is not supported in this browser.")
+    showAlert("Geolocation is not supported in this browser.","info");
     return;
   }
 
   geoWatchId = navigator.geolocation.watchPosition(
     (position) => {
-      // Para test podés descomentar estos valores fijos:
-      // const lat = 37.7803603;
-      // const lon = -122.4120372;
-
       const lat = position.coords.latitude;
       const lon = position.coords.longitude;
       currentSpeed = position.coords.speed || 0;
 
       const latlng = [lat, lon];
 
-      // Crear marcador una sola vez
       if (!window.userMarker) {
         window.userMarker = L.circleMarker(latlng, {
           radius: 8,
@@ -163,18 +154,13 @@ function startUserTracking() {
 
         map.setView(latlng, 15);
       } else {
-        // Mover marcador existente
         window.userMarker.setLatLng(latlng);
       }
 
-      // Si el modo navegación está activo, seguir al usuario
       if (followHeading) {
-        map.setView(latlng, Math.max(map.getZoom(), 16), {
-          animate: true
-        });
+        recenterMap(latlng, Math.max(map.getZoom(), 16));
       }
 
-      // Rotación usando rumbo GPS cuando hay movimiento real
       if (followHeading && lastPosition && currentSpeed > MIN_SPEED_TO_ROTATE) {
         const gpsBearing = computeBearing(
           lastPosition.lat,
@@ -187,12 +173,10 @@ function startUserTracking() {
       }
 
       lastPosition = { lat, lon };
-
-      // Si necesitás recargar paradas visibles:
-      // loadStopsInView();
     },
     (error) => {
       console.error("Geolocation error:", error);
+      showAlert("Could not get your location.","info");
     },
     {
       enableHighAccuracy: true,
@@ -202,10 +186,60 @@ function startUserTracking() {
   );
 }
 
+// --- Detener seguimiento si alguna vez lo necesitás ---
+function stopUserTracking() {
+  if (geoWatchId !== null) {
+    navigator.geolocation.clearWatch(geoWatchId);
+    geoWatchId = null;
+  }
+}
+
+// --- Si el usuario mueve el mapa manualmente, salir del modo navegación ---
+map.on("dragstart", () => {
+  if (isProgrammaticMove) return;
+  if (!followHeading) return;
+
+  followHeading = false;
+  btnCompass.classList.remove("active");
+  resetRotation();
+});
 
 
+btnCompass.addEventListener("click", async () => {
+  const granted = await requestOrientationPermissionIfNeeded();
 
+  if (!granted) {
+    showAlert("Orientation permission was not granted.","warning");
+    return;
+  }
 
+  // 🔁 Toggle estado
+  followHeading = !followHeading;
+
+  // 🎨 UI
+  btnCompass.classList.toggle("active", followHeading);
+
+  // 🛑 Si se desactiva navegación
+  if (!followHeading) {
+    stopUserTracking();   // opcional (según tu estrategia)
+    resetRotation();
+    return;
+  }
+
+  // 🚀 Si se activa navegación
+  startUserTracking();    // opcional (ver nota abajo)
+
+  // 🎯 Centrar en usuario si ya existe
+  if (window.userMarker) {
+    recenterMap(
+      window.userMarker.getLatLng(),
+      Math.max(map.getZoom(), 16)
+    );
+  } else {
+    // 👀 opcional: feedback si aún no hay ubicación
+    showAlert("Getting your location...","info");
+  }
+});
 
 
 
