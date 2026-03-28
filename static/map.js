@@ -123,6 +123,31 @@ function getRouteInfo(routeType) {
     };
 }
 
+function createAccordionItem(index, title, body) {
+  return `
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button
+          class="accordion-button collapsed"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#collapse${index}"
+        >
+          ${title}
+        </button>
+      </h2>
+      <div
+        id="collapse${index}"
+        class="accordion-collapse collapse"
+      >
+        <div class="accordion-body">
+          ${body}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 
 async function drawWalkingRoute(leg,defaultColor) {
 
@@ -407,9 +432,11 @@ chatSend.addEventListener("click", async () => {
             lat = data["dest_coords"][1]
             lon = data["dest_coords"][0]
             option = 1
-            text_result = ''
+            trip_options = ''
+            trip_options += '<div class="accordion" id="tripAccordion">'
+            trip_description = ''
             data["itineraries"].forEach(itinerary => {
-                text_result += `
+                trip_description += `
                     <p><b>Option ${option}</b></p>
                     <p>Duration: ${formatDuration(itinerary.duration)}</p>
                     <p>Start time: ${otpMsToSfHour(itinerary.startTime)}</p>
@@ -419,26 +446,30 @@ chatSend.addEventListener("click", async () => {
                 itinerary.legs.forEach(leg => {
                     styles = getRouteInfo(leg.mode)
                     if (leg.mode == "WALK"){
-                        text_result += `
+                        trip_description += `
                             <p>Walk from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                         `
                         drawWalkingRoute(leg,styles["color"])
                     } else if (leg.mode == "CAR"){
-                        text_result += `
+                        trip_description += `
                             <p>Drive from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                         ` 
                         drawLegGeometry(map, leg, options={"color":styles["color"]});
                     } else {
-                        text_result += `
+                        trip_description += `
                             <p>Take <b>${leg.route.longName} : ${leg.route.shortName}</b> from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                         `
                         drawLegGeometry(map, leg, options={"color":styles["color"]});
                     }
                 });
+
+                trip_options += createAccordionItem(option,`Option ${option}: ${formatDuration(itinerary.duration)}`,trip_description)
+                trip_description = ''
                 option += 1
             });
+            trip_options += '</div>'
             markDest(lat,lon)
-            document.getElementById("chat-result").innerHTML = text_result
+            document.getElementById("chat-result").innerHTML = trip_options
         } 
         
     } catch (error) {
