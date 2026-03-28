@@ -58,7 +58,7 @@ def get_sf_date_time():
 
 
 
-def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: float,date: str,time: str,arrive_by: bool = False,transport_modes: str = "{ mode: WALK }, { mode: TRANSIT }",search_window: int = 3600,num_itineraries: int = 5,max_transfers: int = 3):
+def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: float,date: str,time: str,arrive_by: bool = False,transport_modes: str = "{ mode: WALK }, { mode: TRANSIT }",search_window: int = 36000,num_itineraries: int = 5,max_transfers: int = 3):
     query = """
     query PlanTrip(
       $fromLat: Float!,

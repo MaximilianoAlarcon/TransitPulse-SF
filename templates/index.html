@@ -16,6 +16,11 @@
 </head>
 <body>
 
+<div id="alert-container"
+     class="position-fixed top-0 start-50 translate-middle-x mt-3"
+     style="z-index: 9999; width: auto; max-width: 90%;">
+</div>
+
 <div class="container-fluid vh-100 d-flex flex-column flex-lg-row p-0" id="split-container">
     
     <!-- Sidebar -->
@@ -31,8 +36,8 @@
 
             <button id="chat-send" class="btn btn-primary w-100">Search</button>
             <select id="transport-type" class="form-select" aria-label="Default select example">
-                <option selected>Type of transport</option>
-                <option value="public-transport">Public Transport</option>
+                <option>Type of transport</option>
+                <option value="public-transport" selected>Public Transport</option>
                 <option value="Car">Car</option>
                 <option value="Walk">Walk</option>
             </select>
@@ -45,19 +50,6 @@
     <!-- Map -->
     <div id="map" class="flex-fill"></div>
 </div>
-<div id="toast" style="
-    position: fixed;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #333;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-"></div>
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>

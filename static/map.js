@@ -41,15 +41,21 @@ function formatDuration(seconds) {
     return `${minutes} min`
 }
 
-function showToast(message, duration = 3000) {
-    const toast = document.getElementById("toast");
+function showAlert(message) {
+    const container = document.getElementById("alert-container");
 
-    toast.textContent = message;
-    toast.style.opacity = "1";
+    const alert = document.createElement("div");
+    alert.className = "alert alert-danger shadow text-center d-inline-block fade show mb-0";
+    alert.setAttribute("role", "alert");
+    alert.textContent = message;
+
+    container.innerHTML = "";
+    container.appendChild(alert);
 
     setTimeout(() => {
-        toast.style.opacity = "0";
-    }, duration);
+        alert.classList.remove("show");
+        setTimeout(() => alert.remove(), 200);
+    }, 3000);
 }
 
 function clearRoutes() {
@@ -143,7 +149,7 @@ function createAccordionItem(index, title, body) {
       </h2>
       <div
         id="collapse${index}"
-        class="accordion-collapse collapse ${index === 1 ? "show" : ""}"
+        class="accordion-collapse collapse "
       >
         <div class="accordion-body">
           ${body}
@@ -357,16 +363,19 @@ function drawLegGeometry(map, leg, options = {}) {
 const chatSend = document.getElementById("chat-send");
 const chatInput = document.getElementById("chat-input");
 const chatResult = document.getElementById("chat-result");
+const transportOptions = document.getElementById("transport-type");
 
 chatSend.addEventListener("click", async () => {
     chatSend.disabled = true;
     chatInput.disabled = true;
+    transportOptions.disabled = true;
     suggestionsBox.style.display = "none";
     suggestionsBox.innerHTML = ""
     let address = document.getElementById("chat-input").value.trim();
     let transport_type = document.getElementById("transport-type").value
-    if (!address) return showToast("Enter your destination");
+    if (!address) return showAlert("Enter your destination");
     if (!transport_type) {
+        transportOptions.value = "public-transport";
         transport_type = "public-transport"
     }
     clearRoutes()
@@ -403,6 +412,7 @@ chatSend.addEventListener("click", async () => {
             globalItineraries = {}
             globalItineraries["dest_lat"] = lat
             globalItineraries["dest_lon"] = lon
+            data["itineraries"].sort((a, b) => a.duration - b.duration);
             data["itineraries"].forEach(itinerary => {
                 globalItineraries["collapse"+String(option)] = itinerary
                 trip_description += `
@@ -461,6 +471,13 @@ chatSend.addEventListener("click", async () => {
                     markDest(globalItineraries["dest_lat"],globalItineraries["dest_lon"])
                 });
             });
+
+            const first = document.querySelector(".accordion-collapse");
+
+            if (first) {
+                new bootstrap.Collapse(first, { toggle: true });
+            }
+
         } else if (data["status"] == "Not found"){
             document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`
         }
@@ -473,6 +490,7 @@ chatSend.addEventListener("click", async () => {
     document.getElementById("chat-input").value = "";
     chatSend.disabled = false;
     chatInput.disabled = false;
+    transportOptions.disabled = false;
     suggestionsBox.style.display = "block";
 });
 
