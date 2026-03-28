@@ -438,7 +438,7 @@ chatSend.addEventListener("click", async () => {
             trip_description = ''
             globalItineraries = {}
             data["itineraries"].forEach(itinerary => {
-                globalItineraries["collapse"+str(option)] = itinerary
+                globalItineraries["collapse"+String(option)] = itinerary
                 trip_description += `
                     <p><b>Option ${option}</b></p>
                     <p>Duration: ${formatDuration(itinerary.duration)}</p>
