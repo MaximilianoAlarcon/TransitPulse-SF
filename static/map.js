@@ -561,8 +561,8 @@ const clearBtn = document.getElementById("clear-input");
 
 // limpiar al hacer click
 clearBtn.addEventListener("click", () => {
-  input.value = "";
-  input.focus();
+  chatInput.value = "";
+  chatInput.focus();
   clearBtn.style.display = "none";
 });
 
