@@ -143,7 +143,7 @@ function createAccordionItem(index, title, body) {
       </h2>
       <div
         id="collapse${index}"
-        class="accordion-collapse collapse"
+        class="accordion-collapse collapse ${index === 1 ? "show" : ""}"
       >
         <div class="accordion-body">
           ${body}
@@ -397,10 +397,12 @@ chatSend.addEventListener("click", async () => {
             lat = data["dest_coords"][1]
             lon = data["dest_coords"][0]
             option = 1
-            trip_options = `<center><p>Destination: ${data["dest_name"]}</p></center>`
+            trip_options = `<center><p>${data["dest_name"]}</p></center>`
             trip_options += '<div class="accordion" id="tripAccordion">'
             trip_description = ''
             globalItineraries = {}
+            globalItineraries["dest_lat"] = lat
+            globalItineraries["dest_lon"] = lon
             data["itineraries"].forEach(itinerary => {
                 globalItineraries["collapse"+String(option)] = itinerary
                 trip_description += `
@@ -456,6 +458,7 @@ chatSend.addEventListener("click", async () => {
                             drawLegGeometry(map, leg, options={"color":styles["color"]});
                         }
                     });
+                    markDest(globalItineraries["dest_lat"],globalItineraries["dest_lon"])
                 });
             });
         } else if (data["status"] == "Not found"){
