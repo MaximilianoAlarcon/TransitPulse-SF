@@ -55,7 +55,7 @@ function getRouteInfo(routeType) {
     const map = {
         WALK: {
             key: "walk",
-            color: "#7f8c8d",
+            color: "#136aec",
             icon: "🚶"
         },
         BICYCLE: {
@@ -65,7 +65,7 @@ function getRouteInfo(routeType) {
         },
         CAR: {
             key: "car",
-            color: "#2c3e50",
+            color: "#136aec",
             icon: "🚗"
         },
         BUS: {
@@ -385,8 +385,6 @@ chatSend.addEventListener("click", async () => {
     if (selectedPlace){
         lat = selectedPlace.lat
         lon = selectedPlace.lon
-    } else {
-
     }
     document.getElementById("chat-result").innerHTML = `
     <p>Searching paths...</p>
