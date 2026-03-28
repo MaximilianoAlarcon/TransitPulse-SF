@@ -10,6 +10,23 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'© OpenStreetMap'
 }).addTo(map);
 
+function showAlert(message) {
+    const container = document.getElementById("alert-container");
+
+    const alert = document.createElement("div");
+    alert.className = "alert alert-danger shadow text-center d-inline-block fade show mb-0";
+    alert.setAttribute("role", "alert");
+    alert.textContent = message;
+
+    container.innerHTML = "";
+    container.appendChild(alert);
+
+    setTimeout(() => {
+        alert.classList.remove("show");
+        setTimeout(() => alert.remove(), 200);
+    }, 3000);
+
+}
 
 // Rotacion de mapa
 
@@ -22,6 +39,10 @@ let lastPosition = null;
 const MIN_SPEED_TO_ROTATE = 1.0;   // m/s aprox
 const MIN_BEARING_DELTA = 5;       // grados mínimos para actualizar
 
+// --- Marcador del usuario ---
+window.userMarker = null;
+
+// --- Helpers ---
 function normalizeBearing(deg) {
   return ((deg % 360) + 360) % 360;
 }
@@ -47,7 +68,6 @@ function resetRotation() {
   lastBearing = 0;
 }
 
-// Calcula rumbo entre dos coordenadas GPS
 function computeBearing(lat1, lon1, lat2, lon2) {
   const toRad = (d) => d * Math.PI / 180;
   const toDeg = (r) => r * 180 / Math.PI;
@@ -65,7 +85,7 @@ function computeBearing(lat1, lon1, lat2, lon2) {
   return normalizeBearing(toDeg(Math.atan2(y, x)));
 }
 
-// En iPhone/iPad puede requerirse permiso explícito desde un click del usuario
+// --- Permiso de orientación (iPhone/Safari) ---
 async function requestOrientationPermissionIfNeeded() {
   if (
     typeof DeviceOrientationEvent !== "undefined" &&
@@ -77,79 +97,102 @@ async function requestOrientationPermissionIfNeeded() {
   return true;
 }
 
-// --- Botón brújula ---
+// --- Botón de navegación ---
 const btnCompass = document.getElementById("btn-compass");
 
 btnCompass.addEventListener("click", async () => {
-  try {
-    const granted = await requestOrientationPermissionIfNeeded();
-    if (!granted) {
-      alert("No se concedió permiso para orientación del dispositivo.");
-      return;
-    }
+  const granted = await requestOrientationPermissionIfNeeded();
 
-    followHeading = !followHeading;
-    btnCompass.classList.toggle("active", followHeading);
-    btnCompass.textContent = followHeading ? "🧭 Dirección activada" : "🧭 Seguir dirección";
+  if (!granted) {
+    alert("Orientation permission was not granted.");
+    return;
+  }
 
-    if (!followHeading) {
-      resetRotation();
-    }
-  } catch (err) {
-    console.error("Error al solicitar permisos:", err);
+  followHeading = !followHeading;
+  btnCompass.classList.toggle("active", followHeading);
+
+  if (!followHeading) {
+    resetRotation();
+  } else if (window.userMarker) {
+    map.setView(window.userMarker.getLatLng(), Math.max(map.getZoom(), 16));
   }
 });
 
-// --- Opción A: usar orientación del dispositivo ---
-// alpha representa la rotación alrededor del eje Z. En varios navegadores sirve
-// como base para heading, aunque puede variar según dispositivo/navegador.
+// --- Brújula del dispositivo ---
+// Se usa solo si el usuario NO se está moviendo rápido.
+// Si se mueve, dejamos que mande el GPS.
 window.addEventListener("deviceorientation", (event) => {
   if (!followHeading) return;
+  if (currentSpeed > 1) return;
 
   const alpha = event.alpha;
   if (alpha == null) return;
 
-  // Ajuste simple: usar alpha invertida para que el frente del dispositivo quede "arriba"
   const heading = normalizeBearing(360 - alpha);
   setMapBearingSmooth(heading);
 });
 
-// --- Opción B: respaldo con GPS ---
-// Si la brújula falla o es inestable, esta parte rota usando el movimiento real.
-function startLocationTracking() {
-  if (!("geolocation" in navigator)) {
-    console.warn("Geolocalización no disponible en este navegador.");
+// --- Seguimiento en tiempo real ---
+function startUserTracking() {
+  if (!navigator.geolocation) {
+    console.warn("Geolocation is not supported in this browser.");
+    showAlert("Geolocation is not supported in this browser.")
     return;
   }
 
-  watchId = navigator.geolocation.watchPosition(
-    (pos) => {
-      const { latitude, longitude, speed } = pos.coords;
-      const latlng = [latitude, longitude];
+  geoWatchId = navigator.geolocation.watchPosition(
+    (position) => {
+      // Para test podés descomentar estos valores fijos:
+      // const lat = 37.7803603;
+      // const lon = -122.4120372;
 
-      // Centrar mapa en usuario
-      map.setView(latlng, Math.max(map.getZoom(), 16));
+      const lat = position.coords.latitude;
+      const lon = position.coords.longitude;
+      currentSpeed = position.coords.speed || 0;
 
-      // Si el usuario está quieto, no rotamos por GPS
-      if ((speed || 0) < MIN_SPEED_TO_ROTATE) {
-        lastPosition = { latitude, longitude };
-        return;
+      const latlng = [lat, lon];
+
+      // Crear marcador una sola vez
+      if (!window.userMarker) {
+        window.userMarker = L.circleMarker(latlng, {
+          radius: 8,
+          color: "#136aec",
+          fillColor: "#2a93ee",
+          fillOpacity: 0.9
+        }).addTo(map).bindPopup("You");
+
+        map.setView(latlng, 15);
+      } else {
+        // Mover marcador existente
+        window.userMarker.setLatLng(latlng);
       }
 
-      if (followHeading && lastPosition) {
+      // Si el modo navegación está activo, seguir al usuario
+      if (followHeading) {
+        map.setView(latlng, Math.max(map.getZoom(), 16), {
+          animate: true
+        });
+      }
+
+      // Rotación usando rumbo GPS cuando hay movimiento real
+      if (followHeading && lastPosition && currentSpeed > MIN_SPEED_TO_ROTATE) {
         const gpsBearing = computeBearing(
-          lastPosition.latitude,
-          lastPosition.longitude,
-          latitude,
-          longitude
+          lastPosition.lat,
+          lastPosition.lon,
+          lat,
+          lon
         );
+
         setMapBearingSmooth(gpsBearing);
       }
 
-      lastPosition = { latitude, longitude };
+      lastPosition = { lat, lon };
+
+      // Si necesitás recargar paradas visibles:
+      // loadStopsInView();
     },
-    (err) => {
-      console.error("Error de geolocalización:", err);
+    (error) => {
+      console.error("Geolocation error:", error);
     },
     {
       enableHighAccuracy: true,
@@ -158,23 +201,6 @@ function startLocationTracking() {
     }
   );
 }
-
-startLocationTracking();
-
-// --- UX: si el usuario mueve el mapa manualmente, salir del modo seguimiento ---
-map.on("dragstart zoomstart", () => {
-  if (!followHeading) return;
-
-  followHeading = false;
-  btnCompass.classList.remove("active");
-  btnCompass.textContent = "🧭 Seguir dirección";
-  resetRotation();
-});
-
-// --- opcional: reset rápido al hacer doble click sobre el botón ---
-btnCompass.addEventListener("dblclick", () => {
-  resetRotation();
-});
 
 
 
@@ -541,23 +567,7 @@ clearBtn.addEventListener("click", () => {
 });
 
 
-function showAlert(message) {
-    const container = document.getElementById("alert-container");
 
-    const alert = document.createElement("div");
-    alert.className = "alert alert-danger shadow text-center d-inline-block fade show mb-0";
-    alert.setAttribute("role", "alert");
-    alert.textContent = message;
-
-    container.innerHTML = "";
-    container.appendChild(alert);
-
-    setTimeout(() => {
-        alert.classList.remove("show");
-        setTimeout(() => alert.remove(), 200);
-    }, 3000);
-
-}
 
 chatSend.addEventListener("click", async () => {
 
@@ -713,7 +723,7 @@ async function onPlaceSelected(map, place) {
 
 chatInput.addEventListener("input", () => {
     if (!chatInput.disabled && !chatSend.disabled) {
-        clearBtn.style.display = input.value ? "block" : "none";
+        clearBtn.style.display = chatInput.value ? "block" : "none";
         const query = chatInput.value
 
         if (query.length < 3) {
