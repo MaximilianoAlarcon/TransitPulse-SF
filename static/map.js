@@ -568,6 +568,9 @@ document.addEventListener("click", (e) => {
 
 document.querySelectorAll(".accordion-collapse").forEach((el) => {
   el.addEventListener("shown.bs.collapse", (event) => {
+    console.log(globalItineraries);
+    console.log(event.target.id);
+    console.log(globalItineraries[event.target.id]);
     const id = event.target.id; // collapse0, collapse1, etc
     const itinerary = globalItineraries[id]
     itinerary.legs.forEach(leg => {
