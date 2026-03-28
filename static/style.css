@@ -11,6 +11,45 @@ html, body {
     height: 100%;
 }
 
+.map-btn {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1000;
+
+  border: none;
+  border-radius: 50px;
+  padding: 10px 14px;
+
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+
+.map-btn.active {
+  background: #dbeafe;
+}
+
+
+.clear-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  
+  cursor: pointer;
+  font-size: 18px;
+  color: #999;
+  
+  display: none; /* oculto por defecto */
+}
+
+.clear-btn:hover {
+  color: #333;
+}
+
+
+
 .leaflet-tile {
     filter: grayscale(50%) brightness(105%) saturate(60%) contrast(95%);
 }

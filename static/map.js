@@ -1,9 +1,189 @@
 // --- Leaflet Map ---
-var map = L.map('map', { zoomControl: window.innerWidth > 1024 }).setView([37.77,-122.41], 12);
+var map = L.map('map', { 
+    zoomControl: window.innerWidth > 1024,
+    touchZoom: true,
+    rotate: true,
+    bearing: 0
+}).setView([37.77,-122.41], 12);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'© OpenStreetMap'
 }).addTo(map);
+
+
+// Rotacion de mapa
+
+let followHeading = false;
+let lastBearing = 0;
+let watchId = null;
+let lastPosition = null;
+
+// Umbrales para evitar temblores
+const MIN_SPEED_TO_ROTATE = 1.0;   // m/s aprox
+const MIN_BEARING_DELTA = 5;       // grados mínimos para actualizar
+
+function normalizeBearing(deg) {
+  return ((deg % 360) + 360) % 360;
+}
+
+function smallestAngleDiff(a, b) {
+  let diff = Math.abs(a - b) % 360;
+  return diff > 180 ? 360 - diff : diff;
+}
+
+function setMapBearingSmooth(newBearing) {
+  const normalized = normalizeBearing(newBearing);
+
+  if (smallestAngleDiff(normalized, lastBearing) < MIN_BEARING_DELTA) {
+    return;
+  }
+
+  map.setBearing(normalized);
+  lastBearing = normalized;
+}
+
+function resetRotation() {
+  map.setBearing(0);
+  lastBearing = 0;
+}
+
+// Calcula rumbo entre dos coordenadas GPS
+function computeBearing(lat1, lon1, lat2, lon2) {
+  const toRad = (d) => d * Math.PI / 180;
+  const toDeg = (r) => r * 180 / Math.PI;
+
+  const φ1 = toRad(lat1);
+  const φ2 = toRad(lat2);
+  const λ1 = toRad(lon1);
+  const λ2 = toRad(lon2);
+
+  const y = Math.sin(λ2 - λ1) * Math.cos(φ2);
+  const x =
+    Math.cos(φ1) * Math.sin(φ2) -
+    Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1);
+
+  return normalizeBearing(toDeg(Math.atan2(y, x)));
+}
+
+// En iPhone/iPad puede requerirse permiso explícito desde un click del usuario
+async function requestOrientationPermissionIfNeeded() {
+  if (
+    typeof DeviceOrientationEvent !== "undefined" &&
+    typeof DeviceOrientationEvent.requestPermission === "function"
+  ) {
+    const result = await DeviceOrientationEvent.requestPermission();
+    return result === "granted";
+  }
+  return true;
+}
+
+// --- Botón brújula ---
+const btnCompass = document.getElementById("btn-compass");
+
+btnCompass.addEventListener("click", async () => {
+  try {
+    const granted = await requestOrientationPermissionIfNeeded();
+    if (!granted) {
+      alert("No se concedió permiso para orientación del dispositivo.");
+      return;
+    }
+
+    followHeading = !followHeading;
+    btnCompass.classList.toggle("active", followHeading);
+    btnCompass.textContent = followHeading ? "🧭 Dirección activada" : "🧭 Seguir dirección";
+
+    if (!followHeading) {
+      resetRotation();
+    }
+  } catch (err) {
+    console.error("Error al solicitar permisos:", err);
+  }
+});
+
+// --- Opción A: usar orientación del dispositivo ---
+// alpha representa la rotación alrededor del eje Z. En varios navegadores sirve
+// como base para heading, aunque puede variar según dispositivo/navegador.
+window.addEventListener("deviceorientation", (event) => {
+  if (!followHeading) return;
+
+  const alpha = event.alpha;
+  if (alpha == null) return;
+
+  // Ajuste simple: usar alpha invertida para que el frente del dispositivo quede "arriba"
+  const heading = normalizeBearing(360 - alpha);
+  setMapBearingSmooth(heading);
+});
+
+// --- Opción B: respaldo con GPS ---
+// Si la brújula falla o es inestable, esta parte rota usando el movimiento real.
+function startLocationTracking() {
+  if (!("geolocation" in navigator)) {
+    console.warn("Geolocalización no disponible en este navegador.");
+    return;
+  }
+
+  watchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      const { latitude, longitude, speed } = pos.coords;
+      const latlng = [latitude, longitude];
+
+      // Centrar mapa en usuario
+      map.setView(latlng, Math.max(map.getZoom(), 16));
+
+      // Si el usuario está quieto, no rotamos por GPS
+      if ((speed || 0) < MIN_SPEED_TO_ROTATE) {
+        lastPosition = { latitude, longitude };
+        return;
+      }
+
+      if (followHeading && lastPosition) {
+        const gpsBearing = computeBearing(
+          lastPosition.latitude,
+          lastPosition.longitude,
+          latitude,
+          longitude
+        );
+        setMapBearingSmooth(gpsBearing);
+      }
+
+      lastPosition = { latitude, longitude };
+    },
+    (err) => {
+      console.error("Error de geolocalización:", err);
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 1000,
+      timeout: 10000
+    }
+  );
+}
+
+startLocationTracking();
+
+// --- UX: si el usuario mueve el mapa manualmente, salir del modo seguimiento ---
+map.on("dragstart zoomstart", () => {
+  if (!followHeading) return;
+
+  followHeading = false;
+  btnCompass.classList.remove("active");
+  btnCompass.textContent = "🧭 Seguir dirección";
+  resetRotation();
+});
+
+// --- opcional: reset rápido al hacer doble click sobre el botón ---
+btnCompass.addEventListener("dblclick", () => {
+  resetRotation();
+});
+
+
+
+
+
+
+
+
+
 
 // Ocultar zoom en mobile
 if (window.innerWidth <= 1024) {
@@ -350,6 +530,15 @@ const chatSend = document.getElementById("chat-send");
 const chatInput = document.getElementById("chat-input");
 const chatResult = document.getElementById("chat-result");
 const transportOptions = document.getElementById("transport-type");
+const clearBtn = document.getElementById("clear-input");
+
+
+// limpiar al hacer click
+clearBtn.addEventListener("click", () => {
+  input.value = "";
+  input.focus();
+  clearBtn.style.display = "none";
+});
 
 
 function showAlert(message) {
@@ -447,7 +636,7 @@ chatSend.addEventListener("click", async () => {
                     }
                 });
 
-                trip_options += createAccordionItem(option,`Option ${option}: ${formatDuration(itinerary.duration)}`,trip_description)
+                trip_options += createAccordionItem(option,`${option}: ${formatDuration(itinerary.duration)}`,trip_description)
                 trip_description = ''
                 option += 1
             });
@@ -524,6 +713,7 @@ async function onPlaceSelected(map, place) {
 
 chatInput.addEventListener("input", () => {
     if (!chatInput.disabled && !chatSend.disabled) {
+        clearBtn.style.display = input.value ? "block" : "none";
         const query = chatInput.value
 
         if (query.length < 3) {
