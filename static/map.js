@@ -52,6 +52,10 @@ function showToast(message, duration = 3000) {
     }, duration);
 }
 
+function clearRoutes() {
+    routesLayer.clearLayers();
+}
+
 function getRouteInfo(routeType) {
     const map = {
         WALK: {
@@ -185,47 +189,9 @@ function markRouteStops(map, originLat, originLon, destLat, destLon, originColor
 }
 
 
-function drawShapeRoute(map, coords, options = {}, defaultColor = "#000000") {
-
-    const {
-        color = defaultColor,
-        weight = 5,
-        opacity = 0.9
-    } = options;
-
-    return L.polyline(coords, {
-        color: color,
-        weight: weight,
-        opacity: opacity,
-        lineCap: "round",
-        lineJoin: "round"
-    }).addTo(routesLayer);
-}
 
 
-function drawStopsRoute(map, coords, options = {}, defaultColor = "#000000") {
 
-    const {
-        color = defaultColor,
-        radius = 5,
-        fillOpacity = 0.9
-    } = options;
-
-    let markers = [];
-
-    coords.forEach(([lat, lon]) => {
-        const marker = L.circleMarker([lat, lon], {
-            radius: radius,
-            color: color,
-            fillColor: color,
-            fillOpacity: fillOpacity
-        }).addTo(routesLayer);
-
-        markers.push(marker);
-    });
-
-    return markers;
-}
 
 function drawLine(map, coordinates, defaultColor = "#3388ff") {
     if (!coordinates || coordinates.length < 2) return;
@@ -242,9 +208,7 @@ function drawLine(map, coordinates, defaultColor = "#3388ff") {
     map.fitBounds(polyline.getBounds());
 }
 
-function clearRoutes() {
-    routesLayer.clearLayers();
-}
+
 
 
 function markDest(destLat, destLon) {
@@ -472,13 +436,21 @@ chatSend.addEventListener("click", async () => {
             document.getElementById("chat-result").innerHTML = trip_options
             document.querySelectorAll(".accordion-collapse").forEach((el) => {
                 el.addEventListener("shown.bs.collapse", (event) => {
-                    console.log(globalItineraries);
-                    console.log(event.target.id);
-                    console.log(globalItineraries[event.target.id]);
+                    clearRoutes()
                     const id = event.target.id; // collapse0, collapse1, etc
                     const itinerary = globalItineraries[id]
                     itinerary.legs.forEach(leg => {
                         styles = getRouteInfo(leg.mode)
+                        markRouteStops(map, 
+                            originLat=leg.from.lat, 
+                            originLon=leg.from.lon, 
+                            destLat=leg.to.lat, 
+                            destLon=leg.to.lon, 
+                            originColor = styles["color"], 
+                            destColor = styles["color"],
+                            labelorigin=leg.from.name,
+                            labeldest=leg.to.name
+                        )
                         if (leg.mode == "WALK"){
                             drawWalkingRoute(leg,styles["color"])
                         } else {
