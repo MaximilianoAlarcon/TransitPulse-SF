@@ -134,7 +134,8 @@ function createAccordionItem(index, title, body) {
       </h2>
       <div
         id="collapse${index}"
-        class="accordion-collapse collapse "
+        class="accordion-collapse collapse"
+        data-bs-parent="#tripAccordion"
       >
         <div class="accordion-body">
           ${body}
