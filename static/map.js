@@ -399,16 +399,15 @@ chatSend.addEventListener("click", async () => {
             document.getElementById("chat-result").innerText = errData.error || "Unknown error";
             return;
         }
-
-        lat = response["dest_coords"][1]
-        lon = response["dest_coords"][0]
-
         let data = await response.json();
+
         if ("error" in data){
             document.getElementById("chat-result").innerHTML = `
             <p>Error: <b>${data.error}</b></p>
             `;
         } else if (data["status"] == "Found") {
+            lat = data["dest_coords"][1]
+            lon = data["dest_coords"][0]
             option = 1
             text_result = ''
             data["itineraries"].forEach(itinerary => {
