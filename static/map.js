@@ -24,6 +24,7 @@ let originMarker = null
 let destMarker = null
 let selectedPlace = null
 const suggestionsBox = document.getElementById("suggestions")
+let globalItineraries = {}
 
 let timeout = null
 
@@ -432,10 +433,12 @@ chatSend.addEventListener("click", async () => {
             lat = data["dest_coords"][1]
             lon = data["dest_coords"][0]
             option = 1
-            trip_options = ''
+            trip_options = `<p>Destination: ${data["dest_name"]}</p>`
             trip_options += '<div class="accordion" id="tripAccordion">'
             trip_description = ''
+            globalItineraries = {}
             data["itineraries"].forEach(itinerary => {
+                globalItineraries["collapse"+str(option)] = itinerary
                 trip_description += `
                     <p><b>Option ${option}</b></p>
                     <p>Duration: ${formatDuration(itinerary.duration)}</p>
@@ -449,17 +452,14 @@ chatSend.addEventListener("click", async () => {
                         trip_description += `
                             <p>Walk from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                         `
-                        drawWalkingRoute(leg,styles["color"])
                     } else if (leg.mode == "CAR"){
                         trip_description += `
                             <p>Drive from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                         ` 
-                        drawLegGeometry(map, leg, options={"color":styles["color"]});
                     } else {
                         trip_description += `
                             <p>Take <b>${leg.route.longName} : ${leg.route.shortName}</b> from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                         `
-                        drawLegGeometry(map, leg, options={"color":styles["color"]});
                     }
                 });
 
@@ -564,3 +564,19 @@ document.addEventListener("click", (e) => {
         suggestionsBox.innerHTML = ""
     }
 })
+
+
+document.querySelectorAll(".accordion-collapse").forEach((el) => {
+  el.addEventListener("shown.bs.collapse", (event) => {
+    const id = event.target.id; // collapse0, collapse1, etc
+    const itinerary = globalItineraries[id]
+    itinerary.legs.forEach(leg => {
+        styles = getRouteInfo(leg.mode)
+        if (leg.mode == "WALK"){
+            drawWalkingRoute(leg,styles["color"])
+        } else {
+            drawLegGeometry(map, leg, options={"color":styles["color"]});
+        }
+    });
+  });
+});

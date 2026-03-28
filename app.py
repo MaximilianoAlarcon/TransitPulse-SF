@@ -143,6 +143,7 @@ def direct_trip():
     except ValueError:
         lat, lon = None, None
 
+    dest_name = None
     if lat is None or lon is None:
         if not address:
             return jsonify({"error": "No address received"}), 400
@@ -154,6 +155,7 @@ def direct_trip():
             return jsonify({"error": error_dict["error"]}), status_code
         lat = search_coords["lat"]
         lon = search_coords["lon"]
+        dest_name = search_coords["name"]
 
     origin_coords = my_location
     dest_coords = (lon,lat)
@@ -177,7 +179,8 @@ def direct_trip():
             "status": "Found",
             "itineraries": search["data"]["plan"]["itineraries"],
             "origin_coords":origin_coords,
-            "dest_coords":dest_coords
+            "dest_coords":dest_coords,
+            "dest_name":dest_name
         }))
     else:
         return {
