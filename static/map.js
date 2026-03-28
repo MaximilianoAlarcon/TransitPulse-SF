@@ -456,29 +456,30 @@ function markDest(destLat, destLon) {
 
 }
 
+function markFalsePosition(){
+    if (navigator.geolocation) {
 
-if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
 
-    navigator.geolocation.getCurrentPosition(function(position) {
+            //const lat = position.coords.latitude;
+            //const lon = position.coords.longitude;
+            const lat = 37.7803603;
+            const lon = -122.4120372;
 
-        //const lat = position.coords.latitude;
-        //const lon = position.coords.longitude;
-        const lat = 37.7803603;
-        const lon = -122.4120372;
+            map.setView([lat, lon], 15);
 
-        map.setView([lat, lon], 15);
+            window.userMarker = L.circleMarker([lat, lon], {
+                radius: 8,
+                color: "#136aec",
+                fillColor: "#2a93ee",
+                fillOpacity: 0.9
+            }).addTo(map).bindPopup("You");
 
-        window.userMarker = L.circleMarker([lat, lon], {
-            radius: 8,
-            color: "#136aec",
-            fillColor: "#2a93ee",
-            fillOpacity: 0.9
-        }).addTo(map).bindPopup("You");
+            //loadStopsInView();
 
-        //loadStopsInView();
+        });
 
-    });
-
+    }
 }
 
 
@@ -729,11 +730,11 @@ chatSend.addEventListener("click", async () => {
         console.error(error);
     }
     selectedPlace = null;
-    document.getElementById("chat-input").value = "";
     chatSend.disabled = false;
     chatInput.disabled = false;
     transportOptions.disabled = false;
     suggestionsBox.style.display = "block";
+    markFalsePosition();
 });
 
 // Enter key
