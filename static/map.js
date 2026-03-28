@@ -397,14 +397,13 @@ chatSend.addEventListener("click", async () => {
             lat = data["dest_coords"][1]
             lon = data["dest_coords"][0]
             option = 1
-            trip_options = `<p>Destination: ${data["dest_name"]}</p>`
+            trip_options = `<center><p>Destination: ${data["dest_name"]}</p></center>`
             trip_options += '<div class="accordion" id="tripAccordion">'
             trip_description = ''
             globalItineraries = {}
             data["itineraries"].forEach(itinerary => {
                 globalItineraries["collapse"+String(option)] = itinerary
                 trip_description += `
-                    <p><b>Option ${option}</b></p>
                     <p>Duration: ${formatDuration(itinerary.duration)}</p>
                     <p>Start time: ${otpMsToSfHour(itinerary.startTime)}</p>
                     <p>End time: ${otpMsToSfHour(itinerary.endTime)}</p>
@@ -459,7 +458,9 @@ chatSend.addEventListener("click", async () => {
                     });
                 });
             });
-        } 
+        } else if (data["status"] == "Not found"){
+            document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`
+        }
         
     } catch (error) {
         document.getElementById("chat-result").innerText = "Internal Error";
