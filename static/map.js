@@ -41,22 +41,7 @@ function formatDuration(seconds) {
     return `${minutes} min`
 }
 
-function showAlert(message) {
-    const container = document.getElementById("alert-container");
 
-    const alert = document.createElement("div");
-    alert.className = "alert alert-danger shadow text-center d-inline-block fade show mb-0";
-    alert.setAttribute("role", "alert");
-    alert.textContent = message;
-
-    container.innerHTML = "";
-    container.appendChild(alert);
-
-    setTimeout(() => {
-        alert.classList.remove("show");
-        setTimeout(() => alert.remove(), 200);
-    }, 3000);
-}
 
 function clearRoutes() {
     routesLayer.clearLayers();
@@ -365,19 +350,41 @@ const chatInput = document.getElementById("chat-input");
 const chatResult = document.getElementById("chat-result");
 const transportOptions = document.getElementById("transport-type");
 
+
+function showAlert(message) {
+    const container = document.getElementById("alert-container");
+
+    const alert = document.createElement("div");
+    alert.className = "alert alert-danger shadow text-center d-inline-block fade show mb-0";
+    alert.setAttribute("role", "alert");
+    alert.textContent = message;
+
+    container.innerHTML = "";
+    container.appendChild(alert);
+
+    setTimeout(() => {
+        alert.classList.remove("show");
+        setTimeout(() => alert.remove(), 200);
+    }, 3000);
+
+}
+
 chatSend.addEventListener("click", async () => {
+
+    let address = document.getElementById("chat-input").value.trim();
+    if (!address) return showAlert("Enter your destination");
+    let transport_type = document.getElementById("transport-type").value
+    if (!transport_type) {
+        transportOptions.value = "public-transport";
+        transport_type = "public-transport"
+    }
+
     chatSend.disabled = true;
     chatInput.disabled = true;
     transportOptions.disabled = true;
     suggestionsBox.style.display = "none";
     suggestionsBox.innerHTML = ""
-    let address = document.getElementById("chat-input").value.trim();
-    let transport_type = document.getElementById("transport-type").value
-    if (!address) return showAlert("Enter your destination");
-    if (!transport_type) {
-        transportOptions.value = "public-transport";
-        transport_type = "public-transport"
-    }
+
     clearRoutes()
     lat = null
     lon = null
