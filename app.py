@@ -180,6 +180,11 @@ def direct_trip():
             "dest_coords":dest_coords,
             "dest_name":dest_name
         }))
+    elif transport_type.lower() == "walk":
+        return {
+            "status": "Not found",
+            "reason":"This route is not suitable for walking, please select another transport type"
+        }
     else:
         return {
             "status": "Not found",
