@@ -470,6 +470,23 @@ chatSend.addEventListener("click", async () => {
             trip_options += '</div>'
             markDest(lat,lon)
             document.getElementById("chat-result").innerHTML = trip_options
+            document.querySelectorAll(".accordion-collapse").forEach((el) => {
+                el.addEventListener("shown.bs.collapse", (event) => {
+                    console.log(globalItineraries);
+                    console.log(event.target.id);
+                    console.log(globalItineraries[event.target.id]);
+                    const id = event.target.id; // collapse0, collapse1, etc
+                    const itinerary = globalItineraries[id]
+                    itinerary.legs.forEach(leg => {
+                        styles = getRouteInfo(leg.mode)
+                        if (leg.mode == "WALK"){
+                            drawWalkingRoute(leg,styles["color"])
+                        } else {
+                            drawLegGeometry(map, leg, options={"color":styles["color"]});
+                        }
+                    });
+                });
+            });
         } 
         
     } catch (error) {
@@ -566,20 +583,3 @@ document.addEventListener("click", (e) => {
 })
 
 
-document.querySelectorAll(".accordion-collapse").forEach((el) => {
-  el.addEventListener("shown.bs.collapse", (event) => {
-    console.log(globalItineraries);
-    console.log(event.target.id);
-    console.log(globalItineraries[event.target.id]);
-    const id = event.target.id; // collapse0, collapse1, etc
-    const itinerary = globalItineraries[id]
-    itinerary.legs.forEach(leg => {
-        styles = getRouteInfo(leg.mode)
-        if (leg.mode == "WALK"){
-            drawWalkingRoute(leg,styles["color"])
-        } else {
-            drawLegGeometry(map, leg, options={"color":styles["color"]});
-        }
-    });
-  });
-});
