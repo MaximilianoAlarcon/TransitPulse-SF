@@ -506,7 +506,9 @@ handle.addEventListener("mousedown", (e) => {
 
 handle.addEventListener("touchstart", (e) => {
     isDragging = true;
-    dragOffsetY = touch.clientY - sidebarRect.top;
+    const touch = e.touches[0];
+    const handleRect = handle.getBoundingClientRect();
+    dragOffsetY = touch.clientY - handleRect.top; // offset dentro del handle
     e.preventDefault();
     document.body.style.overflow = "hidden";
 }, { passive: false });
@@ -539,7 +541,8 @@ function dragHandler(e) {
 
     if (isMobile) {
         // corregir el desfase inicial del dedo dentro del handle
-        const topOfSidebar = clientY - dragOffsetY;
+        const topOfHandle = clientY - dragOffsetY;
+        const topOfSidebar = topOfHandle; // ya que el handle está pegado al top del sidebar
         const newSidebarHeight = window.innerHeight - topOfSidebar;
 
         sidebar.style.height = Math.max(100, newSidebarHeight) + "px";
