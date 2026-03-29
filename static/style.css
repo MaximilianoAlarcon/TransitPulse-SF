@@ -83,26 +83,20 @@ html, body {
     cursor: ns-resize;
     position: relative;
     z-index: 2100;
-    order: -1; /* siempre primero dentro del flex del sidebar */
 }
 
 /* Mobile adjustments */
 @media (max-width: 1024px) {
+    #split-container {
+        flex-direction: column;
+    }
+
     #sidebar {
         width: 100%;
         height: 40vh;
-        order: 2;
+        order: 3;
         position: relative;
         padding-top: 0;
-    }
-
-    #map-container {
-        height: 60vh;
-        order: 1;
-    }
-
-    #map {
-        height: 100%;
     }
 
     #drag-handle {
@@ -110,12 +104,23 @@ html, body {
         width: 100%;
         height: 25px;
         min-height: 25px;
+        order: 2;
         position: relative;
         z-index: 2001;
+        flex-shrink: 0;
+    }
+
+    #map-container {
+        height: calc(60vh - 25px);
+        order: 1;
+    }
+
+    #map {
+        height: 100%;
     }
 
     #search-container {
-        position: relative;
+        position: sticky;
         top: 0;
         z-index: 2000;
         background: white;
