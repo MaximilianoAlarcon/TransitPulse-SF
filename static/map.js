@@ -702,7 +702,7 @@ chatSend.addEventListener("click", async () => {
                     }
                 });
 
-                trip_options += createAccordionItem(option,`${option}: ${formatDuration(itinerary.duration)}`,trip_description)
+                trip_options += createAccordionItem(option,`${option}# ${formatDuration(itinerary.duration)}`,trip_description)
                 trip_description = ''
                 option += 1
             });

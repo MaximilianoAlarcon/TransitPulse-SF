@@ -62,6 +62,7 @@ html, body {
     display: flex;
     flex-direction: column;
     position: relative;
+    padding-top: 12px;
 }
 
 #sidebar-content {
@@ -78,6 +79,7 @@ html, body {
     display: none;
     touch-action: none;
     cursor: ns-resize;
+    position: absolute;
 }
 
 /* Mobile adjustments */
