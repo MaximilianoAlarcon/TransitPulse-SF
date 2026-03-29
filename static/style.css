@@ -81,7 +81,7 @@ html, body {
     flex-shrink: 0;
     touch-action: none;
     cursor: ns-resize;
-    position: static;
+    position: relative;
 }
 
 /* Mobile adjustments */
@@ -91,7 +91,7 @@ html, body {
         height: 40vh;
         order: 2;
         position: relative;
-        padding-top: 0; /* espacio para el handle */
+        padding-top: 0;
     }
 
     #map-container {
@@ -105,6 +105,18 @@ html, body {
 
     #drag-handle {
         display: block !important;
+        width: 100%;
+        height: 25px;
+        min-height: 25px;
+        position: relative;
+        z-index: 2001;
+    }
+
+    #search-container {
+        position: sticky;
+        top: 25px;
+        z-index: 2000;
+        background: white;
     }
 }
 
