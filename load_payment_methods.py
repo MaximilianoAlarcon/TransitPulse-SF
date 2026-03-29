@@ -1,6 +1,7 @@
 import os
+from pathlib import Path
+
 import psycopg2
-import pandas as pd
 
 DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
@@ -10,57 +11,44 @@ DB_CONFIG = {
     "password": os.getenv("DB_PASSWORD"),
 }
 
-CSV_PATH = "data/route_payment_methods.csv"
-
-
-def select(cur, query):
-    # Ejecutar la consulta
-    cur.execute(query)
-    rows = cur.fetchall()
-    
-    if not rows:
-        print("No hay resultados")
-        return
-
-    # Obtener nombres de columnas
-    col_names = [desc[0] for desc in cur.description]
-
-    # Calcular ancho máximo de cada columna (para alinear)
-    col_widths = []
-    for i, col in enumerate(col_names):
-        max_len = max(len(str(row[i])) for row in rows)
-        col_widths.append(max(max_len, len(col)))
-
-    # Construir la línea de encabezados
-    header = " | ".join(col.ljust(col_widths[i]) for i, col in enumerate(col_names))
-    separator = "-+-".join("-" * col_widths[i] for i in range(len(col_names)))
-
-    # Construir las filas
-    data_lines = []
-    for row in rows:
-        line = " | ".join(str(item).ljust(col_widths[i]) for i, item in enumerate(row))
-        data_lines.append(line)
-
-    # Combinar todo en un solo texto
-    output = "\n".join([header, separator] + data_lines)
-    print(output)
-
-pd.set_option('display.max_columns', None)  # mostrar todas las columnas
-pd.set_option('display.width', 200)         # ancho de la tabla en consola
-pd.set_option('display.max_rows', 50)      # mostrar hasta 50 filas
-
+CSV_PATH = Path("data/route_payment_methods.csv")
 
 
 def get_connection():
     return psycopg2.connect(**DB_CONFIG)
 
 
-def create_table(cur):
-    cur.execute("""
+def print_query_results(cur, query: str):
+    cur.execute(query)
+    rows = cur.fetchall()
 
+    if not rows:
+        print("No hay resultados")
+        return
+
+    col_names = [desc[0] for desc in cur.description]
+    col_widths = []
+
+    for i, col in enumerate(col_names):
+        max_len = max(len(str(row[i])) for row in rows)
+        col_widths.append(max(max_len, len(col)))
+
+    header = " | ".join(col.ljust(col_widths[i]) for i, col in enumerate(col_names))
+    separator = "-+-".join("-" * col_widths[i] for i in range(len(col_names)))
+
+    data_lines = []
+    for row in rows:
+        line = " | ".join(str(item).ljust(col_widths[i]) for i, item in enumerate(row))
+        data_lines.append(line)
+
+    print("\n".join([header, separator] + data_lines))
+
+
+def recreate_table(cur):
+    cur.execute("""
         DROP TABLE IF EXISTS route_payment_methods;
 
-        CREATE TABLE IF NOT EXISTS route_payment_methods (
+        CREATE TABLE route_payment_methods (
             agency_id TEXT,
             operator_id TEXT,
             route_short_name TEXT,
@@ -82,12 +70,8 @@ def create_table(cur):
     """)
 
 
-def truncate_table(cur):
-    cur.execute("TRUNCATE TABLE route_payment_methods;")
-
-
-def load_csv_with_copy(cur, csv_path: str):
-    with open(csv_path, "r", encoding="utf-8-sig") as f:
+def load_csv_with_copy(cur, csv_path: Path):
+    with csv_path.open("r", encoding="utf-8-sig") as f:
         cur.copy_expert(
             """
             COPY route_payment_methods (
@@ -119,7 +103,13 @@ def load_csv_with_copy(cur, csv_path: str):
         )
 
 
-def load_route_payment_methods_to_postgres(csv_path: str, replace_data: bool = True):
+def load_route_payment_methods_to_postgres(csv_path: Path):
+    if not csv_path.exists():
+        return {
+            "success": False,
+            "error": f"CSV no encontrado: {csv_path}"
+        }
+
     conn = None
 
     try:
@@ -127,21 +117,21 @@ def load_route_payment_methods_to_postgres(csv_path: str, replace_data: bool = T
         conn.autocommit = False
 
         with conn.cursor() as cur:
-            create_table(cur)
-
-            if replace_data:
-                truncate_table(cur)
-
+            recreate_table(cur)
             load_csv_with_copy(cur, csv_path)
 
-        conn.commit()
+            cur.execute("SELECT COUNT(*) FROM route_payment_methods;")
+            inserted_rows = cur.fetchone()[0]
 
-        select(cur, "SELECT * FROM route_payment_methods LIMIT 5")
+            print_query_results(cur, "SELECT * FROM route_payment_methods LIMIT 5;")
+
+        conn.commit()
 
         return {
             "success": True,
             "message": "CSV loaded successfully into route_payment_methods",
-            "csv_path": csv_path
+            "csv_path": str(csv_path),
+            "inserted_rows": inserted_rows,
         }
 
     except Exception as e:
@@ -149,7 +139,7 @@ def load_route_payment_methods_to_postgres(csv_path: str, replace_data: bool = T
             conn.rollback()
         return {
             "success": False,
-            "error": str(e)
+            "error": str(e),
         }
 
     finally:
@@ -158,6 +148,6 @@ def load_route_payment_methods_to_postgres(csv_path: str, replace_data: bool = T
 
 
 def run():
-    result = load_route_payment_methods_to_postgres(CSV_PATH, replace_data=True)
-    status_code = 200 if result["success"] else 500
+    result = load_route_payment_methods_to_postgres(CSV_PATH)
     print("Result:", result)
+    return result
