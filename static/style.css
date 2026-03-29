@@ -76,6 +76,8 @@ html, body {
     cursor: ns-resize;
     flex-shrink: 0;
     display: none;
+    touch-action: none;
+    cursor: ns-resize;
 }
 
 /* Mobile adjustments */

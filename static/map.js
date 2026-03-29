@@ -27,6 +27,12 @@ function showAlert(message, type = "danger") {
     }, 3000);
 }
 
+function focusMap(lat, lon, zoom = 16) {
+  map.setView([lat, lon], zoom, {
+    animate: true
+  });
+}
+
 // Rotacion de mapa
 
 let followHeading = false;
@@ -489,17 +495,34 @@ const mapContainer = document.getElementById("map");
 const handle = document.getElementById("drag-handle");
 
 let isDragging = false;
-handle.addEventListener("mousedown", () => isDragging = true);
-handle.addEventListener("touchstart", () => isDragging = true);
 
-document.addEventListener("mouseup", () => isDragging = false);
-document.addEventListener("touchend", () => isDragging = false);
+handle.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    e.preventDefault();
+});
+
+handle.addEventListener("touchstart", (e) => {
+    isDragging = true;
+    e.preventDefault();
+    document.body.style.overflow = "hidden";
+}, { passive: false });
+
+document.addEventListener("mouseup", () => {
+    isDragging = false;
+    document.body.style.overflow = "";
+});
+
+document.addEventListener("touchend", () => {
+    isDragging = false;
+    document.body.style.overflow = "";
+});
 
 document.addEventListener("mousemove", dragHandler);
-document.addEventListener("touchmove", dragHandler);
+document.addEventListener("touchmove", dragHandler, { passive: false });
 
 function dragHandler(e) {
     if (!isDragging) return;
+
     e.preventDefault();
 
     const isMobile = window.innerWidth <= 1024;
@@ -507,12 +530,10 @@ function dragHandler(e) {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
 
     if (isMobile) {
-        // Vertical split
         const newSidebarHeight = window.innerHeight - clientY;
         sidebar.style.height = Math.max(100, newSidebarHeight) + "px";
         mapContainer.style.height = window.innerHeight - sidebar.offsetHeight + "px";
     } else {
-        // Horizontal split
         const newSidebarWidth = clientX;
         sidebar.style.width = Math.max(200, Math.min(400, newSidebarWidth)) + "px";
     }
@@ -720,6 +741,8 @@ chatSend.addEventListener("click", async () => {
             if (first) {
                 new bootstrap.Collapse(first, { toggle: true });
             }
+
+            focusMap(data["origin_coords"][1],data["origin_coords"][0])
 
         } else if (data["status"] == "Not found"){
             document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`
