@@ -10,6 +10,18 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution:'© OpenStreetMap'
 }).addTo(map);
 
+
+async function getPaymentMethods() {
+  const res = await fetch("/payment-methods");
+  const data = await res.json();
+
+  console.log(data);
+
+  return data;
+}
+
+let paymentMethodsCache = getPaymentMethods();
+
 function showAlert(message, type = "danger") {
     const container = document.getElementById("alert-container");
 
@@ -721,8 +733,15 @@ chatSend.addEventListener("click", async () => {
                             <p>Drive from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                         ` 
                     } else {
+                        const match = paymentMethods.find(p =>
+                        p.agency_id === leg.agency.gtfsId &&
+                        p.route_type === leg.route.gtfsId
+                        );
+
+                        console.log(match?.fare_media_name);
                         trip_description += `
                             <p>Take <b>${leg.route.longName} : ${leg.route.shortName}</b> from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
+                            <p>Payment method: <b>${match?.fare_media_name || "Unknown"}</b></p>
                         `
                     }
                 });

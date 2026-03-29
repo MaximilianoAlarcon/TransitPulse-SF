@@ -100,6 +100,7 @@ def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: 
             to { name lat lon }
             route { gtfsId shortName longName textColor }
             legGeometry { points }
+            agency { gtfsId name }
           }
         }
       }
@@ -175,6 +176,7 @@ def direct_trip():
 
     search,search_status = otp_plan(OTP_URL,origin_coords[1],origin_coords[0],dest_coords[1],dest_coords[0],date_now,hour_now,arrive_by=False,transport_modes=transport_modes)
     if search_status == 200 and "data" in search and search["data"]["plan"]["itineraries"]:
+        print(search)
         return jsonify(sanitize({
             "status": "Found",
             "itineraries": search["data"]["plan"]["itineraries"],
@@ -252,6 +254,43 @@ def place_details():
         "lon": result["geometry"]["location"]["lng"],
         "type": result.get("types", ["unknown"])[0]
     })
+
+
+
+@app.route("/payment-methods", methods=["GET"])
+def get_payment_methods():
+    conn = None
+
+    try:
+        conn = get_connection()
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    agency_id, 
+                    route_type, 
+                    payment_method_code, 
+                    fare_media_name 
+                FROM route_payment_methods
+            """)
+
+            rows = cur.fetchall()
+
+            columns = [desc[0] for desc in cur.description]
+
+            results = [
+                dict(zip(columns, row))
+                for row in rows
+            ]
+
+        return jsonify(results), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        if conn:
+            conn.close()
 
 
 
