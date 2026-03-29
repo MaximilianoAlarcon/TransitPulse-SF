@@ -82,6 +82,8 @@ html, body {
     touch-action: none;
     cursor: ns-resize;
     position: relative;
+    z-index: 2100;
+    order: -1; /* siempre primero dentro del flex del sidebar */
 }
 
 /* Mobile adjustments */
@@ -113,8 +115,8 @@ html, body {
     }
 
     #search-container {
-        position: sticky;
-        top: 25px;
+        position: relative;
+        top: 0;
         z-index: 2000;
         background: white;
     }
