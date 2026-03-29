@@ -11,16 +11,31 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 
-async function getPaymentMethods() {
-  const res = await fetch("/payment-methods");
-  const data = await res.json();
+let paymentMethodsCache = [];
+
+function getPaymentMethods() {
+  const res = fetch("/payment-methods");
+  const data = res.json();
 
   console.log(data);
 
   return data;
 }
 
-let paymentMethodsCache = getPaymentMethods();
+paymentMethodsCache = await getPaymentMethods();
+
+
+mobile_app_url = {
+    "clipper": {
+        "android": "https://play.google.com/store/apps/details?id=com.clippercard.mobile.clipper",
+        "ios": "https://apps.apple.com/us/app/clipper-card/id1534042451"
+    },
+    "munimobile": {
+        "android": "https://play.google.com/store/apps/details?id=de.hafas.android.sfmta",
+        "ios": "https://apps.apple.com/us/app/munimobile/id6466818495"
+    }
+}
+
 
 function showAlert(message, type = "danger") {
     const container = document.getElementById("alert-container");
@@ -738,10 +753,41 @@ chatSend.addEventListener("click", async () => {
                         p.route_type === leg.route.gtfsId
                         );
 
+                        payment_methods = []
+                        if (match?.fare_media_name?.includes("cash")) {
+                            payment_methods.push("Cash")
+                        }
+                        if (match?.fare_media_name?.includes("contactless")) {
+                            payment_methods.push("Credit/Debit Card")
+                        }
+                        if (match?.fare_media_name?.includes("clipper")) {
+                            payment_methods.push(`
+                                <span class="payment-method">
+                                Clipper 
+                                <a href="${mobile_app_url["clipper"]["android"]}" target="_blank" rel="noopener noreferrer" aria-label="Clipper Android"> <i class="fa-brands fa-google-play"></i></a>
+                                <a href="${mobile_app_url["clipper"]["ios"]}" target="_blank" rel="noopener noreferrer" aria-label="Clipper iOS"><i class="fa-brands fa-apple"></i></a>
+                                </span>
+                                `)
+                        }
+                        if (match?.fare_media_name?.includes("munimobile")) {
+                            payment_methods.push(`
+                                <span class="payment-method">
+                                MuniMobile 
+                                <a href="${mobile_app_url["munimobile"]["android"]}" target="_blank" rel="noopener noreferrer" aria-label="MuniMobile Android"> <i class="fa-brands fa-google-play"></i></a>
+                                <a href="${mobile_app_url["munimobile"]["ios"]}" target="_blank" rel="noopener noreferrer" aria-label="MuniMobile iOS"><i class="fa-brands fa-apple"></i></a>
+                                </span>
+                                `)
+                        }
+                        if (match?.fare_media_name?.includes("online")) {
+                            payment_methods.push("Online Payment (Transport website)")
+                        }
+
                         console.log(match?.fare_media_name);
                         trip_description += `
                             <p>Take <b>${leg.route.longName} : ${leg.route.shortName}</b> from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
-                            <p>Payment method: <b>${match?.fare_media_name || "Unknown"}</b></p>
+                            <p>${match?.payment_method_code == "1" ? "The ticket is paid for <b>before</b> boarding the transport." : "The ticket is paid <b>on</b> boarding the transport."}</p>
+                            <p>Payment method:</p>
+                            <p>${payment_methods.join(" / ")}</p>
                         `
                     }
                 });
