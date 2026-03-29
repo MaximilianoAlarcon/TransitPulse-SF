@@ -491,7 +491,7 @@ function markFalsePosition(){
 
 // --- Sidebar drag handle ---
 const sidebar = document.getElementById("sidebar");
-const mapContainer = document.getElementById("map");
+const mapContainer = document.getElementById("map-container");
 const handle = document.getElementById("drag-handle");
 
 let isDragging = false;
@@ -500,6 +500,7 @@ let dragOffsetX = 0;
 
 handle.addEventListener("mousedown", (e) => {
     isDragging = true;
+    const sidebarRect = sidebar.getBoundingClientRect();
     dragOffsetX = e.clientX - sidebarRect.left;
     e.preventDefault();
 });
@@ -508,7 +509,8 @@ handle.addEventListener("touchstart", (e) => {
     isDragging = true;
     const touch = e.touches[0];
     const handleRect = handle.getBoundingClientRect();
-    dragOffsetY = touch.clientY - handleRect.top; // offset dentro del handle
+    // Offset del dedo DENTRO del handle (normalmente ~0-25px)
+    dragOffsetY = touch.clientY - handleRect.top;
     e.preventDefault();
     document.body.style.overflow = "hidden";
 }, { passive: false });
@@ -540,15 +542,18 @@ function dragHandler(e) {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
 
     if (isMobile) {
-        // corregir el desfase inicial del dedo dentro del handle
-        const topOfHandle = clientY - dragOffsetY;
-        const topOfSidebar = topOfHandle; // ya que el handle está pegado al top del sidebar
-        const newSidebarHeight = window.innerHeight - topOfSidebar;
+        // El top del handle es donde está el dedo menos el offset interno
+        const handleTop = clientY - dragOffsetY;
+        const handleH = handle.offsetHeight;
+        // La altura del sidebar empieza DESPUÉS del handle
+        const newSidebarHeight = window.innerHeight - handleTop - handleH;
+        const clampedHeight = Math.max(80, Math.min(window.innerHeight - 80, newSidebarHeight));
 
-        sidebar.style.height = Math.max(100, newSidebarHeight) + "px";
-        mapContainer.style.height = window.innerHeight - sidebar.offsetHeight + "px";
+        sidebar.style.height = clampedHeight + "px";
+        mapContainer.style.height = (window.innerHeight - clampedHeight - handleH) + "px";
     } else {
-        const leftOfSidebar = clientX - dragOffsetX;
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const leftOfSidebar = clientX - dragOffsetX + sidebarRect.left;
         const newSidebarWidth = leftOfSidebar;
 
         sidebar.style.width = Math.max(200, Math.min(400, newSidebarWidth)) + "px";
@@ -858,5 +863,3 @@ document.addEventListener("click", (e) => {
         suggestionsBox.innerHTML = ""
     }
 })
-
-
