@@ -780,11 +780,11 @@ chatSend.addEventListener("click", async () => {
                     } else {
                         const match = paymentMethodsCache.find(p =>
                         p.agency_id === leg.agency.gtfsId &&
-                        p.route_type === modeToRouteType(leg.mode)
+                        p.route_type === modeToRouteType[leg.mode]
                         );
 
                         console.log(leg.agency.gtfsId)
-                        console.log(modeToRouteType(leg.mode))
+                        console.log(modeToRouteType[leg.mode])
                         console.log(match)
 
                         payment_methods = []
