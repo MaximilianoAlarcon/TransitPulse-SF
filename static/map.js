@@ -495,14 +495,18 @@ const mapContainer = document.getElementById("map");
 const handle = document.getElementById("drag-handle");
 
 let isDragging = false;
+let dragOffsetY = 0;
+let dragOffsetX = 0;
 
 handle.addEventListener("mousedown", (e) => {
     isDragging = true;
+    dragOffsetX = e.clientX - sidebarRect.left;
     e.preventDefault();
 });
 
 handle.addEventListener("touchstart", (e) => {
     isDragging = true;
+    dragOffsetY = touch.clientY - sidebarRect.top;
     e.preventDefault();
     document.body.style.overflow = "hidden";
 }, { passive: false });
@@ -517,12 +521,16 @@ document.addEventListener("touchend", () => {
     document.body.style.overflow = "";
 });
 
+document.addEventListener("touchcancel", () => {
+    isDragging = false;
+    document.body.style.overflow = "";
+});
+
 document.addEventListener("mousemove", dragHandler);
 document.addEventListener("touchmove", dragHandler, { passive: false });
 
 function dragHandler(e) {
     if (!isDragging) return;
-
     e.preventDefault();
 
     const isMobile = window.innerWidth <= 1024;
@@ -530,11 +538,16 @@ function dragHandler(e) {
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
 
     if (isMobile) {
-        const newSidebarHeight = window.innerHeight - clientY;
+        // corregir el desfase inicial del dedo dentro del handle
+        const topOfSidebar = clientY - dragOffsetY;
+        const newSidebarHeight = window.innerHeight - topOfSidebar;
+
         sidebar.style.height = Math.max(100, newSidebarHeight) + "px";
         mapContainer.style.height = window.innerHeight - sidebar.offsetHeight + "px";
     } else {
-        const newSidebarWidth = clientX;
+        const leftOfSidebar = clientX - dragOffsetX;
+        const newSidebarWidth = leftOfSidebar;
+
         sidebar.style.width = Math.max(200, Math.min(400, newSidebarWidth)) + "px";
     }
 
