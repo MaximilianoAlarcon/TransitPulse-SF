@@ -3,6 +3,7 @@ import random, os, requests, json
 import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes
 import load_gtfs_trips,load_gtfs_stop_times,load_gtfs_shapes
 import direct_trip_search_prototype,transfer_trip_search_prototype,claude_test
+import load_payment_methods
 from claude import transform_input_address
 from transit_engine import find_direct_trip,find_trip_with_transfer
 import psycopg2
@@ -261,6 +262,18 @@ def run_claude_test():
 def endpoint_claude_test():
 
     thread = threading.Thread(target=run_claude_test)
+    thread.start()
+
+    return {"message": "Holitoo"}
+
+
+def run_load_payment_methods():
+    load_payment_methods.run()
+
+@app.route("/load-route-payment-methods")
+def endpoint_load_payment_methods():
+
+    thread = threading.Thread(target=run_load_payment_methods)
     thread.start()
 
     return {"message": "Holitoo"}

@@ -120,6 +120,7 @@ async function requestOrientationPermissionIfNeeded() {
 
 // --- Botón de navegación ---
 const btnCompass = document.getElementById("btn-compass");
+btnCompass.disabled = true;
 
 
 // --- Brújula del dispositivo ---
@@ -201,6 +202,7 @@ function stopUserTracking() {
 }
 
 // --- Si el usuario mueve el mapa manualmente, salir del modo navegación ---
+/*
 map.on("dragstart", () => {
   if (isProgrammaticMove) return;
   if (!followHeading) return;
@@ -209,6 +211,7 @@ map.on("dragstart", () => {
   btnCompass.classList.remove("active");
   resetRotation();
 });
+*/
 
 
 btnCompass.addEventListener("click", async () => {
@@ -659,6 +662,7 @@ chatSend.addEventListener("click", async () => {
     chatSend.disabled = true;
     chatInput.disabled = true;
     transportOptions.disabled = true;
+    btnCompass.disabled = true;
     suggestionsBox.style.display = "none";
     suggestionsBox.innerHTML = ""
 
@@ -764,6 +768,7 @@ chatSend.addEventListener("click", async () => {
             }
 
             focusMap(data["origin_coords"][1],data["origin_coords"][0])
+            btnCompass.disabled = false;
 
         } else if (data["status"] == "Not found"){
             document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`
