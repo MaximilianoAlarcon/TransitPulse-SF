@@ -57,6 +57,9 @@ def get_connection():
 
 def create_table(cur):
     cur.execute("""
+
+        DROP TABLE IF EXISTS route_payment_methods;
+
         CREATE TABLE IF NOT EXISTS route_payment_methods (
             agency_id TEXT,
             operator_id TEXT,
@@ -66,7 +69,7 @@ def create_table(cur):
             route_type_name TEXT,
             payment_method_code TEXT,
             payment_method_desc TEXT,
-            fare_price NUMERIC,
+            fare_price TEXT,
             currency TEXT,
             transfers_allowed TEXT,
             fare_media_name TEXT,
