@@ -22,7 +22,7 @@ function getPaymentMethods() {
   return data;
 }
 
-paymentMethodsCache = await getPaymentMethods();
+paymentMethodsCache = getPaymentMethods();
 
 
 mobile_app_url = {
