@@ -56,13 +56,14 @@ html, body {
 
 
 #sidebar {
-    width:250px;
-    height: 100vh; /* mobile initial */
+    width: 250px;
+    height: 100vh;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     position: relative;
-    padding-top: 12px;
+    padding-top: 0;
+    overflow: hidden;
 }
 
 #sidebar-content {
@@ -72,11 +73,12 @@ html, body {
 
 /* Drag handle */
 #drag-handle {
-    height: 25px;
-    background-color: grey;
-    cursor: ns-resize;
-    flex-shrink: 0;
     display: none;
+    width: 100%;
+    height: 25px;
+    min-height: 25px;
+    background-color: grey;
+    flex-shrink: 0;
     touch-action: none;
     cursor: ns-resize;
     position: static;
@@ -92,9 +94,13 @@ html, body {
         padding-top: 0; /* espacio para el handle */
     }
 
-    #map {
+    #map-container {
         height: 60vh;
-        order: 1; /* map above */
+        order: 1;
+    }
+
+    #map {
+        height: 100%;
     }
 
     #drag-handle {
