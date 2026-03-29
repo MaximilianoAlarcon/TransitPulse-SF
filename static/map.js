@@ -733,7 +733,7 @@ chatSend.addEventListener("click", async () => {
                             <p>Drive from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                         ` 
                     } else {
-                        const match = paymentMethods.find(p =>
+                        const match = paymentMethodsCache.find(p =>
                         p.agency_id === leg.agency.gtfsId &&
                         p.route_type === leg.route.gtfsId
                         );
