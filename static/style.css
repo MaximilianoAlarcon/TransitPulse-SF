@@ -89,7 +89,7 @@ html, body {
         height: 40vh;
         order: 2;
         position: relative;
-        padding-top: 25px; /* espacio para el handle */
+        padding-top: 0; /* espacio para el handle */
     }
 
     #map {
