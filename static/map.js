@@ -42,6 +42,30 @@ mobile_app_url = {
     }
 }
 
+const modeToRouteType = {
+  // 🚋 Tram / Light rail
+  TRAM: 0,
+  LIGHT_RAIL: 0,
+  STREETCAR: 0,
+  // 🚇 Subway / Metro
+  SUBWAY: 1,
+  METRO: 1,
+  // 🚆 Rail
+  RAIL: 2,
+  TRAIN: 2,
+  // 🚌 Bus
+  BUS: 3,
+  COACH: 3,
+  TROLLEYBUS: 3,
+  SHUTTLE: 3,
+  // ⛴️ Ferry
+  FERRY: 4,
+  // 🚠 Cable / special
+  CABLE_CAR: 5,
+  GONDOLA: 6,
+  FUNICULAR: 7
+};
+
 
 function showAlert(message, type = "danger") {
     const container = document.getElementById("alert-container");
@@ -756,11 +780,11 @@ chatSend.addEventListener("click", async () => {
                     } else {
                         const match = paymentMethodsCache.find(p =>
                         p.agency_id === leg.agency.gtfsId &&
-                        p.route_type === leg.route.gtfsId
+                        p.route_type === modeToRouteType(leg.mode)
                         );
 
                         console.log(leg.agency.gtfsId)
-                        console.log(leg.route.gtfsId)
+                        console.log(modeToRouteType(leg.mode))
                         console.log(match)
 
                         payment_methods = []
@@ -797,7 +821,7 @@ chatSend.addEventListener("click", async () => {
                             <p>Take <b>${leg.route.longName} : ${leg.route.shortName}</b> from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                             <p>${match?.payment_method_code == "1" ? "The ticket is paid for <b>before</b> boarding the transport." : "The ticket is paid <b>on</b> boarding the transport."}</p>
                             <p>Payment method:</p>
-                            <p>${payment_methods.join(" / ")}</p>
+                            <p>${payment_methods.length > 0 ? payment_methods.join(" / ") : "No payment methods available"}</p>
                         `
                     }
                 });
