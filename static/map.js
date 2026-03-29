@@ -779,11 +779,11 @@ chatSend.addEventListener("click", async () => {
                         ` 
                     } else {
                         const match = paymentMethodsCache.find(p =>
-                        p.agency_id === leg.agency.gtfsId &&
+                        p.agency_id === leg.agency.gtfsId.split(":")[1] &&
                         p.route_type === modeToRouteType[leg.mode]
                         );
 
-                        console.log(leg.agency.gtfsId)
+                        console.log(leg.agency.gtfsId.split(":")[1])
                         console.log(modeToRouteType[leg.mode])
                         console.log(match)
 
