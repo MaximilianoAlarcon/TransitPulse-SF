@@ -759,6 +759,10 @@ chatSend.addEventListener("click", async () => {
                         p.route_type === leg.route.gtfsId
                         );
 
+                        console.log(leg.agency.gtfsId)
+                        console.log(leg.route.gtfsId)
+                        console.log(match)
+
                         payment_methods = []
                         if (match?.fare_media_name?.includes("cash")) {
                             payment_methods.push("Cash")
