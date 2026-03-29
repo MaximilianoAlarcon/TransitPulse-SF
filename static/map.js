@@ -13,16 +13,22 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 let paymentMethodsCache = [];
 
-function getPaymentMethods() {
-  const res = fetch("/payment-methods");
-  const data = res.json();
+async function getPaymentMethods() {
+  const res = await fetch("/payment-methods");
+  const data = await res.json();
 
   console.log(data);
 
   return data;
 }
 
-paymentMethodsCache = getPaymentMethods();
+async function queryPaymentMethods() {
+  paymentMethodsCache = await getPaymentMethods();
+
+  console.log(paymentMethodsCache);
+}
+
+queryPaymentMethods();
 
 
 mobile_app_url = {
