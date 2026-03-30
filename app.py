@@ -1,11 +1,9 @@
 from flask import Flask, render_template, jsonify, request, Response
 import random, os, requests, json
-import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes
-import load_gtfs_trips,load_gtfs_stop_times,load_gtfs_shapes
-import direct_trip_search_prototype,transfer_trip_search_prototype,claude_test
+import threading,execute_query_postgis
+import claude_test
 import load_payment_methods
 from claude import transform_input_address
-from transit_engine import find_direct_trip,find_trip_with_transfer
 import psycopg2
 import numpy as np
 from utils import geocode

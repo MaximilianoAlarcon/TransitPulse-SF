@@ -11,6 +11,20 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 
+async function checkLocationPermission() {
+  if (!navigator.permissions) {
+    return "unsupported";
+  }
+
+  try {
+    const result = await navigator.permissions.query({ name: "geolocation" });
+    return result.state; // "granted" | "prompt" | "denied"
+  } catch (error) {
+    console.error("Error checking permissions:", error);
+    return "error";
+  }
+}
+
 let paymentMethodsCache = [];
 
 async function getPaymentMethods() {
@@ -273,26 +287,6 @@ function markRouteStops(map, originLat, originLon, destLat, destLon, originColor
 
 
 
-
-
-function drawLine(map, coordinates, defaultColor = "#3388ff") {
-    if (!coordinates || coordinates.length < 2) return;
-
-    console.log("Coordenadas para dibujar la linea")
-    console.log(coordinates)
-    // Usar arrays [lat, lon] directamente
-    const polyline = L.polyline(coordinates, { color: defaultColor, weight: 5, opacity: 1 });
-    
-    // Agregar al layer
-    polyline.addTo(routesLayer);
-
-    // Ajustar la vista al polyline
-    map.fitBounds(polyline.getBounds());
-}
-
-
-
-
 function markDest(destLat, destLon) {
 
     const redIcon = new L.Icon({
@@ -306,31 +300,6 @@ function markDest(destLat, destLon) {
 
 }
 
-function markFalsePosition(){
-    if (navigator.geolocation) {
-
-        navigator.geolocation.getCurrentPosition(function(position) {
-
-            //const lat = position.coords.latitude;
-            //const lon = position.coords.longitude;
-            const lat = 37.7803603;
-            const lon = -122.4120372;
-
-            map.setView([lat, lon], 15);
-
-            window.userMarker = L.circleMarker([lat, lon], {
-                radius: 8,
-                color: "#136aec",
-                fillColor: "#2a93ee",
-                fillOpacity: 0.9
-            }).addTo(map).bindPopup("You");
-
-            //loadStopsInView();
-
-        });
-
-    }
-}
 
 
 
@@ -900,8 +869,16 @@ chatSend.addEventListener("click", async () => {
         lon_origin = selectedPlaceOrigin.lon
     }
     if (lastPosition && address_origin == ""){
-        lat_origin = lastPosition.lat
-        lon_origin = lastPosition.lng
+        const state = await checkLocationPermission();
+        if (state == "granted") {
+            lat_origin = lastPosition.lat
+            lon_origin = lastPosition.lng
+        } else  {
+            navigator.geolocation.getCurrentPosition(
+                () => startUserTracking(map),
+                () => showAlert("It requires permission to track your location","info")
+            );
+        }
     }
     document.getElementById("chat-result").innerHTML = `
     <p>Searching paths...</p>
@@ -1061,7 +1038,6 @@ chatSend.addEventListener("click", async () => {
     transportOptions.disabled = false;
     suggestionsBox.style.display = "block";
     suggestionsBoxOrigin.style.display = "block";
-    markFalsePosition();
 });
 
 // Enter key
