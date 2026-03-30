@@ -928,22 +928,23 @@ chatSend.addEventListener("click", async () => {
                 () => showAlert("It requires permission to track your location","info")
             );
             return;
-        }        
-    }   
-    if (lastPosition){
-        const state = await checkLocationPermission();
-        if (state == "granted") {
-            lat_origin = lastPosition.lat
-            lon_origin = lastPosition.lng
-        } else  {
-            showAlert("It requires permission to track your location","info")
-            navigator.geolocation.getCurrentPosition(
-                () => startUserTracking(map),
-                () => showAlert("It requires permission to track your location","info")
-            );
-            return;
         }
-    }
+        if (lastPosition){
+            const state = await checkLocationPermission();
+            if (state == "granted") {
+                lat_origin = lastPosition.lat
+                lon_origin = lastPosition.lng
+            } else  {
+                showAlert("It requires permission to track your location","info")
+                navigator.geolocation.getCurrentPosition(
+                    () => startUserTracking(map),
+                    () => showAlert("It requires permission to track your location","info")
+                );
+                return;
+            }
+        }
+    }   
+
 
     chatSend.disabled = true;
     chatInput.disabled = true;
