@@ -653,15 +653,75 @@ function destroyUserTracking(map) {
   removeUserTrackingLayers(map);
 }
 
-startUserTracking(map, {
-  centerOnFirstFix: true,
-  followUser: false,
-  zoom: 16,
-  enableCompass: true
-});
+// Check location permission
+
+async function checkLocationPermission() {
+  if (!navigator.permissions) {
+    return "unsupported";
+  }
+
+  try {
+    const result = await navigator.permissions.query({ name: "geolocation" });
+    return result.state; // "granted" | "prompt" | "denied"
+  } catch (error) {
+    console.error("Error checking location permission:", error);
+    return "error";
+  }
+}
+
+function requestLocationOnce() {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 10000
+    });
+  });
+}
+
+async function initLocation() {
+  const permission = await checkLocationPermission();
+
+  if (permission === "granted") {
+    startUserTracking(map, {
+    centerOnFirstFix: true,
+    followUser: false,
+    zoom: 16,
+    enableCompass: true
+    });
+    return true;
+  }
+
+  if (permission === "prompt" || permission === "unsupported" || permission === "error") {
+    try {
+        await requestLocationOnce(); // esto dispara el popup
+        startUserTracking(map, {
+        centerOnFirstFix: true,
+        followUser: false,
+        zoom: 16,
+        enableCompass: true
+        });
+        return true;
+    } catch (error) {
+      if (error.code === error.PERMISSION_DENIED) {
+        showAlert("Location permission denied.", "warning");
+      } else {
+        showAlert("Could not get your location.", "info");
+      }
+      return false;
+    }
+  }
+
+  if (permission === "denied") {
+    showAlert("Please enable location in your browser settings and reload the page", "info");
+    return false;
+  }
+
+  return false;
+}
 
 
-
+initLocation();
 
 
 
