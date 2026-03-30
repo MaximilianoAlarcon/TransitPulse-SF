@@ -819,7 +819,7 @@ chatSend.addEventListener("click", async () => {
                         console.log(match?.fare_media_name);
                         trip_description += `
                             <p>Take <b>${leg.route.longName} : ${leg.route.shortName}</b> from ${leg.from.name}
-                            <img class="place-img" src="/place-image?lat=${leg.from.lat}&lon=${leg.from.lon}&name=${leg.from.name}" />
+                            <img class="place-img" src="/place-image?lat=${leg.from.lat}&lon=${leg.from.lon}&name=${leg.from.name}&is_stop=true" />
                             to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
                             <p>${match?.payment_method_code == "1" ? "The ticket is paid for <b>before</b> boarding the transport." : "The ticket is paid <b>on</b> boarding the transport."}</p>
                             <p>Payment method:</p>
