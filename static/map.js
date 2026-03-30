@@ -906,15 +906,6 @@ chatSend.addEventListener("click", async () => {
     }
     let address_origin = document.getElementById("chat-origin").value.trim();
 
-    chatSend.disabled = true;
-    chatInput.disabled = true;
-    chatOrigin.disabled = true;
-    transportOptions.disabled = true;
-    suggestionsBox.style.display = "none";
-    suggestionsBox.innerHTML = ""
-    suggestionsBoxOrigin.style.display = "none";
-    suggestionsBoxOrigin.innerHTML = ""
-
     clearRoutes()
     lat = null
     lon = null
@@ -931,10 +922,12 @@ chatSend.addEventListener("click", async () => {
     if (selectedPlaceOrigin == null && address_origin == "") {
         const state = await checkLocationPermission();
         if (state != "granted") {
-            return navigator.geolocation.getCurrentPosition(
+            showAlert("It requires permission to track your location","info")
+            navigator.geolocation.getCurrentPosition(
                 () => startUserTracking(map),
                 () => showAlert("It requires permission to track your location","info")
             );
+            return;
         }        
     }   
     if (lastPosition){
@@ -943,12 +936,24 @@ chatSend.addEventListener("click", async () => {
             lat_origin = lastPosition.lat
             lon_origin = lastPosition.lng
         } else  {
+            showAlert("It requires permission to track your location","info")
             navigator.geolocation.getCurrentPosition(
                 () => startUserTracking(map),
                 () => showAlert("It requires permission to track your location","info")
             );
+            return;
         }
     }
+
+    chatSend.disabled = true;
+    chatInput.disabled = true;
+    chatOrigin.disabled = true;
+    transportOptions.disabled = true;
+    suggestionsBox.style.display = "none";
+    suggestionsBox.innerHTML = ""
+    suggestionsBoxOrigin.style.display = "none";
+    suggestionsBoxOrigin.innerHTML = ""
+
     document.getElementById("chat-result").innerHTML = `
     <p>Searching paths...</p>
     <div class="spinner"></div>`;
