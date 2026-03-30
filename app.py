@@ -229,7 +229,7 @@ def street_view_response(lat, lon, max_width):
 def place_image():
     lat = request.args.get("lat", type=float)
     lon = request.args.get("lon", type=float)
-    radius = request.args.get("radius", default=500, type=int)
+    radius = request.args.get("radius", default=300, type=int)
     max_width = request.args.get("max_width", default=400, type=int)
     use_places = request.args.get("use_places", default="false").lower() == "true"
 
