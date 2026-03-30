@@ -90,224 +90,6 @@ function focusMap(lat, lon, zoom = 16) {
   });
 }
 
-// Rotacion de mapa
-
-let followHeading = false;
-let lastBearing = 0;
-let geoWatchId = null;
-let lastPosition = null;
-let currentSpeed = 0;
-let isProgrammaticMove = false;
-
-// Umbrales para evitar temblores
-const MIN_SPEED_TO_ROTATE = 1.0;   // m/s aprox
-const MIN_BEARING_DELTA = 5;       // grados mínimos para actualizar
-
-// --- Marcador del usuario ---
-window.userMarker = null;
-
-// --- Helpers ---
-function normalizeBearing(deg) {
-  return ((deg % 360) + 360) % 360;
-}
-
-function smallestAngleDiff(a, b) {
-  let diff = Math.abs(a - b) % 360;
-  return diff > 180 ? 360 - diff : diff;
-}
-
-function setMapBearingSmooth(newBearing) {
-  const normalized = normalizeBearing(newBearing);
-
-  if (smallestAngleDiff(normalized, lastBearing) < MIN_BEARING_DELTA) {
-    return;
-  }
-
-  map.setBearing(normalized);
-  lastBearing = normalized;
-}
-
-function resetRotation() {
-  map.setBearing(0);
-  lastBearing = 0;
-}
-
-function computeBearing(lat1, lon1, lat2, lon2) {
-  const toRad = (d) => d * Math.PI / 180;
-  const toDeg = (r) => r * 180 / Math.PI;
-
-  const φ1 = toRad(lat1);
-  const φ2 = toRad(lat2);
-  const λ1 = toRad(lon1);
-  const λ2 = toRad(lon2);
-
-  const y = Math.sin(λ2 - λ1) * Math.cos(φ2);
-  const x =
-    Math.cos(φ1) * Math.sin(φ2) -
-    Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1);
-
-  return normalizeBearing(toDeg(Math.atan2(y, x)));
-}
-
-function recenterMap(latlng, zoom = null) {
-  isProgrammaticMove = true;
-
-  if (zoom !== null) {
-    map.setView(latlng, zoom, { animate: true });
-  } else {
-    map.panTo(latlng, { animate: true });
-  }
-
-  setTimeout(() => {
-    isProgrammaticMove = false;
-  }, 300);
-}
-
-// --- Permiso de orientación (iPhone/Safari) ---
-async function requestOrientationPermissionIfNeeded() {
-  if (
-    typeof DeviceOrientationEvent !== "undefined" &&
-    typeof DeviceOrientationEvent.requestPermission === "function"
-  ) {
-    const result = await DeviceOrientationEvent.requestPermission();
-    return result === "granted";
-  }
-  return true;
-}
-
-// --- Botón de navegación ---
-const btnCompass = document.getElementById("btn-compass");
-btnCompass.disabled = true;
-
-
-// --- Brújula del dispositivo ---
-window.addEventListener("deviceorientation", (event) => {
-  if (!followHeading) return;
-  if (currentSpeed > 1) return;
-
-  const alpha = event.alpha;
-  if (alpha == null) return;
-
-  const heading = normalizeBearing(360 - alpha);
-  setMapBearingSmooth(heading);
-});
-
-// --- Seguimiento en tiempo real ---
-function startUserTracking() {
-  if (!navigator.geolocation) {
-    console.warn("Geolocation is not supported in this browser.");
-    showAlert("Geolocation is not supported in this browser.","info");
-    return;
-  }
-
-  geoWatchId = navigator.geolocation.watchPosition(
-    (position) => {
-      const lat = position.coords.latitude;
-      const lon = position.coords.longitude;
-      currentSpeed = position.coords.speed || 0;
-
-      const latlng = [lat, lon];
-
-      if (!window.userMarker) {
-        window.userMarker = L.circleMarker(latlng, {
-          radius: 8,
-          color: "#136aec",
-          fillColor: "#2a93ee",
-          fillOpacity: 0.9
-        }).addTo(map).bindPopup("You");
-
-        map.setView(latlng, 15);
-      } else {
-        window.userMarker.setLatLng(latlng);
-      }
-
-      if (followHeading) {
-        recenterMap(latlng, Math.max(map.getZoom(), 16));
-      }
-
-      if (followHeading && lastPosition && currentSpeed > MIN_SPEED_TO_ROTATE) {
-        const gpsBearing = computeBearing(
-          lastPosition.lat,
-          lastPosition.lon,
-          lat,
-          lon
-        );
-
-        setMapBearingSmooth(gpsBearing);
-      }
-
-      lastPosition = { lat, lon };
-    },
-    (error) => {
-      console.error("Geolocation error:", error);
-      showAlert("Could not get your location.","info");
-    },
-    {
-      enableHighAccuracy: true,
-      maximumAge: 1000,
-      timeout: 10000
-    }
-  );
-}
-
-// --- Detener seguimiento si alguna vez lo necesitás ---
-function stopUserTracking() {
-  if (geoWatchId !== null) {
-    navigator.geolocation.clearWatch(geoWatchId);
-    geoWatchId = null;
-  }
-}
-
-// --- Si el usuario mueve el mapa manualmente, salir del modo navegación ---
-/*
-map.on("dragstart", () => {
-  if (isProgrammaticMove) return;
-  if (!followHeading) return;
-
-  followHeading = false;
-  btnCompass.classList.remove("active");
-  resetRotation();
-});
-*/
-
-
-btnCompass.addEventListener("click", async () => {
-  const granted = await requestOrientationPermissionIfNeeded();
-
-  if (!granted) {
-    showAlert("Orientation permission was not granted.","warning");
-    return;
-  }
-
-  // 🔁 Toggle estado
-  followHeading = !followHeading;
-
-  // 🎨 UI
-  btnCompass.classList.toggle("active", followHeading);
-
-  // 🛑 Si se desactiva navegación
-  if (!followHeading) {
-    stopUserTracking();   // opcional (según tu estrategia)
-    resetRotation();
-    return;
-  }
-
-  // 🚀 Si se activa navegación
-  startUserTracking();    // opcional (ver nota abajo)
-
-  // 🎯 Centrar en usuario si ya existe
-  if (window.userMarker) {
-    recenterMap(
-      window.userMarker.getLatLng(),
-      Math.max(map.getZoom(), 16)
-    );
-  } else {
-    // 👀 opcional: feedback si aún no hay ubicación
-    showAlert("Getting your location...","info");
-  }
-});
-
-
 
 
 
@@ -329,7 +111,9 @@ let routesLayer = L.featureGroup().addTo(map);
 let originMarker = null
 let destMarker = null
 let selectedPlace = null
+let selectedPlaceOrigin = null
 const suggestionsBox = document.getElementById("suggestions")
+const suggestionsBoxOrigin = document.getElementById("suggestions-origin")
 let globalItineraries = {}
 
 let timeout = null
@@ -549,6 +333,375 @@ function markFalsePosition(){
 }
 
 
+
+// Mostrar ubicacion del usuario en tiempo real
+
+let watchId = null;
+let compassEnabled = false;
+let deviceHeading = null;
+let movementHeading = null;
+let lastPosition = null;
+
+window.userMarker = null;
+window.userAccuracyCircle = null;
+window.userDirectionCone = null;
+
+/**
+ * Convierte grados a radianes
+ */
+function toRad(deg) {
+  return (deg * Math.PI) / 180;
+}
+
+/**
+ * Normaliza un ángulo al rango 0-360
+ */
+function normalizeHeading(deg) {
+  return ((deg % 360) + 360) % 360;
+}
+
+/**
+ * Obtiene heading a partir del movimiento entre dos puntos
+ */
+function getHeadingFromMovement(prev, current) {
+  if (!prev || !current) return null;
+
+  const lat1 = toRad(prev.lat);
+  const lon1 = toRad(prev.lng);
+  const lat2 = toRad(current.lat);
+  const lon2 = toRad(current.lng);
+
+  const dLon = lon2 - lon1;
+
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x =
+    Math.cos(lat1) * Math.sin(lat2) -
+    Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+
+  const bearing = Math.atan2(y, x) * (180 / Math.PI);
+  return normalizeHeading(bearing);
+}
+
+/**
+ * Devuelve el heading más confiable disponible
+ * prioridad:
+ * 1) brújula
+ * 2) dirección por movimiento
+ */
+function getBestHeading() {
+  if (deviceHeading !== null) return deviceHeading;
+  if (movementHeading !== null) return movementHeading;
+  return null;
+}
+
+/**
+ * Genera puntos para un cono de dirección
+ * angle: apertura del cono en grados
+ * radiusMeters: largo del cono en metros
+ */
+function createDirectionCone(lat, lng, heading, angle = 40, radiusMeters = 35) {
+  if (heading === null) return null;
+
+  const points = [];
+  const steps = 18;
+  const startAngle = heading - angle / 2;
+  const endAngle = heading + angle / 2;
+
+  points.push([lat, lng]);
+
+  for (let i = 0; i <= steps; i++) {
+    const currentAngle = startAngle + ((endAngle - startAngle) * i) / steps;
+    const rad = toRad(currentAngle);
+
+    // Aproximación local para metros -> grados
+    const dLat = (radiusMeters * Math.cos(rad)) / 111320;
+    const dLng =
+      (radiusMeters * Math.sin(rad)) /
+      (111320 * Math.cos(toRad(lat)));
+
+    points.push([lat + dLat, lng + dLng]);
+  }
+
+  points.push([lat, lng]);
+
+  return points;
+}
+
+/**
+ * Inicia la lectura de brújula si está disponible
+ * En iPhone/iPad requiere gesto del usuario para pedir permiso
+ */
+async function startCompass() {
+  if (
+    typeof DeviceOrientationEvent === "undefined" ||
+    compassEnabled
+  ) {
+    return;
+  }
+
+  try {
+    // iOS Safari
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+      const permission = await DeviceOrientationEvent.requestPermission();
+      if (permission !== "granted") {
+        console.warn("Permiso de brújula denegado");
+        return;
+      }
+    }
+
+    window.addEventListener(
+      "deviceorientation",
+      (event) => {
+        let heading = null;
+
+        // iOS suele exponer webkitCompassHeading
+        if (typeof event.webkitCompassHeading === "number") {
+          heading = event.webkitCompassHeading;
+        }
+        // Android / otros navegadores
+        else if (typeof event.alpha === "number") {
+          // Ajuste común para que 0 sea norte
+          heading = 360 - event.alpha;
+        }
+
+        if (heading !== null && !Number.isNaN(heading)) {
+          deviceHeading = normalizeHeading(heading);
+          compassEnabled = true;
+
+          // Si ya existe marcador, actualizar cono aunque el usuario no se mueva
+          if (lastPosition && window.userDirectionCone) {
+            const conePoints = createDirectionCone(
+              lastPosition.lat,
+              lastPosition.lng,
+              getBestHeading()
+            );
+            if (conePoints) {
+              window.userDirectionCone.setLatLngs(conePoints);
+            }
+          }
+        }
+      },
+      true
+    );
+  } catch (error) {
+    console.warn("No se pudo iniciar la brújula:", error);
+  }
+}
+
+/**
+ * Crea o actualiza el marcador, círculo de precisión y cono
+ */
+function updateUserLayers(map, lat, lng, accuracy) {
+  const latlng = [lat, lng];
+
+  // marcador
+  if (!window.userMarker) {
+    window.userMarker = L.circleMarker(latlng, {
+      radius: 8,
+      color: "#136aec",
+      fillColor: "#2a93ee",
+      fillOpacity: 0.9,
+      weight: 2
+    })
+      .addTo(map)
+      .bindPopup("You");
+  } else {
+    window.userMarker.setLatLng(latlng);
+  }
+
+  // accuracy circle
+  if (!window.userAccuracyCircle) {
+    window.userAccuracyCircle = L.circle(latlng, {
+      radius: accuracy,
+      color: "#136aec",
+      fillColor: "#136aec",
+      fillOpacity: 0.12,
+      weight: 1
+    }).addTo(map);
+  } else {
+    window.userAccuracyCircle.setLatLng(latlng);
+    window.userAccuracyCircle.setRadius(accuracy);
+  }
+
+  // cono de dirección
+  const heading = getBestHeading();
+  const conePoints = createDirectionCone(lat, lng, heading);
+
+  if (conePoints) {
+    if (!window.userDirectionCone) {
+      window.userDirectionCone = L.polygon(conePoints, {
+        color: "#136aec",
+        fillColor: "#136aec",
+        fillOpacity: 0.18,
+        weight: 0
+      }).addTo(map);
+    } else {
+      window.userDirectionCone.setLatLngs(conePoints);
+    }
+  } else if (window.userDirectionCone) {
+    // si todavía no hay heading, ocultamos el cono
+    window.userDirectionCone.setLatLngs([]);
+  }
+}
+
+/**
+ * Inicia el tracking en tiempo real
+ *
+ * options:
+ * - centerOnFirstFix: centra el mapa la primera vez
+ * - followUser: centra el mapa en cada actualización
+ * - zoom: zoom inicial si se centra el mapa
+ * - enableCompass: intenta usar brújula
+ */
+async function startUserTracking(map, options = {}) {
+  const {
+    centerOnFirstFix = true,
+    followUser = false,
+    zoom = 16,
+    enableCompass = true
+  } = options;
+
+  if (!navigator.geolocation) {
+    console.error("Geolocation no soportado por este navegador");
+    return;
+  }
+
+  if (watchId !== null) {
+    console.warn("El tracking ya está activo");
+    return;
+  }
+
+  if (enableCompass) {
+    await startCompass();
+  }
+
+  let firstFix = true;
+
+  watchId = navigator.geolocation.watchPosition(
+    (position) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const accuracy = position.coords.accuracy ?? 0;
+
+      const currentPosition = { lat, lng };
+
+      // fallback por movimiento si no hay brújula
+      if (lastPosition) {
+        const computedHeading = getHeadingFromMovement(lastPosition, currentPosition);
+
+        // solo actualizar si hubo desplazamiento real
+        const movedEnough =
+          map.distance(
+            [lastPosition.lat, lastPosition.lng],
+            [currentPosition.lat, currentPosition.lng]
+          ) > 3;
+
+        if (movedEnough && computedHeading !== null) {
+          movementHeading = computedHeading;
+        }
+      }
+
+      lastPosition = currentPosition;
+
+      updateUserLayers(map, lat, lng, accuracy);
+
+      if (firstFix && centerOnFirstFix) {
+        map.setView([lat, lng], zoom);
+        firstFix = false;
+      } else if (followUser) {
+        map.setView([lat, lng], map.getZoom());
+      }
+
+      console.log("Ubicación actualizada:", {
+        lat,
+        lng,
+        accuracy,
+        heading: getBestHeading()
+      });
+    },
+    (error) => {
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          console.error("El usuario denegó el permiso de ubicación");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          console.error("La ubicación no está disponible");
+          break;
+        case error.TIMEOUT:
+          console.error("La solicitud de ubicación expiró");
+          break;
+        default:
+          console.error("Error de geolocalización:", error.message);
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 10000
+    }
+  );
+}
+
+/**
+ * Detiene el tracking
+ */
+function stopUserTracking() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    console.log("Tracking detenido");
+  }
+}
+
+/**
+ * Elimina las capas del usuario del mapa
+ */
+function removeUserTrackingLayers(map) {
+  if (window.userMarker) {
+    map.removeLayer(window.userMarker);
+    window.userMarker = null;
+  }
+
+  if (window.userAccuracyCircle) {
+    map.removeLayer(window.userAccuracyCircle);
+    window.userAccuracyCircle = null;
+  }
+
+  if (window.userDirectionCone) {
+    map.removeLayer(window.userDirectionCone);
+    window.userDirectionCone = null;
+  }
+
+  lastPosition = null;
+  movementHeading = null;
+}
+
+/**
+ * Detiene tracking y borra las capas
+ */
+function destroyUserTracking(map) {
+  stopUserTracking();
+  removeUserTrackingLayers(map);
+}
+
+startUserTracking(map, {
+  centerOnFirstFix: true,
+  followUser: false,
+  zoom: 16,
+  enableCompass: true
+});
+
+
+
+
+
+
+
+
+
+
+
+
 // --- Sidebar drag handle ---
 const sidebar = document.getElementById("sidebar");
 const mapContainer = document.getElementById("map-container");
@@ -691,9 +844,11 @@ function drawLegGeometry(map, leg, options = {}) {
 // --- Chat ---
 const chatSend = document.getElementById("chat-send");
 const chatInput = document.getElementById("chat-input");
+const chatOrigin = document.getElementById("chat-origin");
 const chatResult = document.getElementById("chat-result");
 const transportOptions = document.getElementById("transport-type");
 const clearBtn = document.getElementById("clear-input");
+const clearBtnOrigin = document.getElementById("clear-origin");
 
 
 // limpiar al hacer click
@@ -703,6 +858,11 @@ clearBtn.addEventListener("click", () => {
   clearBtn.style.display = "none";
 });
 
+clearBtnOrigin.addEventListener("click", () => {
+  chatOrigin.value = "";
+  chatOrigin.focus();
+  clearBtnOrigin.style.display = "none";
+});
 
 
 
@@ -715,27 +875,41 @@ chatSend.addEventListener("click", async () => {
         transportOptions.value = "public-transport";
         transport_type = "public-transport"
     }
+    let address_origin = document.getElementById("chat-origin").value.trim();
 
     chatSend.disabled = true;
     chatInput.disabled = true;
+    chatOrigin.disabled = true;
     transportOptions.disabled = true;
     btnCompass.disabled = true;
     suggestionsBox.style.display = "none";
     suggestionsBox.innerHTML = ""
+    suggestionsBoxOrigin.style.display = "none";
+    suggestionsBoxOrigin.innerHTML = ""
 
     clearRoutes()
     lat = null
     lon = null
+    lat_origin = null
+    lon_origin = null
     if (selectedPlace){
         lat = selectedPlace.lat
         lon = selectedPlace.lon
+    }
+    if (selectedPlaceOrigin){
+        lat_origin = selectedPlaceOrigin.lat
+        lon_origin = selectedPlaceOrigin.lon
+    }
+    if (lastPosition && address_origin == ""){
+        lat_origin = lastPosition.lat
+        lon_origin = lastPosition.lng
     }
     document.getElementById("chat-result").innerHTML = `
     <p>Searching paths...</p>
     <div class="spinner"></div>`;
     try {
         //Search trip
-        let response = await fetch(`/search-trip?address=${encodeURIComponent(address)}&lat=${lat}&lon=${lon}&transport_type=${transport_type}`);
+        let response = await fetch(`/search-trip?address=${encodeURIComponent(address)}&lat=${lat}&lon=${lon}&transport_type=${transport_type}&address_origin=${encodeURIComponent(address_origin)}&lat_origin=${lat_origin}&lon_origin=${lon_origin}`);
         if (!response.ok) {
             let errData = await response.json();
             document.getElementById("chat-result").innerText = errData.error || "Unknown error";
@@ -882,10 +1056,13 @@ chatSend.addEventListener("click", async () => {
         console.error(error);
     }
     selectedPlace = null;
+    selectedPlaceOrigin = null;
     chatSend.disabled = false;
     chatInput.disabled = false;
+    chatOrigin.disabled = false;
     transportOptions.disabled = false;
     suggestionsBox.style.display = "block";
+    suggestionsBoxOrigin.style.display = "block";
     markFalsePosition();
 });
 
@@ -905,6 +1082,19 @@ async function onPlaceSelected(map, place) {
         // 👉 Ejemplo: centrar mapa (Leaflet)
         map.setView([place.lat, place.lon], 14)
         selectedPlace = place
+    }
+}
+
+async function onPlaceSelectedOrigin(map, place) {
+
+    response = await fetch(`/place-details?place_id=${place.place_id}`);
+    if (response.ok) {
+        place.lat = response["lat"]
+        place.lon = response["lon"]
+        console.log("Destino:", place.lat, place.lon)
+        // 👉 Ejemplo: centrar mapa (Leaflet)
+        map.setView([place.lat, place.lon], 14)
+        selectedPlaceOrigin = place
     }
 }
 
@@ -965,9 +1155,74 @@ chatInput.addEventListener("input", () => {
     }
 })
 
+chatOrigin.addEventListener("input", () => {
+    if (!chatOrigin.disabled && !chatSend.disabled) {
+        clearBtnOrigin.style.display = chatOrigin.value ? "block" : "none";
+        const query = chatOrigin.value
+
+        if (query.length < 3) {
+            suggestionsBoxOrigin.innerHTML = ""
+            return
+        }
+
+        clearTimeout(timeout)
+
+        timeout = setTimeout(() => {
+            fetch(`/autocomplete?q=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    suggestionsBoxOrigin.innerHTML = ""
+
+                    // 🔥 NUEVO: manejar sin resultados
+                    if (!data || data.length === 0) {
+                        const div = document.createElement("div")
+                        div.classList.add("suggestion-item")
+                        div.classList.add("no-results") 
+                        div.innerText = "No suggestions to show"
+                        
+                        suggestionsBoxOrigin.appendChild(div)
+                        return
+                    }
+
+                    suggestionsBoxOrigin.classList.add("active");
+
+                    data.forEach(place => {
+                        const div = document.createElement("div")
+                        div.classList.add("suggestion-item")
+
+                        div.innerText = place.name
+
+                        div.addEventListener("click", () => {
+                            chatOrigin.value = place.name
+                            suggestionsBoxOrigin.innerHTML = ""
+
+                            console.log("Seleccionado:", place)
+
+                            // 🔥 ACÁ conectás tu GPS
+                            onPlaceSelectedOrigin(map,place)
+                        })
+
+                        suggestionsBoxOrigin.appendChild(div)
+                    })
+                })
+        }, 300)
+    } else {
+        suggestionsBoxOrigin.innerHTML = ""
+        return
+    }
+})
+
 
 document.addEventListener("click", (e) => {
     if (!chatInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
         suggestionsBox.innerHTML = ""
     }
+    if (!chatOrigin.contains(e.target) && !suggestionsBoxOrigin.contains(e.target)) {
+        suggestionsBoxOrigin.innerHTML = ""
+    }
 })
+
+
+
+
+

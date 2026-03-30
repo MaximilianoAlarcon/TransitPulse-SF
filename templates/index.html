@@ -33,6 +33,10 @@
         <!-- 🔍 BUSCADOR (altura automática) -->
         <div id="search-container" class="p-2 border-bottom">
             <div class="position-relative mb-2">
+                <input id="chat-origin" class="form-control pe-5" type="text" placeholder="Your location">
+                <span id="clear-origin" class="clear-btn">&times;</span>
+                <div id="suggestions-origin" class="list-group position-absolute w-100"></div>
+
                 <input id="chat-input" class="form-control pe-5" type="text" placeholder="Where do you want to go?">
                 <span id="clear-input" class="clear-btn">&times;</span>
                 <div id="suggestions" class="list-group position-absolute w-100"></div>
@@ -40,7 +44,6 @@
 
             <button id="chat-send" class="btn btn-primary w-100">Search</button>
             <select id="transport-type" class="form-select" aria-label="Default select example">
-                <option>Type of transport</option>
                 <option value="public-transport" selected>Public Transport</option>
                 <option value="Car">Car</option>
                 <option value="Walk">Walk</option>

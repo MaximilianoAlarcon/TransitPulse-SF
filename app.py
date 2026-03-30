@@ -136,11 +136,13 @@ def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: 
 
 @app.route("/search-trip")
 def direct_trip():
-    my_location = (-122.4120372,37.7803603)
 
     address = request.args.get("address")
+    address_origin = request.args.get("address_origin")
     lat = request.args.get("lat")
     lon = request.args.get("lon")
+    lat_origin = request.args.get("lat_origin")
+    lon_origin = request.args.get("lon_origin")
     transport_type = request.args.get("transport_type", "public-transport")
     try:
         lat = float(lat) if lat is not None else None
@@ -151,7 +153,7 @@ def direct_trip():
     dest_name = None
     if lat is None or lon is None:
         if not address:
-            return jsonify({"error": "No address received"}), 400
+            return jsonify({"error": "No destination received"}), 400
         search_coords = geocode(address)
         if "error" in search_coords:
             return jsonify({"error": search_coords["error"]}), 404
@@ -162,7 +164,26 @@ def direct_trip():
         lon = search_coords["lon"]
         dest_name = search_coords["name"]
 
-    origin_coords = my_location
+
+
+    try:
+        lat_origin = float(lat_origin) if lat_origin is not None else None
+        lon_origin = float(lon_origin) if lon_origin is not None else None
+    except ValueError:
+        lat_origin, lon_origin = None, None
+
+    if lat_origin is None or lon_origin is None:
+        search_coords = geocode(address_origin)
+        if "error" in search_coords:
+            return jsonify({"error": search_coords["error"]}), 404
+        if isinstance(search_coords, tuple):
+            error_dict, status_code = search_coords
+            return jsonify({"error": error_dict["error"]}), status_code
+        lat_origin = search_coords["lat"]
+        lon_origin = search_coords["lon"]
+
+
+    origin_coords = (lon_origin,lat_origin)
     dest_coords = (lon,lat)
     date_now, hour_now = get_sf_date_time()
     TRANSPORT_MAP = {
