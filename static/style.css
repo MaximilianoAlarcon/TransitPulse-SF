@@ -149,7 +149,7 @@ html, body {
 #suggestions {
     top: 100%;
     left: 0;
-    z-index: 99999;
+    z-index: 19999;
     max-height: 250px;
     overflow-y: auto;
     border: 1px solid #ddd;
@@ -164,6 +164,30 @@ html, body {
 #suggestions.active {
     display: block; /* cuando hay sugerencias */
 }
+
+
+
+#suggestions-origin {
+    top: 100%;
+    left: 0;
+    z-index: 99999;
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-top: none;
+    background-color: white;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    position: absolute;
+    display: none;
+}
+
+#suggestions-origin.active {
+    display: block; /* cuando hay sugerencias */
+}
+
+
+
 
 .suggestion-item {
     padding: 10px;
