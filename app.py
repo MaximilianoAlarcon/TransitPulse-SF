@@ -227,13 +227,11 @@ def street_view_response(lat, lon, max_width):
 
 @app.route("/place-image")
 def place_image():
-
     lat = request.args.get("lat", type=float)
     lon = request.args.get("lon", type=float)
-    name = request.args.get("name", default="", type=str)
     radius = request.args.get("radius", default=500, type=int)
     max_width = request.args.get("max_width", default=400, type=int)
-    is_stop = request.args.get("is_stop", default="false").lower() == "true"
+    use_places = request.args.get("use_places", default="false").lower() == "true"
 
     if not API_GEO_KEY:
         return jsonify({"error": "Missing API_GEO_KEY"}), 500
@@ -241,13 +239,12 @@ def place_image():
     if lat is None or lon is None:
         return jsonify({"error": "lat and lon are required"}), 400
 
-    max_width = max(1, min(max_width, 4800))
+    max_width = max(1, min(max_width, 640))
 
-    # 🧠 1. Si es parada → Street View directo
-    if is_stop:
+    # Por defecto: Street View
+    if not use_places:
         return street_view_response(lat, lon, max_width)
 
-    # 🧠 2. Intentar con Places (estaciones / destinos)
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": API_GEO_KEY,
@@ -284,7 +281,6 @@ def place_image():
         nearby_resp.raise_for_status()
         nearby_data = nearby_resp.json()
     except requests.RequestException:
-        # fallback automático
         return street_view_response(lat, lon, max_width)
 
     places = nearby_data.get("places", [])
@@ -296,7 +292,6 @@ def place_image():
             photo_name = photos[0].get("name")
             break
 
-    # 🧠 3. Si no hay foto → Street View
     if not photo_name:
         return street_view_response(lat, lon, max_width)
 
