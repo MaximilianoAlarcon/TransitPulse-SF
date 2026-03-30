@@ -928,7 +928,16 @@ chatSend.addEventListener("click", async () => {
         lat_origin = selectedPlaceOrigin.lat
         lon_origin = selectedPlaceOrigin.lon
     }
-    if (lastPosition && address_origin == ""){
+    if (selectedPlaceOrigin == null && address_origin == "") {
+        const state = await checkLocationPermission();
+        if (state != "granted") {
+            return navigator.geolocation.getCurrentPosition(
+                () => startUserTracking(map),
+                () => showAlert("It requires permission to track your location","info")
+            );
+        }        
+    }   
+    if (lastPosition){
         const state = await checkLocationPermission();
         if (state == "granted") {
             lat_origin = lastPosition.lat
