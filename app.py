@@ -3,7 +3,6 @@ import random, os, requests, json
 import threading,execute_query_postgis
 import claude_test
 import load_payment_methods
-from claude import transform_input_address
 import psycopg2
 import numpy as np
 from utils import geocode
