@@ -210,3 +210,11 @@ html, body {
   text-decoration: none;
   font-size: 1.1rem;
 }
+
+
+.place-img {
+  width: 100%;
+  aspect-ratio: 16/9;  /* 👈 consistente */
+  object-fit: cover;
+  border-radius: 8px;
+}
