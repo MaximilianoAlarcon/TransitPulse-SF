@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, Response
 import random, os, requests, json
 import threading,load_gtfs_stops,execute_query_postgis,load_gtfs_routes
 import load_gtfs_trips,load_gtfs_stop_times,load_gtfs_shapes
@@ -11,6 +11,8 @@ import numpy as np
 from utils import geocode
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
+
 
 app = Flask(__name__)
 
@@ -194,6 +196,124 @@ def direct_trip():
             "status": "Not found",
             "reason":"We couldn't find a route. This app only works in San Francisco, California"
         }
+
+
+PLACES_NEARBY_URL = "https://places.googleapis.com/v1/places:searchNearby"
+PLACES_BASE_URL = "https://places.googleapis.com/v1"
+
+
+@app.route("/place-image")
+def place_image():
+    """
+    Devuelve la imagen binaria directamente, para usarla así:
+    <img src="/place-image?lat=37.779&lon=-122.414&name=Civic Center / UN Plaza">
+
+    Query params:
+    - lat: requerido
+    - lon: requerido
+    - name: opcional, ayuda a encontrar mejor la parada/lugar
+    - radius: opcional, default 150
+    - max_width: opcional, default 600
+    """
+    if not API_GEO_KEY:
+        return jsonify({"error": "Missing API_GEO_KEY environment variable"}), 500
+
+    lat = request.args.get("lat", type=float)
+    lon = request.args.get("lon", type=float)
+    name = request.args.get("name", default="", type=str)
+    radius = request.args.get("radius", default=150, type=int)
+    max_width = request.args.get("max_width", default=600, type=int)
+
+    if lat is None or lon is None:
+        return jsonify({"error": "lat and lon are required"}), 400
+
+    # Google acepta entre 1 y 4800 para maxWidthPx / maxHeightPx.
+    max_width = max(1, min(max_width, 4800))
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": API_GEO_KEY,
+        # Solo pedimos lo necesario
+        "X-Goog-FieldMask": "places.displayName,places.photos",
+    }
+
+    payload = {
+        "locationRestriction": {
+            "circle": {
+                "center": {
+                    "latitude": lat,
+                    "longitude": lon,
+                },
+                "radius": radius,
+            }
+        },
+        "maxResultCount": 5,
+        "rankPreference": "DISTANCE",
+    }
+
+    # Si tienes nombre de parada o lugar, ayuda bastante a afinar resultados.
+    # searchNearby admite restricciones geográficas; aquí usamos el nombre como texto auxiliar.
+    # Si no quieres usarlo, puedes quitar esta línea y buscar solo por coordenadas.
+    if name:
+        payload["includedPrimaryTypes"] = ["transit_station"]
+
+    try:
+        nearby_resp = requests.post(
+            PLACES_NEARBY_URL,
+            headers=headers,
+            json=payload,
+            timeout=10,
+        )
+        nearby_resp.raise_for_status()
+        nearby_data = nearby_resp.json()
+    except requests.RequestException as e:
+        return jsonify({"error": "Failed to search nearby place", "details": str(e)}), 502
+
+    places = nearby_data.get("places", [])
+    if not places:
+        return jsonify({"error": "No nearby places found"}), 404
+
+    # Elegimos el primer lugar con fotos
+    photo_name = None
+    for place in places:
+        photos = place.get("photos", [])
+        if photos:
+            photo_name = photos[0].get("name")
+            break
+
+    if not photo_name:
+        return jsonify({"error": "Nearby place found, but no photos available"}), 404
+
+    # photos[].name viene como:
+    # places/{placeId}/photos/{photo_reference}
+    # Para obtener la imagen hay que pedir:
+    # places/{placeId}/photos/{photo_reference}/media?maxWidthPx=600&key=...
+    image_url = f"{PLACES_BASE_URL}/{photo_name}/media"
+
+    try:
+        img_resp = requests.get(
+            image_url,
+            params={
+                "maxWidthPx": max_width,
+                "key": API_GEO_KEY,
+                # Opcional: si quisieras JSON con photoUri temporal, podrías usar:
+                # "skipHttpRedirect": "true"
+            },
+            stream=True,
+            timeout=15,
+        )
+        img_resp.raise_for_status()
+    except requests.RequestException as e:
+        return jsonify({"error": "Failed to fetch photo media", "details": str(e)}), 502
+
+    content_type = img_resp.headers.get("Content-Type", "image/jpeg")
+
+    return Response(
+        img_resp.iter_content(chunk_size=8192),
+        content_type=content_type,
+        direct_passthrough=True,
+    )
+
 
 
 

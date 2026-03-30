@@ -826,6 +826,8 @@ chatSend.addEventListener("click", async () => {
                     }
                 });
 
+                trip_description += `<img src="/place-image?lat=${globalItineraries["dest_lat"]}&lon=${globalItineraries["dest_lon"]}&name=${data["dest_name"]}" />`
+
                 trip_options += createAccordionItem(option,`${option}# ${formatDuration(itinerary.duration)}`,trip_description)
                 trip_description = ''
                 option += 1
