@@ -768,14 +768,14 @@ chatSend.addEventListener("click", async () => {
                 `
                 itinerary.legs.forEach(leg => {
                     styles = getRouteInfo(leg.mode)
-                    trip_description += `<p>${otpMsToSfHour(leg.startTime)} - ${otpMsToSfHour(leg.endTime)}</p><hr>`
+                    trip_description += `<hr><p>${otpMsToSfHour(leg.startTime)} - ${otpMsToSfHour(leg.endTime)}</p>`
                     if (leg.mode == "WALK"){
                         trip_description += `
-                            <p>Walk from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
+                            <p>Walk from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p><hr>
                         `
                     } else if (leg.mode == "CAR"){
                         trip_description += `
-                            <p>Drive from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
+                            <p>Drive from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p><hr>
                         ` 
                     } else {
                         const match = paymentMethodsCache.find(p =>
@@ -821,9 +821,9 @@ chatSend.addEventListener("click", async () => {
                             <p>Take the ${leg.mode.toLowerCase()} <b>${leg.route.longName} : ${leg.route.shortName}</b> from ${leg.from.name}
                             <img class="place-img" src="/place-image?lat=${leg.from.lat}&lon=${leg.from.lon}&name=${leg.from.name}&is_stop=true" />
                             to ${leg.to.name} for ${formatDuration(leg.duration)}</p>
-                            <p>${match?.payment_method_code == "1" ? "The ticket is paid for <b>before</b> boarding the transport." : "The ticket is paid <b>on</b> boarding the transport."}</p>
+                            <p>${match?.payment_method_code == "1" ? "The ticket is paid <b>before</b> boarding the transport." : "The ticket is paid <b>on</b> boarding the transport."}</p>
                             <p>Payment method:</p>
-                            <p>${payment_methods.length > 0 ? payment_methods.join(" / ") : "No payment methods available"}</p>
+                            <p>${payment_methods.length > 0 ? payment_methods.join(" / ") : "No payment methods available"}</p><hr>
                         `
                     }
                 });
