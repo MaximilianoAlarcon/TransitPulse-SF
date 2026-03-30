@@ -221,7 +221,7 @@ def place_image():
     lat = request.args.get("lat", type=float)
     lon = request.args.get("lon", type=float)
     name = request.args.get("name", default="", type=str)
-    radius = request.args.get("radius", default=150, type=int)
+    radius = request.args.get("radius", default=500, type=int)
     max_width = request.args.get("max_width", default=600, type=int)
 
     if lat is None or lon is None:
