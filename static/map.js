@@ -881,7 +881,6 @@ chatSend.addEventListener("click", async () => {
     chatInput.disabled = true;
     chatOrigin.disabled = true;
     transportOptions.disabled = true;
-    btnCompass.disabled = true;
     suggestionsBox.style.display = "none";
     suggestionsBox.innerHTML = ""
     suggestionsBoxOrigin.style.display = "none";
@@ -1045,7 +1044,6 @@ chatSend.addEventListener("click", async () => {
             }
 
             focusMap(data["origin_coords"][1],data["origin_coords"][0])
-            btnCompass.disabled = false;
 
         } else if (data["status"] == "Not found"){
             document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`
