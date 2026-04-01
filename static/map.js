@@ -704,7 +704,7 @@ async function initLocation() {
         return true;
     } catch (error) {
       if (error.code === error.PERMISSION_DENIED) {
-        showAlert("Location permission denied.", "warning");
+        showAlert("Share your location to get more accurate routes.", "info");
       } else {
         showAlert("Could not get your location.", "info");
       }
@@ -910,7 +910,10 @@ chatSend.addEventListener("click", async () => {
 
     toggle_inputs(false);
     let address = document.getElementById("chat-input").value.trim();
-    if (!address) toggle_inputs(true); return showAlert("Enter your destination");
+    if (!address) {
+      toggle_inputs(true); 
+      return showAlert("Enter your destination");
+    }
     let transport_type = document.getElementById("transport-type").value
     if (!transport_type) {
         transportOptions.value = "public-transport";
