@@ -212,7 +212,7 @@ def direct_trip():
     else:
         return {
             "status": "Not found",
-            "reason":"We couldn't find a route. This app only works in San Francisco, California"
+            "reason":"We couldn't find a route at the moment. This app only works in Northern California"
         }
 
 PLACES_NEARBY_URL = "https://places.googleapis.com/v1/places:searchNearby"
