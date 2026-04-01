@@ -893,12 +893,24 @@ clearBtnOrigin.addEventListener("click", () => {
   clearBtnOrigin.style.display = "none";
 });
 
+function toggle_inputs(state){
+  chatSend.disabled = !state;
+  chatInput.disabled = !state;
+  chatOrigin.disabled = !state;
+  transportOptions.disabled = !state;
+  suggestionsBox.style.display = state? "block" : "none";
+  suggestionsBox.innerHTML = ""
+  suggestionsBoxOrigin.style.display = state? "block" : "none";
+  suggestionsBoxOrigin.innerHTML = ""
+}
+
 
 
 chatSend.addEventListener("click", async () => {
 
+    toggle_inputs(false);
     let address = document.getElementById("chat-input").value.trim();
-    if (!address) return showAlert("Enter your destination");
+    if (!address) toggle_inputs(true); return showAlert("Enter your destination");
     let transport_type = document.getElementById("transport-type").value
     if (!transport_type) {
         transportOptions.value = "public-transport";
@@ -927,6 +939,7 @@ chatSend.addEventListener("click", async () => {
                 () => startUserTracking(map),
                 () => showAlert("It requires permission to track your location","info")
             );
+            toggle_inputs(true);
             return;
         }
         if (lastPosition){
@@ -940,20 +953,12 @@ chatSend.addEventListener("click", async () => {
                     () => startUserTracking(map),
                     () => showAlert("It requires permission to track your location","info")
                 );
+                toggle_inputs(true);
                 return;
             }
         }
     }   
 
-
-    chatSend.disabled = true;
-    chatInput.disabled = true;
-    chatOrigin.disabled = true;
-    transportOptions.disabled = true;
-    suggestionsBox.style.display = "none";
-    suggestionsBox.innerHTML = ""
-    suggestionsBoxOrigin.style.display = "none";
-    suggestionsBoxOrigin.innerHTML = ""
 
     document.getElementById("chat-result").innerHTML = `
     <p>Searching paths...</p>
@@ -964,6 +969,7 @@ chatSend.addEventListener("click", async () => {
         if (!response.ok) {
             let errData = await response.json();
             document.getElementById("chat-result").innerText = errData.error || "Unknown error";
+            toggle_inputs(true);
             return;
         }
         let data = await response.json();
@@ -1100,19 +1106,16 @@ chatSend.addEventListener("click", async () => {
         } else if (data["status"] == "Not found"){
             document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`
         }
+        toggle_inputs(true);
         
     } catch (error) {
         document.getElementById("chat-result").innerText = "Internal Error";
         console.error(error);
+        toggle_inputs(true);
     }
     selectedPlace = null;
     selectedPlaceOrigin = null;
-    chatSend.disabled = false;
-    chatInput.disabled = false;
-    chatOrigin.disabled = false;
-    transportOptions.disabled = false;
-    suggestionsBox.style.display = "block";
-    suggestionsBoxOrigin.style.display = "block";
+    toggle_inputs(true);
 });
 
 // Enter key
