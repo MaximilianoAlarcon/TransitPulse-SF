@@ -48,11 +48,59 @@
             </div>
 
             <select id="transport-type" class="form-select">
-                <option value="public-transport" selected>Public Transport</option>
-                <option value="Car">Car</option>
-                <option value="Walk">Walk</option>
+                <option value="public-transport" selected>Public Transport 🚇</option>
+                <option value="Car">Car 🚗</option>
+                <option value="Walk">Walk 🚶</option>
             </select>
+
+            <!-- ADVANCED OPTIONS -->
             
+            <button id="toggle-advanced-options" class="btn btn-link">⚙️ More options</button>
+
+            <div class="advanced-input" id="advanced-options" style="display:none;">
+
+                <div class="mb-2">
+                    <label class="fw-bold d-block">Priority</label>
+
+                    <input type="radio" id="pref-fastest" name="pref" value="fastest" checked>
+                    <label for="pref-fastest">⚡ Fastest</label><br>
+
+                    <input type="radio" id="pref-fewest" name="pref" value="fewest">
+                    <label for="pref-fewest">🔄 Fewer transfers</label><br>
+
+                    <input type="radio" id="pref-walking" name="pref" value="walking">
+                    <label for="pref-walking">🚶 Less walking</label>
+                </div>
+
+                <div class="mb-2">
+                    <label class="fw-bold">Time</label><br>
+                    <select id="time-type" class="form-select mb-1">
+                        <option value="now">Leave now</option>
+                        <option value="depart">Depart at</option>
+                        <option value="arrive">Arrive by</option>
+                    </select>
+
+                    <input type="time" id="time-input" class="form-control" style="display:none;">
+                </div>
+
+                <div class="mb-2">
+                    <label class="fw-bold">Max walking distance</label><br>
+                    <select id="max-walk" class="form-select">
+                        <option value="">No limit</option>
+                        <option value="500">Up to 500 m</option>
+                        <option value="1000">Up to 1 km</option>
+                        <option value="2000">Up to 2 km</option>
+                    </select>
+                </div>
+
+                <div class="mb-2">
+                    <input type="checkbox" id="wheelchair" name="wheelchair">
+                    <label for="wheelchair">♿ Wheelchair accessible</label>
+                </div>
+
+            </div>
+
+
             <button id="chat-send" class="btn btn-primary w-100">Search</button>
 
         </div>
