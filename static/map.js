@@ -30,16 +30,11 @@ let paymentMethodsCache = [];
 async function getPaymentMethods() {
   const res = await fetch("/payment-methods");
   const data = await res.json();
-
-  console.log(data);
-
   return data;
 }
 
 async function queryPaymentMethods() {
   paymentMethodsCache = await getPaymentMethods();
-
-  console.log(paymentMethodsCache);
 }
 
 queryPaymentMethods();
@@ -581,7 +576,7 @@ async function startUserTracking(map, options = {}) {
         map.setView([lat, lng], map.getZoom());
       }
 
-      console.log("Ubicación actualizada:", {
+      console.log("Updated location:", {
         lat,
         lng,
         accuracy,
@@ -618,7 +613,7 @@ function stopUserTracking() {
   if (watchId !== null) {
     navigator.geolocation.clearWatch(watchId);
     watchId = null;
-    console.log("Tracking detenido");
+    console.log("Stopped tracking");
   }
 }
 
@@ -1017,10 +1012,6 @@ chatSend.addEventListener("click", async () => {
                         p.route_type === modeToRouteType[leg.mode]
                         );
 
-                        console.log(leg.agency.gtfsId.split(":")[1])
-                        console.log(modeToRouteType[leg.mode])
-                        console.log(match)
-
                         payment_methods = []
                         if (match?.fare_media_name?.includes("cash")) {
                             payment_methods.push("Cash")
@@ -1050,7 +1041,6 @@ chatSend.addEventListener("click", async () => {
                             payment_methods.push("Online Payment (Transport website)")
                         }
 
-                        console.log(match?.fare_media_name);
                         trip_description += `
                             <p>Take the ${leg.mode.toLowerCase()} <b>${leg.route.longName} : ${leg.route.shortName}</b> from ${leg.from.name}
                             <img class="place-img" src="/place-image?lat=${leg.from.lat}&lon=${leg.from.lon}&name=${leg.from.name}&is_stop=true" />
@@ -1133,7 +1123,6 @@ async function onPlaceSelected(map, place) {
     if (response.ok) {
         place.lat = response["lat"]
         place.lon = response["lon"]
-        console.log("Destino:", place.lat, place.lon)
         // 👉 Ejemplo: centrar mapa (Leaflet)
         map.setView([place.lat, place.lon], 14)
         selectedPlace = place
@@ -1146,7 +1135,6 @@ async function onPlaceSelectedOrigin(map, place) {
     if (response.ok) {
         place.lat = response["lat"]
         place.lon = response["lon"]
-        console.log("Destino:", place.lat, place.lon)
         // 👉 Ejemplo: centrar mapa (Leaflet)
         map.setView([place.lat, place.lon], 14)
         selectedPlaceOrigin = place
@@ -1193,10 +1181,6 @@ chatInput.addEventListener("input", () => {
                         div.addEventListener("click", () => {
                             chatInput.value = place.name
                             suggestionsBox.innerHTML = ""
-
-                            console.log("Seleccionado:", place)
-
-                            // 🔥 ACÁ conectás tu GPS
                             onPlaceSelected(map,place)
                         })
 
@@ -1250,10 +1234,6 @@ chatOrigin.addEventListener("input", () => {
                         div.addEventListener("click", () => {
                             chatOrigin.value = place.name
                             suggestionsBoxOrigin.innerHTML = ""
-
-                            console.log("Seleccionado:", place)
-
-                            // 🔥 ACÁ conectás tu GPS
                             onPlaceSelectedOrigin(map,place)
                         })
 
