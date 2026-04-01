@@ -93,6 +93,7 @@ def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: 
           legs {
             duration
             mode
+            headsign
             startTime
             endTime
             from { name lat lon }

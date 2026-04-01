@@ -1042,7 +1042,7 @@ chatSend.addEventListener("click", async () => {
                         }
 
                         trip_description += `
-                            <p>Take the ${leg.mode.toLowerCase()} <b>${leg.route.longName} : ${leg.route.shortName}</b> at "${leg.from.name}"
+                            <p>Take the ${leg.mode.toLowerCase()} <b>${leg.route.longName} : ${leg.route.shortName}</b> towards ${leg.headsign} at "${leg.from.name}"
                             <img class="place-img" src="/place-image?lat=${leg.from.lat}&lon=${leg.from.lon}&name=${leg.from.name}&is_stop=true" />
                             Then, get off at "${leg.to.name}", it will take around ${formatDuration(leg.duration)}</p>
                             <p>${match?.payment_method_code == "1" ? "The ticket is paid <b>before</b> boarding the transport." : "The ticket is paid <b>on</b> boarding the transport."}</p>
