@@ -235,12 +235,15 @@ def should_use_transit(origin_coords, dest_coords):
 
 
 
-def geocode(place):
+def geocode(place,is_origin=False):
     """
     Recibe un texto (dirección o lugar) y devuelve:
     name, lat, lon, type
     Usando Google Places API
     """
+
+    if not place and is_origin:
+        return {"error": "Maybe you want to reload the page?"}, 400
     if not place:
         return {"error": "Missing input"}, 400
 

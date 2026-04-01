@@ -1002,7 +1002,7 @@ chatSend.addEventListener("click", async () => {
                 `
                 itinerary.legs.forEach(leg => {
                     styles = getRouteInfo(leg.mode)
-                    trip_description += `<hr><p>${otpMsToSfHour(leg.startTime)} - ${otpMsToSfHour(leg.endTime)}</p>`
+                    trip_description += `<hr><p>${otpMsToSfHour(leg.startTime)} - ${otpMsToSfHour(leg.endTime)} ${styles["icon"]}</p>`
                     if (leg.mode == "WALK"){
                         trip_description += `
                             <p>Walk from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p><hr>

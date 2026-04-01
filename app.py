@@ -170,7 +170,7 @@ def direct_trip():
         lat_origin, lon_origin = None, None
 
     if lat_origin is None or lon_origin is None:
-        search_coords = geocode(address_origin)
+        search_coords = geocode(address_origin,is_origin=True)
         if "error" in search_coords:
             return jsonify({"error": search_coords["error"]}), 404
         if isinstance(search_coords, tuple):
