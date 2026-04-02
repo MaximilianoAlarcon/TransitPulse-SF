@@ -288,7 +288,6 @@ def search_trip():
     # Filtros por modo
     if transport_type == "public-transport":
         print("Filtering by public transport")
-        priority = inputs.get("priority")
 
         time_data = inputs.get("time", {})
         time_type = time_data.get("type", "now")
@@ -300,8 +299,6 @@ def search_trip():
             time = f"{time_value}:00"
             arrive_by = True
 
-        max_walk_distance = inputs.get("max_walking_distance")
-        wheelchair = bool(inputs.get("wheelchair_accessible", False))
         print("time_type")
         print(time_type)
         print("time")
