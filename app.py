@@ -208,6 +208,8 @@ def search_trip():
     lon_origin = payload.get("lon_origin")
     transport_type = (payload.get("transport_type") or "public-transport").lower()
     advanced_filters = payload.get("advanced_filters") or {}
+    print("advanced_filters")
+    print(advanced_filters)
 
     try:
         lat = float(lat) if lat is not None else None
@@ -285,6 +287,7 @@ def search_trip():
 
     # Filtros por modo
     if transport_type == "public-transport":
+        print("Filtering by public transport")
         priority = inputs.get("priority")
 
         time_data = inputs.get("time", {})
@@ -299,6 +302,14 @@ def search_trip():
 
         max_walk_distance = inputs.get("max_walking_distance")
         wheelchair = bool(inputs.get("wheelchair_accessible", False))
+        print("time_type")
+        print(time_type)
+        print("time")
+        print(time)
+        print("max_walk_distance")
+        print(max_walk_distance)
+        print("wheelchair")
+        print(wheelchair)
 
     elif transport_type == "car":
         priority = None

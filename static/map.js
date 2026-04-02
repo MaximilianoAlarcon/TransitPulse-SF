@@ -1098,6 +1098,9 @@ chatSend.addEventListener("click", async () => {
           advanced_filters: advancedFilters
         };
 
+        console.log("advancedFilters")
+        console.log(advancedFilters)
+
         const response = await fetch("/search-trip", {
           method: "POST",
           headers: {
