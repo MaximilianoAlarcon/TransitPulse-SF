@@ -227,9 +227,6 @@ def search_trip():
 
     inputs = advanced_filters.get("inputs", {})
 
-    print("Avanced filters")
-    print(inputs)
-
     # Defaults
     date = date_now
     time = f"{hour_now}:00" if len(hour_now) == 5 else hour_now
@@ -240,7 +237,6 @@ def search_trip():
 
     # Filtros por modo
     if transport_type == "public-transport":
-        print("Filtering by public transport")
         priority = inputs.get("priority")
 
         time_data = inputs.get("time", {})
@@ -256,15 +252,7 @@ def search_trip():
         max_walk_distance = inputs.get("max_walking_distance")
         wheelchair = bool(inputs.get("wheelchair_accessible", False))
 
-        print("max_walk_distance")
-        print(max_walk_distance)
-        print("wheelchair")
-        print(wheelchair)
-        print("time")
-        print(time)
-
     elif transport_type == "car":
-        print("Filtering by cat")
         priority = None
 
         time_data = inputs.get("time", {})
@@ -276,8 +264,6 @@ def search_trip():
         elif time_type == "arrive" and time_value:
             time = f"{time_value}:00"
             arrive_by = True
-        print("time")
-        print(time)
 
     else:  # walk
         priority = None
