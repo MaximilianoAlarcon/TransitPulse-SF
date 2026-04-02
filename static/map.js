@@ -1019,7 +1019,6 @@ function toggle_inputs(state){
   suggestionsBox.innerHTML = ""
   suggestionsBoxOrigin.style.display = state? "block" : "none";
   suggestionsBoxOrigin.innerHTML = ""
-  hide_element("advanced-options")
 }
 
 chatSend.addEventListener("click", async () => {
@@ -1238,6 +1237,7 @@ chatSend.addEventListener("click", async () => {
             }
 
             focusMap(data["origin_coords"][1],data["origin_coords"][0])
+            hide_element("advanced-options")
 
         } else if (data["status"] == "Not found"){
             document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`
