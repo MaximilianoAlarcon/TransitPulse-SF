@@ -50,7 +50,7 @@
             <select id="transport-type" class="form-select">
                 <option value="public-transport" selected>Public Transport 🚇</option>
                 <option value="Car">Car 🚗</option>
-                <option value="Walk">Walk 🚶</option>
+                <option value="walk">Walk 🚶</option>
             </select>
 
             <!-- ADVANCED OPTIONS -->
@@ -59,7 +59,9 @@
 
             <div class="advanced-input" id="advanced-options" style="display:none;">
 
-                <div class="mb-2">
+                <div class="mb-2" id="message-for-user"></div>
+
+                <div class="mb-2" id="block-priority">
                     <label class="fw-bold d-block">Priority</label>
 
                     <input type="radio" id="pref-fastest" name="pref" value="fastest" checked>
@@ -72,7 +74,7 @@
                     <label for="pref-walking">🚶 Less walking</label>
                 </div>
 
-                <div class="mb-2">
+                <div class="mb-2" id="block-time">
                     <label class="fw-bold">Time</label><br>
                     <select id="time-type" class="form-select mb-1">
                         <option value="now">Leave now</option>
@@ -83,7 +85,7 @@
                     <input type="time" id="time-input" class="form-control" style="display:none;">
                 </div>
 
-                <div class="mb-2">
+                <div class="mb-2" id="block-walking-distance">
                     <label class="fw-bold">Max walking distance</label><br>
                     <select id="max-walk" class="form-select">
                         <option value="">No limit</option>
@@ -93,7 +95,7 @@
                     </select>
                 </div>
 
-                <div class="mb-2">
+                <div class="mb-2" id="block-wheelchair">
                     <input type="checkbox" id="wheelchair" name="wheelchair">
                     <label for="wheelchair">♿ Wheelchair accessible</label>
                 </div>

@@ -51,6 +51,14 @@ mobile_app_url = {
     }
 }
 
+function hide_element(element_id){
+  document.getElementById(element_id).style.display = "none";
+}
+
+function show_element(element_id){
+  document.getElementById(element_id).style.display = "block";
+}
+
 const modeToRouteType = {
   // 🚋 Tram / Light rail
   TRAM: 0,
@@ -900,12 +908,50 @@ function toggle_inputs(state){
   suggestionsBoxOrigin.innerHTML = ""
 }
 
+
+
+transportOptions.addEventListener("change", () => {
+  if (transportOptions.value == "public-transport"){
+    show_element("block-priority")
+    show_element("block-time")
+    show_element("block-walking-distance")
+    show_element("block-wheelchair")
+    document.getElementById("message-for-user").innerHTML = ""
+  } else if (transportOptions.value == "car"){
+    hide_element("block-priority")
+    show_element("block-time")
+    hide_element("block-walking-distance")
+    hide_element("block-wheelchair")
+    document.getElementById("message-for-user").innerHTML = ""
+  } else if (transportOptions.value == "walk"){
+    hide_element("block-priority")
+    hide_element("block-time")
+    hide_element("block-walking-distance")
+    hide_element("block-wheelchair")
+    document.getElementById("message-for-user").innerHTML = "No more options for Walking"
+  }
+});
+
+
+
 const btnAdvancedOptions = document.getElementById("toggle-advanced-options");
 const advancedOptions = document.getElementById("advanced-options");
 btnAdvancedOptions.addEventListener("click", () => {
   const isHidden = advancedOptions.style.display === "none";
 
   advancedOptions.style.display = isHidden ? "block" : "none";
+});
+
+const timeType = document.getElementById("time-type");
+const timeInput = document.getElementById("time-input");
+
+timeType.addEventListener("change", () => {
+  if (timeType.value === "now") {
+    //timeInput.value = "";
+    timeInput.style.display = "none";
+  } else {
+    timeInput.style.display = "block";
+  }
 });
 
 
