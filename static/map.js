@@ -979,6 +979,7 @@ function getAdvancedTransportFilters() {
       max_walking_distance: maxWalk === "" ? "" : Number(maxWalk),
       wheelchair_accessible: wheelchair
     };
+    console.log(result)
 
     return result;
   }
@@ -994,6 +995,8 @@ function getAdvancedTransportFilters() {
         value: timeType === "now" ? "" : timeInput
       }
     };
+
+    console.log(result)
 
     return result;
   }
@@ -1083,6 +1086,8 @@ chatSend.addEventListener("click", async () => {
         //Search trip
 
         const advancedFilters = getAdvancedTransportFilters();
+
+        console.log(advancedFilters)
 
         const payload = {
           address,
