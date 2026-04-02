@@ -58,7 +58,22 @@ def get_sf_date_time():
 
 
 
-def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: float,date: str,time: str,arrive_by: bool = False,transport_modes: str = "{ mode: WALK }, { mode: TRANSIT }",search_window: int = 3600,num_itineraries: int = 5,max_transfers: int = 3):
+def otp_plan(
+    otp_url: str,
+    from_lat: float,
+    from_lon: float,
+    to_lat: float,
+    to_lon: float,
+    date: str,
+    time: str,
+    arrive_by: bool = False,
+    transport_modes: str = "{ mode: WALK }, { mode: TRANSIT }",
+    search_window: int = 3600,
+    num_itineraries: int = 5,
+    max_transfers: int = 3,
+    max_walk_distance: int | None = None,
+    wheelchair: bool = False
+):
     query = """
     query PlanTrip(
       $fromLat: Float!,
@@ -70,7 +85,9 @@ def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: 
       $arriveBy: Boolean!,
       $searchWindow: Long!,
       $numItineraries: Int!,
-      $maxTransfers: Int!
+      $maxTransfers: Int!,
+      $wheelchair: Boolean!,
+      $maxWalkDistance: Float
     ) {
       plan(
         from: { lat: $fromLat, lon: $fromLon }
@@ -81,6 +98,8 @@ def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: 
         searchWindow: $searchWindow
         numItineraries: $numItineraries
         maxTransfers: $maxTransfers
+        wheelchair: $wheelchair
+        maxWalkDistance: $maxWalkDistance
         transportModes: [__MODES__]
       ) {
         nextPageCursor
@@ -90,6 +109,7 @@ def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: 
           startTime
           endTime
           generalizedCost
+          walkDistance
           legs {
             duration
             mode
@@ -117,7 +137,9 @@ def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: 
         "arriveBy": arrive_by,
         "searchWindow": search_window,
         "numItineraries": num_itineraries,
-        "maxTransfers": max_transfers
+        "maxTransfers": max_transfers,
+        "wheelchair": wheelchair,
+        "maxWalkDistance": max_walk_distance
     }
 
     query = query.replace("__MODES__", transport_modes)
@@ -132,58 +154,66 @@ def otp_plan(otp_url: str,from_lat: float,from_lon: float,to_lat: float,to_lon: 
     return response.json(), response.status_code
 
 
-@app.route("/search-trip")
-def direct_trip():
+@app.route("/search-trip", methods=["POST"])
+def search_trip():
+    payload = request.get_json(silent=True) or {}
 
-    address = request.args.get("address")
-    address_origin = request.args.get("address_origin")
-    lat = request.args.get("lat")
-    lon = request.args.get("lon")
-    lat_origin = request.args.get("lat_origin")
-    lon_origin = request.args.get("lon_origin")
-    transport_type = request.args.get("transport_type", "public-transport")
+    address = payload.get("address")
+    address_origin = payload.get("address_origin")
+    lat = payload.get("lat")
+    lon = payload.get("lon")
+    lat_origin = payload.get("lat_origin")
+    lon_origin = payload.get("lon_origin")
+    transport_type = (payload.get("transport_type") or "public-transport").lower()
+    advanced_filters = payload.get("advanced_filters") or {}
+
     try:
         lat = float(lat) if lat is not None else None
         lon = float(lon) if lon is not None else None
-    except ValueError:
+    except (TypeError, ValueError):
         lat, lon = None, None
 
     dest_name = None
     if lat is None or lon is None:
         if not address:
             return jsonify({"error": "No destination received"}), 400
+
         search_coords = geocode(address)
-        if "error" in search_coords:
-            return jsonify({"error": search_coords["error"]}), 404
         if isinstance(search_coords, tuple):
             error_dict, status_code = search_coords
             return jsonify({"error": error_dict["error"]}), status_code
+
+        if "error" in search_coords:
+            return jsonify({"error": search_coords["error"]}), 404
+
         lat = search_coords["lat"]
         lon = search_coords["lon"]
         dest_name = search_coords["name"]
 
-
-
     try:
         lat_origin = float(lat_origin) if lat_origin is not None else None
         lon_origin = float(lon_origin) if lon_origin is not None else None
-    except ValueError:
+    except (TypeError, ValueError):
         lat_origin, lon_origin = None, None
 
     if lat_origin is None or lon_origin is None:
-        search_coords = geocode(address_origin,is_origin=True)
-        if "error" in search_coords:
-            return jsonify({"error": search_coords["error"]}), 404
+        search_coords = geocode(address_origin, is_origin=True)
+
         if isinstance(search_coords, tuple):
             error_dict, status_code = search_coords
             return jsonify({"error": error_dict["error"]}), status_code
+
+        if "error" in search_coords:
+            return jsonify({"error": search_coords["error"]}), 404
+
         lat_origin = search_coords["lat"]
         lon_origin = search_coords["lon"]
 
+    origin_coords = (lon_origin, lat_origin)
+    dest_coords = (lon, lat)
 
-    origin_coords = (lon_origin,lat_origin)
-    dest_coords = (lon,lat)
     date_now, hour_now = get_sf_date_time()
+
     TRANSPORT_MAP = {
         "public-transport": "{ mode: WALK }, { mode: TRANSIT }",
         "car": "{ mode: CAR }",
@@ -191,29 +221,113 @@ def direct_trip():
     }
 
     transport_modes = TRANSPORT_MAP.get(
-        transport_type.lower(),
+        transport_type,
         "{ mode: WALK }, { mode: TRANSIT }"
     )
 
-    search,search_status = otp_plan(OTP_URL,origin_coords[1],origin_coords[0],dest_coords[1],dest_coords[0],date_now,hour_now,arrive_by=False,transport_modes=transport_modes)
-    if search_status == 200 and "data" in search and search["data"]["plan"]["itineraries"]:
+    inputs = advanced_filters.get("inputs", {})
+
+    # Defaults
+    date = date_now
+    time = f"{hour_now}:00" if len(hour_now) == 5 else hour_now
+    arrive_by = False
+    max_walk_distance = None
+    wheelchair = False
+    num_itineraries = 5
+
+    # Filtros por modo
+    if transport_type == "public-transport":
+        priority = inputs.get("priority")
+
+        time_data = inputs.get("time", {})
+        time_type = time_data.get("type", "now")
+        time_value = time_data.get("value", "")
+
+        if time_type == "depart" and time_value:
+            time = f"{time_value}:00"
+        elif time_type == "arrive" and time_value:
+            time = f"{time_value}:00"
+            arrive_by = True
+
+        max_walk_distance = inputs.get("max_walking_distance")
+        wheelchair = bool(inputs.get("wheelchair_accessible", False))
+
+    elif transport_type == "car":
+        priority = None
+
+        time_data = inputs.get("time", {})
+        time_type = time_data.get("type", "now")
+        time_value = time_data.get("value", "")
+
+        if time_type == "depart" and time_value:
+            time = f"{time_value}:00"
+        elif time_type == "arrive" and time_value:
+            time = f"{time_value}:00"
+            arrive_by = True
+
+    else:  # walk
+        priority = None
+
+    search, search_status = otp_plan(
+        OTP_URL,
+        origin_coords[1],
+        origin_coords[0],
+        dest_coords[1],
+        dest_coords[0],
+        date,
+        time,
+        arrive_by=arrive_by,
+        transport_modes=transport_modes,
+        num_itineraries=num_itineraries,
+        max_walk_distance=max_walk_distance,
+        wheelchair=wheelchair
+    )
+
+    itineraries = (
+        search.get("data", {})
+        .get("plan", {})
+        .get("itineraries", [])
+    )
+
+    # Ordenamiento según priority, solo para transporte público
+    if transport_type == "public-transport" and itineraries:
+        if priority == "fastest":
+            itineraries.sort(key=lambda x: x.get("duration", float("inf")))
+        elif priority == "fewest":
+            itineraries.sort(key=lambda x: len([
+                leg for leg in x.get("legs", [])
+                if leg.get("mode") != "WALK"
+            ]))
+        elif priority == "walking":
+            itineraries.sort(key=lambda x: x.get("walkDistance", float("inf")))
+
+    if search_status == 200 and itineraries:
         return jsonify(sanitize({
             "status": "Found",
-            "itineraries": search["data"]["plan"]["itineraries"],
-            "origin_coords":origin_coords,
-            "dest_coords":dest_coords,
-            "dest_name":dest_name
+            "itineraries": itineraries,
+            "origin_coords": origin_coords,
+            "dest_coords": dest_coords,
+            "dest_name": dest_name,
+            "applied_filters": {
+                "transport_type": transport_type,
+                "date": date,
+                "time": time,
+                "arrive_by": arrive_by,
+                "max_walk_distance": max_walk_distance,
+                "wheelchair": wheelchair
+            }
         }))
-    elif transport_type.lower() == "walk":
-        return {
+
+    if transport_type == "walk":
+        return jsonify({
             "status": "Not found",
-            "reason":"This route is not suitable for walking, please select another transport type"
-        }
-    else:
-        return {
-            "status": "Not found",
-            "reason":"We couldn't find a route at the moment. This app only works in Northern California"
-        }
+            "reason": "This route is not suitable for walking, please select another transport type"
+        })
+
+    return jsonify({
+        "status": "Not found",
+        "reason": "We couldn't find a route at the moment. This app only works in Northern California"
+    })
 
 PLACES_NEARBY_URL = "https://places.googleapis.com/v1/places:searchNearby"
 PLACES_BASE_URL = "https://places.googleapis.com/v1"

@@ -897,16 +897,7 @@ clearBtnOrigin.addEventListener("click", () => {
   clearBtnOrigin.style.display = "none";
 });
 
-function toggle_inputs(state){
-  chatSend.disabled = !state;
-  chatInput.disabled = !state;
-  chatOrigin.disabled = !state;
-  transportOptions.disabled = !state;
-  suggestionsBox.style.display = state? "block" : "none";
-  suggestionsBox.innerHTML = ""
-  suggestionsBoxOrigin.style.display = state? "block" : "none";
-  suggestionsBoxOrigin.innerHTML = ""
-}
+
 
 
 
@@ -928,7 +919,7 @@ transportOptions.addEventListener("change", () => {
     hide_element("block-time")
     hide_element("block-walking-distance")
     hide_element("block-wheelchair")
-    document.getElementById("message-for-user").innerHTML = "No more options for Walking"
+    document.getElementById("message-for-user").innerHTML = "No more options for Walk 🚶"
   }
 });
 
@@ -954,6 +945,79 @@ timeType.addEventListener("change", () => {
   }
 });
 
+
+function getAdvancedTransportFilters() {
+  const transportType = document.getElementById("transport-type").value;
+  const advancedOptions = document.getElementById("advanced-options");
+
+  const isAdvancedVisible = advancedOptions.style.display !== "none";
+
+  const result = {
+    transport_type: transportType,
+    inputs: {}
+  };
+
+  // Si el panel avanzado no está visible, devolvemos inputs vacío
+  if (!isAdvancedVisible) {
+    return result;
+  }
+
+  // PUBLIC TRANSPORT
+  if (transportType === "public-transport") {
+    const pref = document.querySelector('input[name="pref"]:checked')?.value || null;
+    const timeType = document.getElementById("time-type").value;
+    const timeInput = document.getElementById("time-input").value;
+    const maxWalk = document.getElementById("max-walk").value;
+    const wheelchair = document.getElementById("wheelchair").checked;
+
+    result.inputs = {
+      priority: pref,
+      time: {
+        type: timeType,
+        value: timeType === "now" ? "" : timeInput
+      },
+      max_walking_distance: maxWalk === "" ? "" : Number(maxWalk),
+      wheelchair_accessible: wheelchair
+    };
+
+    return result;
+  }
+
+  // CAR
+  if (transportType === "car") {
+    const timeType = document.getElementById("time-type").value;
+    const timeInput = document.getElementById("time-input").value;
+
+    result.inputs = {
+      time: {
+        type: timeType,
+        value: timeType === "now" ? "" : timeInput
+      }
+    };
+
+    return result;
+  }
+
+  // WALK
+  if (transportType === "walk") {
+    return result;
+  }
+
+  return result;
+}
+
+
+function toggle_inputs(state){
+  chatSend.disabled = !state;
+  chatInput.disabled = !state;
+  chatOrigin.disabled = !state;
+  transportOptions.disabled = !state;
+  suggestionsBox.style.display = state? "block" : "none";
+  suggestionsBox.innerHTML = ""
+  suggestionsBoxOrigin.style.display = state? "block" : "none";
+  suggestionsBoxOrigin.innerHTML = ""
+  hide_element("advanced-options")
+}
 
 chatSend.addEventListener("click", async () => {
 
@@ -1017,7 +1081,27 @@ chatSend.addEventListener("click", async () => {
     <div class="spinner"></div>`;
     try {
         //Search trip
-        let response = await fetch(`/search-trip?address=${encodeURIComponent(address)}&lat=${lat}&lon=${lon}&transport_type=${transport_type}&address_origin=${encodeURIComponent(address_origin)}&lat_origin=${lat_origin}&lon_origin=${lon_origin}`);
+
+        const advancedFilters = getAdvancedTransportFilters();
+
+        const payload = {
+          address,
+          lat,
+          lon,
+          transport_type,
+          address_origin,
+          lat_origin,
+          lon_origin,
+          advanced_filters: advancedFilters
+        };
+
+        const response = await fetch("/search-trip", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
         if (!response.ok) {
             let errData = await response.json();
             document.getElementById("chat-result").innerText = errData.error || "Unknown error";
