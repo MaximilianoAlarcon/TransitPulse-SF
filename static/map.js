@@ -1240,6 +1240,7 @@ chatSend.addEventListener("click", async () => {
 
             focusMap(data["origin_coords"][1],data["origin_coords"][0])
             hide_element("advanced-options")
+            btnAdvancedOptions.textContent = "⚙️ More filters";
 
         } else if (data["status"] == "Not found"){
             document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`
