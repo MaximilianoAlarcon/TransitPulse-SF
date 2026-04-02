@@ -58,6 +58,48 @@ def get_sf_date_time():
 
 
 
+def normalize_advanced_inputs(transport_type: str, inputs: dict, default_time: str):
+    result = {
+        "priority": None,
+        "time": default_time,
+        "arrive_by": False,
+        "max_walk_distance": None,
+        "wheelchair": False,
+    }
+
+    if transport_type == "public-transport":
+        result["priority"] = inputs.get("priority") or "fastest"
+
+        time_data = inputs.get("time", {}) or {}
+        time_type = time_data.get("type", "now")
+        time_value = time_data.get("value", "")
+
+        if time_type == "depart" and time_value:
+            result["time"] = f"{time_value}:00"
+        elif time_type == "arrive" and time_value:
+            result["time"] = f"{time_value}:00"
+            result["arrive_by"] = True
+
+        max_walk = inputs.get("max_walking_distance")
+        if max_walk not in ("", None):
+            result["max_walk_distance"] = int(max_walk)
+
+        result["wheelchair"] = bool(inputs.get("wheelchair_accessible", False))
+
+    elif transport_type == "car":
+        time_data = inputs.get("time", {}) or {}
+        time_type = time_data.get("type", "now")
+        time_value = time_data.get("value", "")
+
+        if time_type == "depart" and time_value:
+            result["time"] = f"{time_value}:00"
+        elif time_type == "arrive" and time_value:
+            result["time"] = f"{time_value}:00"
+            result["arrive_by"] = True
+
+    return result
+
+
 def otp_plan(
     otp_url: str,
     from_lat: float,
@@ -227,12 +269,18 @@ def search_trip():
 
     inputs = advanced_filters.get("inputs", {})
 
-    # Defaults
+    normalized = normalize_advanced_inputs(
+        transport_type=transport_type,
+        inputs=inputs,
+        default_time=f"{hour_now}:00"
+    )
+
     date = date_now
-    time = f"{hour_now}:00" if len(hour_now) == 5 else hour_now
-    arrive_by = False
-    max_walk_distance = None
-    wheelchair = False
+    priority = normalized["priority"]
+    time = normalized["time"]
+    arrive_by = normalized["arrive_by"]
+    max_walk_distance = normalized["max_walk_distance"]
+    wheelchair = normalized["wheelchair"]
     num_itineraries = 5
 
     # Filtros por modo
