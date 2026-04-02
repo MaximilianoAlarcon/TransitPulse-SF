@@ -227,6 +227,9 @@ def search_trip():
 
     inputs = advanced_filters.get("inputs", {})
 
+    print("Avanced filters")
+    print(inputs)
+
     # Defaults
     date = date_now
     time = f"{hour_now}:00" if len(hour_now) == 5 else hour_now
