@@ -5,7 +5,7 @@ import claude_test
 import load_payment_methods
 import psycopg2
 import numpy as np
-from utils import geocode,summarize_place_reviews_with_claude
+from utils import geocode,summarize_place_reviews_with_claude,get_place_rating_and_summary
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import context_aware_recommendations
@@ -208,6 +208,7 @@ def search_trip():
     lon_origin = payload.get("lon_origin")
     transport_type = (payload.get("transport_type") or "public-transport").lower()
     advanced_filters = payload.get("advanced_filters") or {}
+    place_id = payload.get("place_id")
     rating = None
     review_summary = None
 
@@ -218,7 +219,7 @@ def search_trip():
         lat, lon = None, None
 
     dest_name = None
-    if lat is None or lon is None:
+    if lat is None or lon is None or place_id is None:
         if not address:
             return jsonify({"error": "No destination received"}), 400
 
@@ -235,6 +236,11 @@ def search_trip():
         dest_name = search_coords["name"]
         rating = search_coords["rating"]
         review_summary = search_coords["review_summary"]
+
+    if place_id is not None:
+        search_rating = get_place_rating_and_summary(place_id)
+        rating = search_rating["rating"]
+        review_summary = search_rating["review_summary"]
 
     try:
         lat_origin = float(lat_origin) if lat_origin is not None else None
@@ -545,7 +551,7 @@ def place_details():
     params = {
         "place_id": place_id,
         "key": API_GEO_KEY,
-        "fields": "geometry,name,rating,user_ratings_total,types,formatted_address,reviews"
+        "fields": "geometry,name,types"
     }
 
     try:
@@ -559,28 +565,11 @@ def place_details():
     if not result or "geometry" not in result:
         return jsonify({"error": "Place not found"}), 404
 
-    reviews = result.get("reviews", [])
-    review_texts = [r.get("text", "") for r in reviews[:3] if r.get("text")]
-
-    review_summary = summarize_place_reviews_with_claude(
-        place_name=result.get("name", ""),
-        rating=result.get("rating"),
-        review_texts=review_texts
-    )
-
-    print("review_summary")
-    print(review_summary)
-
     return jsonify({
         "name": result.get("name"),
-        "formatted_address": result.get("formatted_address"),
         "lat": result["geometry"]["location"]["lat"],
         "lon": result["geometry"]["location"]["lng"],
-        "type": result.get("types", ["unknown"])[0],
-        "types": result.get("types", []),
-        "rating": result.get("rating"),
-        "user_ratings_total": result.get("user_ratings_total"),
-        "review_summary": review_summary
+        "type": result.get("types", ["unknown"])[0]
     })
 
 

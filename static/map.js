@@ -1087,6 +1087,11 @@ chatSend.addEventListener("click", async () => {
 
         const advancedFilters = getAdvancedTransportFilters();
 
+        const place_id = null
+        if (selectedPlace){
+          place_id = selectedPlace.place_id
+        }
+
         const payload = {
           address,
           lat,
@@ -1095,7 +1100,8 @@ chatSend.addEventListener("click", async () => {
           address_origin,
           lat_origin,
           lon_origin,
-          advanced_filters: advancedFilters
+          advanced_filters: advancedFilters,
+          place_id
         };
 
         console.log("advancedFilters")
@@ -1204,6 +1210,17 @@ chatSend.addEventListener("click", async () => {
             });
             trip_options += '</div>'
             markDest(lat,lon)
+
+            if (selectedPlace && (selectedPlace.rating || selectedPlace.review_summary)) {
+              review_text = (selectedPlace.rating ? selectedPlace.rating + "⭐ " : "") + (selectedPlace.review_summary || "")
+              showAlert(review_text,"info");
+              trip_options += `<p>${review_text}</p`
+            } else if (data["rating"] || data["review_summary"]) {
+              review_text = (data["rating"] ? data["rating"] + "⭐ " : "") + (data["review_summary"] || "")
+              showAlert(review_text,"info");
+              trip_options += `<p>${review_text}</p`
+            }
+
             document.getElementById("chat-result").innerHTML = trip_options
             document.querySelectorAll(".accordion-collapse").forEach((el) => {
                 el.addEventListener("shown.bs.collapse", (event) => {
@@ -1242,19 +1259,7 @@ chatSend.addEventListener("click", async () => {
             hide_element("advanced-options")
             btnAdvancedOptions.textContent = "⚙️ More filters";
 
-            if (selectedPlace && (selectedPlace.rating || selectedPlace.review_summary)) {
-              showAlert(
-                (selectedPlace.rating ? selectedPlace.rating + "⭐ " : "") +
-                (selectedPlace.review_summary || ""),
-                "info"
-              );
-            } else if (data["rating"] || data["review_summary"]) {
-              showAlert(
-                (data["rating"] ? data["rating"] + "⭐ " : "") +
-                (data["review_summary"] || ""),
-                "info"
-              );
-            }
+
 
         } else if (data["status"] == "Not found"){
             document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`

@@ -408,3 +408,67 @@ def geocode(place, is_origin=False):
         "user_ratings_total": result.get("user_ratings_total"),
         "review_summary": review_summary
     }
+
+
+def get_place_rating_and_summary(place_id: str) -> dict:
+    """
+    Devuelve rating y review_summary a partir de un place_id de Google Places.
+    Usa Claude para resumir reviews.
+
+    Returns:
+        {
+            "rating": float | None,
+            "review_summary": str | None
+        }
+    """
+
+    API_GEO_KEY = os.environ.get("API_GEO_KEY")
+
+    if not place_id:
+        return {"rating": None, "review_summary": None}
+
+    if not API_GEO_KEY:
+        print("Missing API_GEO_KEY")
+        return {"rating": None, "review_summary": None}
+
+    # 🔹 1. Google Place Details
+    url = "https://maps.googleapis.com/maps/api/place/details/json"
+    params = {
+        "place_id": place_id,
+        "key": API_GEO_KEY,
+        "fields": "name,rating,reviews"
+    }
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+    except Exception as e:
+        print("Place Details error:", e)
+        return {"rating": None, "review_summary": None}
+
+    result = data.get("result", {})
+
+    rating = result.get("rating")
+
+    reviews = result.get("reviews", [])
+    review_texts = [r.get("text", "") for r in reviews[:3] if r.get("text")]
+
+    # 🔹 2. Si no hay reviews → solo rating
+    if not review_texts:
+        return {
+            "rating": rating,
+            "review_summary": None
+        }
+
+    # 🔹 3. Claude summary
+    review_summary = summarize_place_reviews_with_claude(
+        place_name=result.get("name", ""),
+        rating=rating,
+        review_texts=review_texts
+    )
+
+    return {
+        "rating": rating,
+        "review_summary": review_summary
+    }
