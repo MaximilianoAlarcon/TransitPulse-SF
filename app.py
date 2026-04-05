@@ -217,7 +217,7 @@ def search_trip():
         lat, lon = None, None
 
     dest_name = None
-    if lat is None or lon is None:
+    if lat is None or lon is None or place_id is None:
         if not address:
             return jsonify({"error": "No destination received"}), 400
 
@@ -348,6 +348,8 @@ def search_trip():
             itineraries.sort(key=lambda x: x.get("walkDistance", float("inf")))
 
     if search_status == 200 and itineraries:
+        print("place_id")
+        print(place_id)
         return jsonify(sanitize({
             "status": "Found",
             "itineraries": itineraries,

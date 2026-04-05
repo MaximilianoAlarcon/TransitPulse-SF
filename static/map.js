@@ -1020,9 +1020,11 @@ async function getPlaceRatingReviews(placeId) {
     }
 
     const data = await res.json();
-    review_text = (data["rating"] ? data["rating"] + "⭐ " : "") + (data["review_summary"] || "")
-    showAlert(review_text,"info");
-    document.getElementById("chat-result").innerHTML += `<div class="accordion">${review_text}</div>`;
+    if (data["rating"] || data["review_summary"]){
+      review_text = (data["rating"] ? data["rating"] + "⭐ " : "") + (data["review_summary"] || "")
+      showAlert(review_text,"info");
+      document.getElementById("chat-result").innerHTML += `<div class="accordion">${review_text}</div>`;
+    }
 
   } catch (err) {
     console.error("Error fetching place rating:", err);

@@ -436,6 +436,8 @@ def get_place_rating_and_summary(place_id: str) -> dict:
         review_texts=review_texts
     )
 
+    print("Llegue hasta el final")
+
     return {
         "rating": rating,
         "review_summary": review_summary
