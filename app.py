@@ -405,7 +405,7 @@ def street_view_response(lat, lon, max_width):
 
 
 
-@app.route("/search-rating-reviews")
+@app.route("/place-rating-reviews")
 def search_rating_reviews():
     place_id = request.args.get("place_id", type=str)
     return jsonify(get_place_rating_and_summary(place_id))    
