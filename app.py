@@ -348,8 +348,6 @@ def search_trip():
             itineraries.sort(key=lambda x: x.get("walkDistance", float("inf")))
 
     if search_status == 200 and itineraries:
-        print("place_id")
-        print(place_id)
         return jsonify(sanitize({
             "status": "Found",
             "itineraries": itineraries,
