@@ -323,20 +323,11 @@ Instructions:
 
 
 
-def geocode(place, is_origin=False):
+def geocode(place,is_origin=False):
     """
-    Recibe un texto (dirección o lugar) y devuelve el mismo formato que /place-details:
-    - name
-    - formatted_address
-    - lat
-    - lon
-    - type
-    - types
-    - rating
-    - user_ratings_total
-    - review_summary
-
-    Usa Google Places Autocomplete + Place Details.
+    Recibe un texto (dirección o lugar) y devuelve:
+    name, lat, lon, type
+    Usando Google Places API
     """
 
     if not place and is_origin:
@@ -344,69 +335,46 @@ def geocode(place, is_origin=False):
     if not place:
         return {"error": "Missing input"}, 400
 
-    if not API_GEO_KEY:
-        return {"error": "Missing API_GEO_KEY"}, 500
-
-    # 1) Autocomplete -> place_id
+    # 1️⃣ Autocomplete para obtener place_id
     autocomplete_url = "https://maps.googleapis.com/maps/api/place/autocomplete/json"
     autocomplete_params = {
         "input": place,
         "key": API_GEO_KEY,
-        "location": "37.7749,-122.4194",  # centro de SF
-        "radius": 80000  # 80 km
+        "location": "37.7749,-122.4194",  # centro SF
+        "radius": 80000  # 80 km, cubre SF + Bay Area
     }
 
-    try:
-        auto_resp = requests.get(autocomplete_url, params=autocomplete_params, timeout=15)
-        auto_resp.raise_for_status()
-        auto_data = auto_resp.json()
-    except requests.RequestException as e:
-        return {"error": f"Autocomplete request failed: {str(e)}"}, 502
-
+    auto_resp = requests.get(autocomplete_url, params=autocomplete_params)
+    auto_data = auto_resp.json()
     predictions = auto_data.get("predictions", [])
+
     if not predictions:
         return {"error": "Place not found"}, 404
 
+    # Tomamos la primera predicción
     place_id = predictions[0]["place_id"]
 
-    # 2) Place Details -> mismos campos que /place-details
+    # 2️⃣ Place Details para obtener lat/lon y tipo
     details_url = "https://maps.googleapis.com/maps/api/place/details/json"
     details_params = {
         "place_id": place_id,
         "key": API_GEO_KEY,
-        "fields": "geometry,name,rating,user_ratings_total,types,formatted_address,reviews"
+        "fields": "geometry,name,types"
     }
 
-    try:
-        details_resp = requests.get(details_url, params=details_params, timeout=15)
-        details_resp.raise_for_status()
-        details_data = details_resp.json()
-    except requests.RequestException as e:
-        return {"error": f"Place Details request failed: {str(e)}"}, 502
-
+    details_resp = requests.get(details_url, params=details_params)
+    details_data = details_resp.json()
     result = details_data.get("result")
+
     if not result or "geometry" not in result:
         return {"error": "Place not found"}, 404
 
-    reviews = result.get("reviews", [])
-    review_texts = [r.get("text", "") for r in reviews[:3] if r.get("text")]
-
-    review_summary = summarize_place_reviews_with_claude(
-        place_name=result.get("name", ""),
-        rating=result.get("rating"),
-        review_texts=review_texts
-    )
-
     return {
         "name": result.get("name"),
-        "formatted_address": result.get("formatted_address"),
         "lat": result["geometry"]["location"]["lat"],
         "lon": result["geometry"]["location"]["lng"],
         "type": result.get("types", ["unknown"])[0],
-        "types": result.get("types", []),
-        "rating": result.get("rating"),
-        "user_ratings_total": result.get("user_ratings_total"),
-        "review_summary": review_summary
+        "place_id":place_id
     }
 
 

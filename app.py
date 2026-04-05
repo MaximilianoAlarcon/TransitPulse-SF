@@ -209,8 +209,6 @@ def search_trip():
     transport_type = (payload.get("transport_type") or "public-transport").lower()
     advanced_filters = payload.get("advanced_filters") or {}
     place_id = payload.get("place_id")
-    rating = None
-    review_summary = None
 
     try:
         lat = float(lat) if lat is not None else None
@@ -219,7 +217,7 @@ def search_trip():
         lat, lon = None, None
 
     dest_name = None
-    if lat is None or lon is None or place_id is None:
+    if lat is None or lon is None:
         if not address:
             return jsonify({"error": "No destination received"}), 400
 
@@ -234,13 +232,7 @@ def search_trip():
         lat = search_coords["lat"]
         lon = search_coords["lon"]
         dest_name = search_coords["name"]
-        rating = search_coords["rating"]
-        review_summary = search_coords["review_summary"]
-
-    if place_id is not None:
-        search_rating = get_place_rating_and_summary(place_id)
-        rating = search_rating["rating"]
-        review_summary = search_rating["review_summary"]
+        place_id = search_coords["lon"]
 
     try:
         lat_origin = float(lat_origin) if lat_origin is not None else None
@@ -370,8 +362,7 @@ def search_trip():
                 "max_walk_distance": max_walk_distance,
                 "wheelchair": wheelchair
             },
-            "rating":rating,
-            "review_summary":review_summary
+            "place_id":place_id
         }))
 
     if transport_type == "walk":
@@ -411,6 +402,13 @@ def street_view_response(lat, lon, max_width):
         )
     except requests.RequestException as e:
         return jsonify({"error": "Street View failed", "details": str(e)}), 502
+
+
+
+@app.route("/search-rating-reviews")
+def search_rating_reviews():
+    place_id = request.args.get("place_id", type=str)
+    return jsonify(get_place_rating_and_summary(place_id))    
 
 
 @app.route("/place-image")

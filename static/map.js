@@ -1011,6 +1011,29 @@ function getAdvancedTransportFilters() {
 }
 
 
+async function getPlaceRatingReviews(placeId) {
+  try {
+    const res = await fetch(`/place-rating-reviews?place_id=${placeId}`);
+
+    if (!res.ok) {
+      throw new Error("Request failed");
+    }
+
+    const data = await res.json();
+    review_text = (data["rating"] ? data["rating"] + "⭐ " : "") + (data["review_summary"] || "")
+    showAlert(review_text,"info");
+    document.getElementById("chat-result").innerHTML += `<div class="accordion">${review_text}</div>`;
+
+  } catch (err) {
+    console.error("Error fetching place rating:", err);
+    return {
+      rating: null,
+      review_summary: null
+    };
+  }
+}
+
+
 function toggle_inputs(state){
   chatSend.disabled = !state;
   chatInput.disabled = !state;
@@ -1211,17 +1234,9 @@ chatSend.addEventListener("click", async () => {
             trip_options += '</div>'
             markDest(lat,lon)
 
-            if (selectedPlace && (selectedPlace.rating || selectedPlace.review_summary)) {
-              review_text = (selectedPlace.rating ? selectedPlace.rating + "⭐ " : "") + (selectedPlace.review_summary || "")
-              showAlert(review_text,"info");
-              trip_options += `<p>${review_text}</p`
-            } else if (data["rating"] || data["review_summary"]) {
-              review_text = (data["rating"] ? data["rating"] + "⭐ " : "") + (data["review_summary"] || "")
-              showAlert(review_text,"info");
-              trip_options += `<p>${review_text}</p`
-            }
 
             document.getElementById("chat-result").innerHTML = trip_options
+            getPlaceRatingReviews(data["place_id"])
             document.querySelectorAll(".accordion-collapse").forEach((el) => {
                 el.addEventListener("shown.bs.collapse", (event) => {
                     clearRoutes()
