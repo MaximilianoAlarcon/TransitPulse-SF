@@ -1242,6 +1242,20 @@ chatSend.addEventListener("click", async () => {
             hide_element("advanced-options")
             btnAdvancedOptions.textContent = "⚙️ More filters";
 
+            if (selectedPlace.rating || selectedPlace.review_summary) {
+              showAlert(
+                (selectedPlace.rating ? selectedPlace.rating + "⭐ " : "") +
+                (selectedPlace.review_summary || ""),
+                "info"
+              );
+            } else if (data["rating"] || data["review_summary"]) {
+              showAlert(
+                (data["rating"] ? data["rating"] + "⭐ " : "") +
+                (data["review_summary"] || ""),
+                "info"
+              );
+            }
+
         } else if (data["status"] == "Not found"){
             document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`
         }
@@ -1269,6 +1283,8 @@ async function onPlaceSelected(map, place) {
     if (response.ok) {
         place.lat = response["lat"]
         place.lon = response["lon"]
+        place.rating = response["rating"]
+        place.review_summary = response["review_summary"]
         // 👉 Ejemplo: centrar mapa (Leaflet)
         map.setView([place.lat, place.lon], 14)
         selectedPlace = place

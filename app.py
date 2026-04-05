@@ -208,6 +208,8 @@ def search_trip():
     lon_origin = payload.get("lon_origin")
     transport_type = (payload.get("transport_type") or "public-transport").lower()
     advanced_filters = payload.get("advanced_filters") or {}
+    rating = None
+    review_summary = None
 
     try:
         lat = float(lat) if lat is not None else None
@@ -231,6 +233,8 @@ def search_trip():
         lat = search_coords["lat"]
         lon = search_coords["lon"]
         dest_name = search_coords["name"]
+        rating = search_coords["rating"]
+        review_summary = search_coords["review_summary"]
 
     try:
         lat_origin = float(lat_origin) if lat_origin is not None else None
@@ -359,7 +363,9 @@ def search_trip():
                 "arrive_by": arrive_by,
                 "max_walk_distance": max_walk_distance,
                 "wheelchair": wheelchair
-            }
+            },
+            "rating":rating,
+            "review_summary":review_summary
         }))
 
     if transport_type == "walk":
