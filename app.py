@@ -1,14 +1,11 @@
 from flask import Flask, render_template, jsonify, request, Response
 import random, os, requests, json
-import threading,execute_query_postgis
-import claude_test
-import load_payment_methods
+import threading
 import psycopg2
 import numpy as np
-from utils import geocode,summarize_place_reviews_with_claude,get_place_rating_and_summary
+from utils import geocode,get_place_rating_and_summary
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import context_aware_recommendations
 
 
 app = Flask(__name__)
@@ -606,44 +603,6 @@ def get_payment_methods():
     finally:
         if conn:
             conn.close()
-
-
-
-def run_claude_test():
-    claude_test.run()
-
-@app.route("/claude-test")
-def endpoint_claude_test():
-
-    thread = threading.Thread(target=run_claude_test)
-    thread.start()
-
-    return {"message": "Holitoo"}
-
-
-def run_load_payment_methods():
-    load_payment_methods.run()
-
-@app.route("/load-route-payment-methods")
-def endpoint_load_payment_methods():
-
-    thread = threading.Thread(target=run_load_payment_methods)
-    thread.start()
-
-    return {"message": "Holitoo"}
-
-
-
-def run_context_aware_recommendations():
-    context_aware_recommendations.run()
-
-@app.route("/context_aware_recommendations")
-def endpoint_context_aware_recommendations():
-
-    thread = threading.Thread(target=run_context_aware_recommendations)
-    thread.start()
-
-    return {"message": "Holitoo"}
 
 
 
