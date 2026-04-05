@@ -5,7 +5,7 @@ import claude_test
 import load_payment_methods
 import psycopg2
 import numpy as np
-from utils import geocode
+from utils import geocode,summarize_place_reviews_with_claude
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import context_aware_recommendations
@@ -544,27 +544,49 @@ def place_details():
     if not place_id:
         return jsonify({"error": "Missing place_id"}), 400
 
+    if not API_GEO_KEY:
+        return jsonify({"error": "Missing API_GEO_KEY"}), 500
+
     url = "https://maps.googleapis.com/maps/api/place/details/json"
     params = {
         "place_id": place_id,
         "key": API_GEO_KEY,
-        "fields": "geometry,name,rating,types,formatted_address,reviews"
+        "fields": "geometry,name,rating,user_ratings_total,types,formatted_address,reviews"
     }
 
-    response = requests.get(url, params=params)
-    data = response.json()
-    result = data.get("result")
-    print("result")
-    print(result)
+    try:
+        response = requests.get(url, params=params, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+    except requests.RequestException as e:
+        return jsonify({"error": "Google Places request failed", "details": str(e)}), 502
 
+    result = data.get("result")
     if not result or "geometry" not in result:
         return jsonify({"error": "Place not found"}), 404
 
+    reviews = result.get("reviews", [])
+    review_texts = [r.get("text", "") for r in reviews[:3] if r.get("text")]
+
+    review_summary = summarize_place_reviews_with_claude(
+        place_name=result.get("name", ""),
+        rating=result.get("rating"),
+        review_texts=review_texts
+    )
+
+    print("review_summary")
+    print(review_summary)
+
     return jsonify({
         "name": result.get("name"),
+        "formatted_address": result.get("formatted_address"),
         "lat": result["geometry"]["location"]["lat"],
         "lon": result["geometry"]["location"]["lng"],
-        "type": result.get("types", ["unknown"])[0]
+        "type": result.get("types", ["unknown"])[0],
+        "types": result.get("types", []),
+        "rating": result.get("rating"),
+        "user_ratings_total": result.get("user_ratings_total"),
+        "review_summary": review_summary
     })
 
 

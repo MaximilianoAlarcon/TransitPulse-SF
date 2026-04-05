@@ -235,6 +235,93 @@ def should_use_transit(origin_coords, dest_coords):
 
 
 
+def summarize_place_reviews_with_claude(
+    place_name: str,
+    rating: float | None,
+    review_texts: list[str]
+) -> str | None:
+    api_key = os.environ.get("API_CLAUDE_KEY")
+    if not api_key or not review_texts:
+        return None
+
+    cleaned_reviews = []
+    for text in review_texts:
+        if not text:
+            continue
+        text = text.strip().replace("\n", " ")
+        if text:
+            cleaned_reviews.append(text[:400])
+
+    if not cleaned_reviews:
+        return None
+
+    prompt = f"""
+You are summarizing Google Maps reviews for a San Francisco transit app.
+
+Place name: {place_name}
+Rating: {rating if rating is not None else "unknown"}
+
+Reviews:
+{json.dumps(cleaned_reviews, ensure_ascii=False)}
+
+Instructions:
+1. Write exactly ONE short sentence.
+2. Keep it positive, natural, and useful for a traveler.
+3. Mention the place name if it fits naturally.
+4. Do not invent facts not supported by the reviews.
+5. Return only the sentence, with no JSON and no extra text.
+""".strip()
+
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+    }
+
+    payload = {
+        "model": "claude-sonnet-4-6",
+        "max_tokens": 80,
+        "temperature": 0.2,
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    }
+
+    try:
+        response = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers=headers,
+            json=payload,
+            timeout=15
+        )
+        response.raise_for_status()
+
+        data = response.json()
+        text_output = data["content"][0]["text"].strip()
+
+        # Forzar una sola oración
+        for sep in [". ", "! ", "? "]:
+            if sep in text_output:
+                first = text_output.split(sep)[0].strip()
+                if not first.endswith((".", "!", "?")):
+                    first += "."
+                return first
+
+        if text_output and not text_output.endswith((".", "!", "?")):
+            text_output += "."
+
+        return text_output or None
+
+    except Exception as e:
+        print("Claude review summary error:", e)
+        return None
+
+
+
+
 def geocode(place,is_origin=False):
     """
     Recibe un texto (dirección o lugar) y devuelve:
@@ -287,3 +374,6 @@ def geocode(place,is_origin=False):
         "lon": result["geometry"]["location"]["lng"],
         "type": result.get("types", ["unknown"])[0]
     }
+
+
+
