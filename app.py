@@ -8,7 +8,7 @@ import numpy as np
 from utils import geocode
 from datetime import datetime
 from zoneinfo import ZoneInfo
-
+import context_aware_recommendations
 
 
 app = Flask(__name__)
@@ -627,6 +627,18 @@ def endpoint_load_payment_methods():
 
     return {"message": "Holitoo"}
 
+
+
+def run_context_aware_recommendations():
+    context_aware_recommendations.run()
+
+@app.route("/context_aware_recommendations")
+def endpoint_context_aware_recommendations():
+
+    thread = threading.Thread(target=run_context_aware_recommendations)
+    thread.start()
+
+    return {"message": "Holitoo"}
 
 
 
