@@ -1242,7 +1242,7 @@ chatSend.addEventListener("click", async () => {
             hide_element("advanced-options")
             btnAdvancedOptions.textContent = "⚙️ More filters";
 
-            if (selectedPlace.rating || selectedPlace.review_summary) {
+            if (selectedPlace && (selectedPlace.rating || selectedPlace.review_summary)) {
               showAlert(
                 (selectedPlace.rating ? selectedPlace.rating + "⭐ " : "") +
                 (selectedPlace.review_summary || ""),
