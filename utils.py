@@ -393,6 +393,7 @@ def get_place_rating_and_summary(place_id: str) -> dict:
     API_GEO_KEY = os.environ.get("API_GEO_KEY")
 
     if not place_id:
+        print("No place_id")
         return {"rating": None, "review_summary": None}
 
     if not API_GEO_KEY:
