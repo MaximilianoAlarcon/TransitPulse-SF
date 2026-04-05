@@ -548,12 +548,14 @@ def place_details():
     params = {
         "place_id": place_id,
         "key": API_GEO_KEY,
-        "fields": "geometry,name,types"
+        "fields": "geometry,name,rating,types,formatted_address"
     }
 
     response = requests.get(url, params=params)
     data = response.json()
     result = data.get("result")
+    print("result")
+    print(result)
 
     if not result or "geometry" not in result:
         return jsonify({"error": "Place not found"}), 404
