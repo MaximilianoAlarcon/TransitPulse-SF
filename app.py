@@ -548,7 +548,7 @@ def place_details():
     params = {
         "place_id": place_id,
         "key": API_GEO_KEY,
-        "fields": "geometry,name,rating,types,formatted_address"
+        "fields": "geometry,name,rating,types,formatted_address,reviews"
     }
 
     response = requests.get(url, params=params)
