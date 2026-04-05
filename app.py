@@ -232,7 +232,7 @@ def search_trip():
         lat = search_coords["lat"]
         lon = search_coords["lon"]
         dest_name = search_coords["name"]
-        place_id = search_coords["lon"]
+        place_id = search_coords["place_id"]
 
     try:
         lat_origin = float(lat_origin) if lat_origin is not None else None
