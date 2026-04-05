@@ -69,7 +69,7 @@ def get_context_recommendations(
     }
 
     payload = {
-        "model": "claude-3-5-sonnet-20241022",
+        "model": "claude-sonnet-4-6",
         "max_tokens": 200,
         "temperature": 0.5,
         "messages": [
