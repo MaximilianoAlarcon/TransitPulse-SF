@@ -42,11 +42,6 @@ def get_context_recommendations(
 
         Your job is to generate helpful contextual recommendations.
 
-        Input:
-        - Destination: {destination_name}
-        - Time: {time_hhmm}
-        - Transport modes: {modes_str}
-
         Instructions:
         1. Suggest ONE interesting attraction or place near the destination ONLY if relevant.
         2. Provide ONE safety tip ONLY if relevant (based on time, walking, or area context).
@@ -55,11 +50,41 @@ def get_context_recommendations(
         5. Do NOT include multiple sentences.
         6. If something is not relevant, return null.
 
-        Return ONLY valid JSON like this:
+        Rules:
+        - attraction: return ONE short sentence only if the destination is clearly associated with a known attraction, landmark, park, waterfront, museum, shopping area, or notable neighborhood.
+        - safety_warning: return ONE short sentence only if the trip includes walking at night, or if the destination is an area that is widely known for variable street conditions at night.
+        - If not applicable, return null.
+        - Output ONLY valid JSON.
+
+        JSON:
         {{
-        "attraction": "text or null",
-        "safety_warning": "text or null"
+        "attraction": "string or null",
+        "safety_warning": "string or null"
         }}
+
+        Examples:
+
+        Input:
+        - Destination: Ferry Building
+        - Time: 18:30
+        - Transport modes: walk,tram,walk
+        Output:
+        {{"attraction":"The Ferry Building is a popular waterfront destination with shops and food options nearby.","safety_warning":null}}
+
+        Input:
+        - Destination: Tenderloin
+        - Time: 23:00
+        - Transport modes: walk
+        Output:
+        {{"attraction":null,"safety_warning":"This trip includes late-night walking toward an area with variable street conditions."}}
+
+        Now, process this input
+
+        Input:
+        - Destination: {destination_name}
+        - Time: {time_hhmm}
+        - Transport modes: {modes_str}
+
         """
 
     headers = {
