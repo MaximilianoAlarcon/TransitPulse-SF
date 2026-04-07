@@ -1013,6 +1013,7 @@ function getAdvancedTransportFilters() {
 
 async function getPlaceRatingReviews(placeId) {
   try {
+    console.log(placeId)
     const res = fetch(`/place-rating-reviews?place_id=${placeId}`);
 
     if (!res.ok) {
@@ -1028,10 +1029,7 @@ async function getPlaceRatingReviews(placeId) {
 
   } catch (err) {
     console.error("Error fetching place rating:", err);
-    return {
-      rating: null,
-      review_summary: null
-    };
+    console.log(placeId)
   }
 }
 
