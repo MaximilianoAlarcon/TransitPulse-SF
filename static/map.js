@@ -1244,6 +1244,11 @@ chatSend.addEventListener("click", async () => {
                     clearRoutes()
                     const id = event.target.id; // collapse0, collapse1, etc
                     const itinerary = globalItineraries[id]
+                    console.log("Cambiando ruta")
+                    console.log("id")
+                    console.log(id)
+                    console.log("itinerary")
+                    console.log(itinerary)
                     itinerary.legs.forEach(leg => {
                         styles = getRouteInfo(leg.mode)
                         markRouteStops(map, 
