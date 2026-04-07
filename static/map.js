@@ -173,7 +173,7 @@ function getRouteInfo(routeType) {
         },
         BUS: {
             key: "bus",
-            color: "#2980b9",
+            color: "#000000",
             icon: "🚌"
         },
         TRAM: {
@@ -1203,7 +1203,7 @@ chatSend.addEventListener("click", async () => {
                             payment_methods.push("Cash")
                         }
                         if (match?.fare_media_name?.includes("contactless")) {
-                            payment_methods.push("Credit/Debit Card")
+                            payment_methods.push("Tap-to-pay (Card, Apple Pay, Google Wallet)")
                         }
                         if (match?.fare_media_name?.includes("clipper")) {
                             payment_methods.push(`
