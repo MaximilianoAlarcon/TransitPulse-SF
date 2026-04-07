@@ -1013,7 +1013,6 @@ function getAdvancedTransportFilters() {
 
 async function getPlaceRatingReviews(placeId) {
   try {
-    console.log(placeId);
 
     const res = await fetch(`/place-rating-reviews?place_id=${placeId}`);
 
@@ -1042,7 +1041,6 @@ async function getPlaceRatingReviews(placeId) {
 
   } catch (err) {
     console.error("Error fetching place rating:", err);
-    console.log(placeId);
   }
 }
 
@@ -1139,9 +1137,6 @@ chatSend.addEventListener("click", async () => {
           advanced_filters: advancedFilters,
           place_id
         };
-
-        console.log("advancedFilters")
-        console.log(advancedFilters)
 
         const response = await fetch("/search-trip", {
           method: "POST",
@@ -1255,11 +1250,6 @@ chatSend.addEventListener("click", async () => {
                     clearRoutes()
                     const id = event.target.id; // collapse0, collapse1, etc
                     const itinerary = globalItineraries[id]
-                    console.log("Cambiando ruta")
-                    console.log("id")
-                    console.log(id)
-                    console.log("itinerary")
-                    console.log(itinerary)
                     itinerary.legs.forEach(leg => {
                         styles = getRouteInfo(leg.mode)
                         markRouteStops(map, 
