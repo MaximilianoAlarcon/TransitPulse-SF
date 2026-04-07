@@ -1013,23 +1013,28 @@ function getAdvancedTransportFilters() {
 
 async function getPlaceRatingReviews(placeId) {
   try {
-    console.log(placeId)
-    const res = fetch(`/place-rating-reviews?place_id=${placeId}`);
+    console.log(placeId);
+
+    const res = await fetch(`/place-rating-reviews?place_id=${placeId}`);
 
     if (!res.ok) {
       throw new Error("Request failed");
     }
 
     const data = await res.json();
-    if (data["rating"] || data["review_summary"]){
-      review_text = (data["rating"] ? data["rating"] + "⭐ " : "") + (data["review_summary"] || "")
-      showAlert(review_text,"info");
-      document.getElementById("chat-result").innerHTML += `<div class="alert alert-info shadow text-center d-inline-block fade show mb-0" role="alert" style="width: auto; max-width: 100%;">${review_text}</div>`
+
+    if (data["rating"] || data["review_summary"]) {
+      const review_text =
+        (data["rating"] ? data["rating"] + "⭐ " : "") +
+        (data["review_summary"] || "");
+
+      showAlert(review_text, "info");
+      document.getElementById("chat-result").innerHTML += `<div class="alert alert-info shadow text-center d-inline-block fade show mb-0" role="alert" style="width: auto; max-width: 100%;">${review_text}</div>`;
     }
 
   } catch (err) {
     console.error("Error fetching place rating:", err);
-    console.log(placeId)
+    console.log(placeId);
   }
 }
 
@@ -1279,7 +1284,7 @@ chatSend.addEventListener("click", async () => {
             hide_element("advanced-options")
             btnAdvancedOptions.textContent = "⚙️ More filters";
 
-            getPlaceRatingReviews(data["place_id"])
+            getPlaceRatingReviews(data["place_id"]).catch((err) => {console.error("Unexpected reviews error:", err);});
 
         } else if (data["status"] == "Not found"){
             document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`
