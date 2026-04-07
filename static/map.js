@@ -1235,20 +1235,12 @@ chatSend.addEventListener("click", async () => {
             });
             trip_options += '</div>'
             markDest(lat,lon)
-
-
             document.getElementById("chat-result").innerHTML = trip_options
-            getPlaceRatingReviews(data["place_id"])
             document.querySelectorAll(".accordion-collapse").forEach((el) => {
                 el.addEventListener("shown.bs.collapse", (event) => {
                     clearRoutes()
                     const id = event.target.id; // collapse0, collapse1, etc
                     const itinerary = globalItineraries[id]
-                    console.log("Cambiando ruta")
-                    console.log("id")
-                    console.log(id)
-                    console.log("itinerary")
-                    console.log(itinerary)
                     itinerary.legs.forEach(leg => {
                         styles = getRouteInfo(leg.mode)
                         markRouteStops(map, 
@@ -1280,6 +1272,8 @@ chatSend.addEventListener("click", async () => {
             focusMap(data["origin_coords"][1],data["origin_coords"][0])
             hide_element("advanced-options")
             btnAdvancedOptions.textContent = "⚙️ More filters";
+
+            getPlaceRatingReviews(data["place_id"])
 
 
 
