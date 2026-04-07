@@ -1029,7 +1029,15 @@ async function getPlaceRatingReviews(placeId) {
         (data["review_summary"] || "");
 
       showAlert(review_text, "info");
-      document.getElementById("chat-result").innerHTML += `<div class="alert alert-info shadow text-center d-inline-block fade show mb-0" role="alert" style="width: auto; max-width: 100%;">${review_text}</div>`;
+
+      const reviewBox = document.createElement("div");
+      reviewBox.className = "alert alert-info shadow text-center d-inline-block fade show mb-0";
+      reviewBox.setAttribute("role", "alert");
+      reviewBox.style.width = "auto";
+      reviewBox.style.maxWidth = "100%";
+      reviewBox.textContent = review_text;
+
+      document.getElementById("chat-result").appendChild(reviewBox);
     }
 
   } catch (err) {
