@@ -1011,46 +1011,21 @@ function getAdvancedTransportFilters() {
 }
 
 
-function appendPlaceRatingReviews(result) {
-  if (!result || (!result.rating && !result.review_summary)) {
-    return;
-  }
-
-  const reviewText =
-    `${result.rating ? result.rating + "⭐ " : ""}${result.review_summary || ""}`;
-
-  showAlert(reviewText, "info");
-
-  chatResult.innerHTML += `
-    <div class="alert alert-info shadow text-center d-inline-block fade show mb-0"
-         role="alert"
-         style="width: auto; max-width: 100%;">
-      ${reviewText}
-    </div>
-  `;
-}
-
 async function getPlaceRatingReviews(placeId) {
-  if (!placeId) {
-    return {
-      rating: null,
-      review_summary: null
-    };
-  }
-
   try {
-    const res = await fetch(`/place-rating-reviews?place_id=${encodeURIComponent(placeId)}`);
+    const res = await fetch(`/place-rating-reviews?place_id=${placeId}`);
 
     if (!res.ok) {
-      throw new Error(`Request failed: ${res.status}`);
+      throw new Error("Request failed");
     }
 
     const data = await res.json();
+    if (data["rating"] || data["review_summary"]){
+      review_text = (data["rating"] ? data["rating"] + "⭐ " : "") + (data["review_summary"] || "")
+      showAlert(review_text,"info");
+      document.getElementById("chat-result").innerHTML += `<div class="alert alert-info shadow text-center d-inline-block fade show mb-0" role="alert" style="width: auto; max-width: 100%;">${review_text}</div>`
+    }
 
-    return {
-      rating: data.rating || null,
-      review_summary: data.review_summary || null
-    };
   } catch (err) {
     console.error("Error fetching place rating:", err);
     return {
@@ -1137,7 +1112,7 @@ chatSend.addEventListener("click", async () => {
 
         const advancedFilters = getAdvancedTransportFilters();
 
-        let place_id = null
+        const place_id = null
         if (selectedPlace){
           place_id = selectedPlace.place_id
         }
@@ -1260,12 +1235,20 @@ chatSend.addEventListener("click", async () => {
             });
             trip_options += '</div>'
             markDest(lat,lon)
+
+
             document.getElementById("chat-result").innerHTML = trip_options
+            
             document.querySelectorAll(".accordion-collapse").forEach((el) => {
                 el.addEventListener("shown.bs.collapse", (event) => {
                     clearRoutes()
                     const id = event.target.id; // collapse0, collapse1, etc
                     const itinerary = globalItineraries[id]
+                    console.log("Cambiando ruta")
+                    console.log("id")
+                    console.log(id)
+                    console.log("itinerary")
+                    console.log(itinerary)
                     itinerary.legs.forEach(leg => {
                         styles = getRouteInfo(leg.mode)
                         markRouteStops(map, 
@@ -1298,15 +1281,7 @@ chatSend.addEventListener("click", async () => {
             hide_element("advanced-options")
             btnAdvancedOptions.textContent = "⚙️ More filters";
 
-            const placeIdForReviews = data["place_id"];
-
-            getPlaceRatingReviews(placeIdForReviews)
-              .then((reviews) => {
-                appendPlaceRatingReviews(reviews);
-              })
-              .catch((err) => {
-                console.error("Unexpected reviews error:", err);
-              });
+            getPlaceRatingReviews(data["place_id"])
 
         } else if (data["status"] == "Not found"){
             document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`
@@ -1330,33 +1305,29 @@ chatInput.addEventListener("keypress", e => { if (e.key === "Enter") chatSend.cl
 
 
 async function onPlaceSelected(map, place) {
-    const response = await fetch(`/place-details?place_id=${place.place_id}`);
 
-    if (!response.ok) return;
-
-    const data = await response.json();
-
-    place.lat = data.lat;
-    place.lon = data.lon;
-    place.rating = data.rating;
-    place.review_summary = data.review_summary;
-
-    map.setView([place.lat, place.lon], 14);
-    selectedPlace = place;
+    response = await fetch(`/place-details?place_id=${place.place_id}`);
+    if (response.ok) {
+        place.lat = response["lat"]
+        place.lon = response["lon"]
+        place.rating = response["rating"]
+        place.review_summary = response["review_summary"]
+        // 👉 Ejemplo: centrar mapa (Leaflet)
+        map.setView([place.lat, place.lon], 14)
+        selectedPlace = place
+    }
 }
 
 async function onPlaceSelectedOrigin(map, place) {
-    const response = await fetch(`/place-details?place_id=${place.place_id}`);
 
-    if (!response.ok) return;
-
-    const data = await response.json();
-
-    place.lat = data.lat;
-    place.lon = data.lon;
-
-    map.setView([place.lat, place.lon], 14);
-    selectedPlaceOrigin = place;
+    response = await fetch(`/place-details?place_id=${place.place_id}`);
+    if (response.ok) {
+        place.lat = response["lat"]
+        place.lon = response["lon"]
+        // 👉 Ejemplo: centrar mapa (Leaflet)
+        map.setView([place.lat, place.lon], 14)
+        selectedPlaceOrigin = place
+    }
 }
 
 chatInput.addEventListener("input", () => {
@@ -1474,8 +1445,3 @@ document.addEventListener("click", (e) => {
         suggestionsBoxOrigin.innerHTML = ""
     }
 })
-
-
-
-
-
