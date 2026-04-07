@@ -1013,7 +1013,7 @@ function getAdvancedTransportFilters() {
 
 async function getPlaceRatingReviews(placeId) {
   try {
-    const res = await fetch(`/place-rating-reviews?place_id=${placeId}`);
+    const res = fetch(`/place-rating-reviews?place_id=${placeId}`);
 
     if (!res.ok) {
       throw new Error("Request failed");
