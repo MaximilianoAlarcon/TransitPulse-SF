@@ -571,11 +571,11 @@ def place_details():
 
 @app.route("/search-risk-routes", methods=["POST"])
 def search_risk_routes():
-    url = os.getenv("CI_SF"+"/api/ml/route-risk")
+    url = os.getenv("CI_SF")
     payload = request.get_json(silent=True) or {}
 
     try:
-        response = requests.post(url, json=payload, timeout=15)
+        response = requests.post(url+"/api/ml/route-risk", json=payload, timeout=15)
         response.raise_for_status()
         data = response.json()
     except requests.RequestException as e:
