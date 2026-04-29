@@ -1074,7 +1074,7 @@ async function getRiskRoutes(itineraries) {
         message += `<p>Risk level: ${leg.risk_level}</p>`
         message += `<p>Reason: ${leg.reason}</p>`
         risk_description.textContent = message;
-        container.appendChild(risk_description);
+        div_element.appendChild(risk_description);
         num_leg += 1
       });
     });
