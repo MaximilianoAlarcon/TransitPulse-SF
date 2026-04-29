@@ -1045,42 +1045,122 @@ async function getPlaceRatingReviews(placeId) {
 }
 
 
+function riskBadgeClass(level) {
+  const normalized = String(level || "").toLowerCase();
+
+  if (normalized === "very high") return "bg-danger";
+  if (normalized === "high") return "bg-warning text-dark";
+  if (normalized === "medium") return "bg-info text-dark";
+  if (normalized === "low") return "bg-success";
+
+  return "bg-secondary";
+}
+
+function riskIcon(level) {
+  const normalized = String(level || "").toLowerCase();
+
+  if (normalized === "very high") return "🚨";
+  if (normalized === "high") return "⚠️";
+  if (normalized === "medium") return "🟡";
+  if (normalized === "low") return "🟢";
+
+  return "ℹ️";
+}
+
+function formatProbability(value) {
+  const num = Number(value || 0);
+  return `${Math.round(num * 100)}%`;
+}
+
+function buildRiskHtml(leg) {
+  const probability = formatProbability(leg.leg_incident_probability);
+  const level = leg.risk_level || "Unknown";
+  const reason = leg.reason || "Risk details unavailable.";
+  const badgeClass = riskBadgeClass(level);
+  const icon = riskIcon(level);
+
+  return `
+    <div class="risk-leg-card mt-2 p-2 rounded border bg-light">
+      <div class="d-flex align-items-center justify-content-between gap-2">
+        <div class="fw-semibold small">
+          ${icon} Safety risk
+        </div>
+        <span class="badge ${badgeClass}">
+          ${level} · ${probability}
+        </span>
+      </div>
+
+      <div class="small text-muted mt-1">
+        ${reason}
+      </div>
+    </div>
+  `;
+}
+
 async function getRiskRoutes(itineraries) {
   try {
+    document.querySelectorAll(".risk-loading").forEach(el => {
+      el.innerHTML = `<span class="badge bg-secondary">Checking safety...</span>`;
+    });
 
     const res = await fetch("/search-risk-routes", {
       method: "POST",
       headers: {
-      "Content-Type": "application/json"
+        "Content-Type": "application/json"
       },
       body: JSON.stringify(itineraries)
     });
 
     if (!res.ok) {
-      throw new Error("Request failed");
+      throw new Error("Risk route request failed");
     }
 
     const data = await res.json();
 
-    data["routes"].forEach(route => {
-      itinerary_id = route["itinerary_id"]
-      num_leg = 1
-      route["leg_incident_probabilities"].forEach(leg => {
-        div_id = itinerary_id+"-leg"+String(num_leg)
-        const div_element = document.getElementById(div_id);
-        const risk_description = document.createElement("div");
-        message = ``
-        message += `<p>Probability of incident: ${leg.leg_incident_probability}</p>`
-        message += `<p>Risk level: ${leg.risk_level}</p>`
-        message += `<p>Reason: ${leg.reason}</p>`
-        risk_description.textContent = message;
-        div_element.appendChild(risk_description);
-        num_leg += 1
+    (data.routes || []).forEach(route => {
+      const itineraryId = route.itinerary_id;
+
+      (route.leg_incident_probabilities || []).forEach((leg, index) => {
+        const divId = `${itineraryId}-leg${index + 1}`;
+        const divElement = document.getElementById(divId);
+
+        if (!divElement) return;
+
+        const oldRisk = divElement.querySelector(".risk-leg-card");
+        if (oldRisk) oldRisk.remove();
+
+        divElement.insertAdjacentHTML("beforeend", buildRiskHtml(leg));
       });
+
+      const itineraryCard = document.getElementById(itineraryId);
+      if (itineraryCard && route.highest_risk_leg) {
+        const oldSummary = itineraryCard.querySelector(".risk-route-summary");
+        if (oldSummary) oldSummary.remove();
+
+        const summaryHtml = `
+          <div class="risk-route-summary alert alert-light border mt-2 mb-2 py-2">
+            <div class="fw-semibold">
+              ${riskIcon(route.risk_level)} Route safety: 
+              <span class="badge ${riskBadgeClass(route.risk_level)}">
+                ${route.risk_level} · ${formatProbability(route.itinerary_incident_probability || route.risk_score)}
+              </span>
+            </div>
+            <div class="small text-muted mt-1">
+              Highest-risk segment: ${route.highest_risk_leg.mode} · ${route.highest_risk_leg.reason}
+            </div>
+          </div>
+        `;
+
+        itineraryCard.insertAdjacentHTML("afterbegin", summaryHtml);
+      }
     });
 
   } catch (err) {
     console.error("Error fetching risk routes:", err);
+
+    document.querySelectorAll(".risk-loading").forEach(el => {
+      el.innerHTML = `<span class="badge bg-secondary">Safety unavailable</span>`;
+    });
   }
 }
 
@@ -1220,8 +1300,8 @@ chatSend.addEventListener("click", async () => {
                 num_leg = 1
                 itinerary.legs.forEach(leg => {
                     styles = getRouteInfo(leg.mode)
-                    trip_description += `<div id="${"collapse"+String(option)}-leg${num_leg}">`
                     trip_description += `<hr><p>${otpMsToSfHour(leg.startTime)} - ${otpMsToSfHour(leg.endTime)} ${styles["icon"]}</p>`
+                    trip_description += `<div id="${"collapse"+String(option)}-leg${num_leg}">`
                     if (leg.mode == "WALK"){
                         trip_description += `
                             <p>Walk from ${leg.from.name} to ${leg.to.name} for ${formatDuration(leg.duration)}</p><hr>
