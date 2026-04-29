@@ -1158,6 +1158,8 @@ chatSend.addEventListener("click", async () => {
             <p>Error: <b>${data.error}</b></p>
             `;
         } else if (data["status"] == "Found") {
+            console.log("Data")
+            console.log(data)
             lat = data["dest_coords"][1]
             lon = data["dest_coords"][0]
             option = 1
