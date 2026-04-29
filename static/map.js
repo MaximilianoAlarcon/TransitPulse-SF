@@ -1045,6 +1045,46 @@ async function getPlaceRatingReviews(placeId) {
 }
 
 
+async function getRiskRoutes(itineraries) {
+  try {
+
+    const res = await fetch("/search-risk-routes", {
+      method: "POST",
+      headers: {
+      "Content-Type": "application/json"
+      },
+      body: JSON.stringify(itineraries)
+    });
+
+    if (!res.ok) {
+      throw new Error("Request failed");
+    }
+
+    const data = await res.json();
+
+    data["routes"].forEach(route => {
+      itinerary_id = route["itinerary_id"]
+      num_leg = 1
+      route["leg_incident_probabilities"].forEach(leg => {
+        div_id = itinerary_id+"-leg"+String(num_leg)
+        const div_element = document.getElementById(div_id);
+        const risk_description = document.createElement("div");
+        message = ``
+        message += `<p>Probability of incident: ${leg.leg_incident_probability}</p>`
+        message += `<p>Risk level: ${leg.risk_level}</p>`
+        message += `<p>Reason: ${leg.reason}</p>`
+        risk_description.textContent = message;
+        container.appendChild(risk_description);
+        num_leg += 1
+      });
+    });
+
+  } catch (err) {
+    console.error("Error fetching risk routes:", err);
+  }
+}
+
+
 function toggle_inputs(state){
   chatSend.disabled = !state;
   chatInput.disabled = !state;
@@ -1158,8 +1198,6 @@ chatSend.addEventListener("click", async () => {
             <p>Error: <b>${data.error}</b></p>
             `;
         } else if (data["status"] == "Found") {
-            console.log("Data")
-            console.log(data)
             lat = data["dest_coords"][1]
             lon = data["dest_coords"][0]
             option = 1
@@ -1167,6 +1205,7 @@ chatSend.addEventListener("click", async () => {
             trip_options += '<div class="accordion" id="tripAccordion">'
             trip_description = ''
             globalItineraries = {}
+            globalItineraries["save"] = false
             globalItineraries["dest_lat"] = lat
             globalItineraries["dest_lon"] = lon
             data["itineraries"].sort((a, b) => a.duration - b.duration);
@@ -1178,8 +1217,10 @@ chatSend.addEventListener("click", async () => {
                     <p>End time: ${otpMsToSfHour(itinerary.endTime)}</p>
                     <p>Path</p>
                 `
+                num_leg = 1
                 itinerary.legs.forEach(leg => {
                     styles = getRouteInfo(leg.mode)
+                    trip_description += `<div id="${"collapse"+String(option)}-leg${num_leg}">`
                     trip_description += `<hr><p>${otpMsToSfHour(leg.startTime)} - ${otpMsToSfHour(leg.endTime)} ${styles["icon"]}</p>`
                     if (leg.mode == "WALK"){
                         trip_description += `
@@ -1233,6 +1274,8 @@ chatSend.addEventListener("click", async () => {
                             <p>${payment_methods.length > 0 ? payment_methods.join(" / ") : "No payment methods available"}</p><hr>
                         `
                     }
+                    trip_description += `</div>`
+                    num_leg += 1
                 });
 
                 trip_description += `<img class="place-img" src="/place-image?lat=${globalItineraries["dest_lat"]}&lon=${globalItineraries["dest_lon"]}&name=${data["dest_name"]}" />`
@@ -1285,6 +1328,7 @@ chatSend.addEventListener("click", async () => {
             btnAdvancedOptions.textContent = "⚙️ More filters";
 
             getPlaceRatingReviews(data["place_id"]).catch((err) => {console.error("Unexpected reviews error:", err);});
+            getRiskRoutes(globalItineraries)
 
         } else if (data["status"] == "Not found"){
             document.getElementById("chat-result").innerHTML = `<p>${data["reason"]}</p>`

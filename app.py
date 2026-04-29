@@ -569,6 +569,24 @@ def place_details():
 
 
 
+@app.route("/search-risk-routes", methods=["POST"])
+def search_risk_routes():
+    url = os.getenv("CI_SF"+"/api/ml/route-risk")
+    payload = request.get_json(silent=True) or {}
+
+    try:
+        response = requests.post(url, json=payload, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+    except requests.RequestException as e:
+        return jsonify({"error": "Risk route request failed", "details": str(e)}), 502
+
+    return jsonify({
+        "routes": data.get("routes")
+    })
+
+
+
 @app.route("/payment-methods", methods=["GET"])
 def get_payment_methods():
     conn = None
