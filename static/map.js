@@ -1131,28 +1131,6 @@ async function getRiskRoutes(itineraries) {
 
         divElement.insertAdjacentHTML("beforeend", buildRiskHtml(leg));
       });
-
-      const itineraryCard = document.getElementById(itineraryId);
-      if (itineraryCard && route.highest_risk_leg) {
-        const oldSummary = itineraryCard.querySelector(".risk-route-summary");
-        if (oldSummary) oldSummary.remove();
-
-        const summaryHtml = `
-          <div class="risk-route-summary alert alert-light border mt-2 mb-2 py-2">
-            <div class="fw-semibold">
-              ${riskIcon(route.risk_level)} Route safety: 
-              <span class="badge ${riskBadgeClass(route.risk_level)}">
-                ${route.risk_level} · ${formatProbability(route.itinerary_incident_probability || route.risk_score)}
-              </span>
-            </div>
-            <div class="small text-muted mt-1">
-              Highest-risk segment: ${route.highest_risk_leg.mode} · ${route.highest_risk_leg.reason}
-            </div>
-          </div>
-        `;
-
-        itineraryCard.insertAdjacentHTML("afterbegin", summaryHtml);
-      }
     });
 
   } catch (err) {
